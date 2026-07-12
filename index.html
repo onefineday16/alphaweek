@@ -174,7 +174,7 @@
   <div class="app">
     <header class="utility-bar">
       <div class="health-inline"><span class="dot" id="health-dot"></span><span id="health-text">กำลังเตรียม AlphaWeek...</span></div>
-      <div class="meta"><span id="app-version">index-alphaweek-v10</span><button class="btn ghost" id="refresh-btn" type="button"><i class="ti ti-refresh"></i> Refresh</button><button class="btn ghost" id="theme-btn" type="button"><i class="ti ti-sun"></i> Day</button></div>
+      <div class="meta"><span id="app-version">index-alphaweek-v10</span><button class="btn ghost" id="refresh-btn" type="button"><i class="ti ti-refresh"></i> Refresh</button><button class="btn ghost" id="refresh-prices-btn" type="button"><i class="ti ti-currency-baht"></i> Refresh Prices</button><button class="btn ghost" id="theme-btn" type="button"><i class="ti ti-sun"></i> Day</button></div>
     </header>
     <div class="runtime-error" id="runtime-error"></div>
 
@@ -311,11 +311,15 @@
             <div class="grid cols-2">
               <label>Apps Script URL<input id="apps-script-url" value="https://script.google.com/macros/s/AKfycbzh2PhvOrJu16P9ZLX192PEXUZqTHbp26P1y6TAXNUdO-3UCslhogZHBkoPnOcfx1SA/exec" spellcheck="false"></label>
               <label>Health URL<input id="health-url" value="https://alphaweek.vercel.app/api/health" spellcheck="false"></label>
-              <label>PIN สำหรับเขียนข้อมูล<input id="local-pin" type="password" autocomplete="off" placeholder="เก็บเฉพาะในเครื่องนี้"></label>
+              <label>Fetch Weekly URL<input id="fetch-weekly-url" value="https://alphaweek.vercel.app/api/fetch-weekly" spellcheck="false"></label>
+              <label>PIN สำหรับเขียน/Refresh ราคา<input id="local-pin" type="password" autocomplete="off" placeholder="เก็บเฉพาะในเครื่องนี้"></label>
               <label>Theme<select id="theme-select"><option value="day">Day / Light</option><option value="auto">Auto</option><option value="night">Night</option></select></label>
+              <label>Auto Refresh Prices on Open<select id="auto-refresh-prices"><option value="Y">Y — auto เมื่อเปิดเว็บ</option><option value="N">N — กดเองเท่านั้น</option></select></label>
+              <label>Auto Refresh Cooldown (minutes)<input id="price-refresh-cooldown" type="number" min="0" max="1440" step="1" value="15"></label>
             </div>
-            <div class="meta"><button class="btn primary" id="save-settings-btn" type="button"><i class="ti ti-device-floppy"></i> Save Local Settings</button><button class="btn" id="restore-default-urls-btn" type="button"><i class="ti ti-rotate-clockwise"></i> Restore Default URLs</button><button class="btn" id="test-connection-btn" type="button"><i class="ti ti-plug-connected"></i> Test Connection</button></div>
-            <div class="alert good">Default URLs are embedded in this file. Only PIN needs manual input.</div><div id="settings-status"></div>
+            <div class="meta"><button class="btn primary" id="save-settings-btn" type="button"><i class="ti ti-device-floppy"></i> Save Local Settings</button><button class="btn" id="restore-default-urls-btn" type="button"><i class="ti ti-rotate-clockwise"></i> Restore Default URLs</button><button class="btn" id="test-connection-btn" type="button"><i class="ti ti-plug-connected"></i> Test Connection</button><button class="btn primary" id="refresh-prices-control-btn" type="button"><i class="ti ti-currency-baht"></i> Refresh Prices Now</button></div>
+            <div class="alert good">Default URLs are embedded in this file. Only PIN needs manual input. Auto refresh uses your local PIN and is throttled by cooldown.</div><div id="settings-status"></div>
+            <div id="price-refresh-status"></div>
             <div class="connection-result" id="connection-result"></div>
           </section>
           <section class="panel control-section">
@@ -352,19 +356,24 @@
   <script>
   (function () {
     'use strict';
-    const APP_VERSION = 'index-alphaweek-v10';
-    const STORAGE_KEY = 'alphaweek_config_v10';
-    const LEGACY_KEYS = ['alphaweek_config_v09', 'alphaweek_config_v08', 'alphaweek_config_v07', 'alphaweek_config_v06', 'alphaweek_config_v05', 'alphaweek_config_v04', 'alphaweek_config_v03', 'alphaweek_config_v02', 'alphaweek_config_v01'];
+    const APP_VERSION = 'index-alphaweek-v11';
+    const STORAGE_KEY = 'alphaweek_config_v11';
+    const LEGACY_KEYS = ['alphaweek_config_v10', 'alphaweek_config_v09', 'alphaweek_config_v08', 'alphaweek_config_v07', 'alphaweek_config_v06', 'alphaweek_config_v05', 'alphaweek_config_v04', 'alphaweek_config_v03', 'alphaweek_config_v02', 'alphaweek_config_v01'];
     const DEFAULT_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzh2PhvOrJu16P9ZLX192PEXUZqTHbp26P1y6TAXNUdO-3UCslhogZHBkoPnOcfx1SA/exec';
     const DEFAULT_HEALTH_URL = 'https://alphaweek.vercel.app/api/health';
+    const DEFAULT_FETCH_WEEKLY_URL = 'https://alphaweek.vercel.app/api/fetch-weekly';
     const DEFAULT_CONFIG = {
       appsScriptUrl: DEFAULT_APPS_SCRIPT_URL,
       healthUrl: DEFAULT_HEALTH_URL,
+      fetchWeeklyUrl: DEFAULT_FETCH_WEEKLY_URL,
       pin: '',
       theme: 'day',
+      autoRefreshPricesOnOpen: true,
+      priceRefreshCooldownMinutes: 15,
+      lastPriceRefreshAt: '',
       templates: defaultTemplates()
     };
-    const state = { config: loadConfig(), health: null, dashboard: null, articles: [], allArticles: [], editingArticleId: null, activeTab: 'brief' };
+    const state = { config: loadConfig(), health: null, dashboard: null, articles: [], allArticles: [], editingArticleId: null, activeTab: 'brief', priceRefresh: { running:false, lastResult:null } };
     const $ = (sel) => document.querySelector(sel);
     const $$ = (sel) => Array.from(document.querySelectorAll(sel));
     function reportRuntimeError(message) {
@@ -376,10 +385,10 @@
     window.addEventListener('error', event => reportRuntimeError(`Runtime error: ${event.message || event.error || 'unknown'}`));
     window.addEventListener('unhandledrejection', event => reportRuntimeError(`Async error: ${event.reason && event.reason.message ? event.reason.message : event.reason}`));
     function runFrontendSelfCheck() {
-      const requiredIds = ['brief-alert','watchlist-coverage','latest-article-home','signal-cards','news-list','market-table','article-list','article-manager-list','apps-script-url','health-url','save-settings-btn','restore-default-urls-btn','test-connection-btn','watchlist-manager'];
+      const requiredIds = ['brief-alert','watchlist-coverage','latest-article-home','signal-cards','news-list','market-table','article-list','article-manager-list','apps-script-url','health-url','save-settings-btn','restore-default-urls-btn','test-connection-btn','refresh-prices-btn','refresh-prices-control-btn','fetch-weekly-url','auto-refresh-prices','price-refresh-cooldown','price-refresh-status','watchlist-manager'];
       const missingIds = requiredIds.filter(id => !document.getElementById(id));
-      const requiredFns = ['loadAll','loadDashboard','loadArticles','loadArticleManager','renderWatchlistCoverage','renderLatestArticle','lookupWatchlistRow','saveWatchlist','saveLocalSettings','restoreDefaultUrls','testConnection'];
-      const available = { loadAll, loadDashboard, loadArticles, loadArticleManager, renderWatchlistCoverage, renderLatestArticle, lookupWatchlistRow, saveWatchlist, saveLocalSettings, restoreDefaultUrls, testConnection };
+      const requiredFns = ['loadAll','loadDashboard','loadArticles','loadArticleManager','renderWatchlistCoverage','renderLatestArticle','lookupWatchlistRow','saveWatchlist','saveLocalSettings','restoreDefaultUrls','testConnection','refreshPrices','maybeAutoRefreshPricesOnOpen'];
+      const available = { loadAll, loadDashboard, loadArticles, loadArticleManager, renderWatchlistCoverage, renderLatestArticle, lookupWatchlistRow, saveWatchlist, saveLocalSettings, restoreDefaultUrls, testConnection, refreshPrices, maybeAutoRefreshPricesOnOpen };
       const missingFns = requiredFns.filter(name => typeof available[name] !== 'function');
       const result = { ok: missingIds.length === 0 && missingFns.length === 0, missingIds, missingFns, version: APP_VERSION };
       if (!result.ok) reportRuntimeError(`Frontend self-check failed\nMissing IDs: ${missingIds.join(', ') || '-'}\nMissing functions: ${missingFns.join(', ') || '-'}`);
@@ -388,11 +397,12 @@
     window.AlphaWeekSelfCheck = runFrontendSelfCheck;
     document.addEventListener('DOMContentLoaded', init);
 
-    function init() { if ($('#app-version')) $('#app-version').textContent = APP_VERSION; applyTheme(); bindEvents(); hydrateSettings(); const check = runFrontendSelfCheck(); if (check.ok) { const box = $('#runtime-error'); if (box) { box.classList.remove('show'); box.textContent = ''; } } loadAll(); }
+    function init() { if ($('#app-version')) $('#app-version').textContent = APP_VERSION; applyTheme(); bindEvents(); hydrateSettings(); const check = runFrontendSelfCheck(); if (check.ok) { const box = $('#runtime-error'); if (box) { box.classList.remove('show'); box.textContent = ''; } } loadAll().then(() => maybeAutoRefreshPricesOnOpen()); }
     function safeBind(selector, event, handler) { const el = $(selector); if (el) el.addEventListener(event, handler); }
     function bindEvents() {
       $$('[data-tab]').forEach(btn => btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
       safeBind('#refresh-btn', 'click', loadAll);
+      safeBind('#refresh-prices-btn', 'click', () => refreshPrices({ source:'manual-header', force:true }));
       safeBind('#theme-btn', 'click', cycleTheme);
       safeBind('#theme-select', 'change', () => { state.config.theme = $('#theme-select').value; saveConfigLocal(); applyTheme(); });
       safeBind('#copy-table-btn', 'click', copyMarketTable);
@@ -415,6 +425,7 @@
       safeBind('#save-settings-btn', 'click', saveLocalSettings);
       safeBind('#restore-default-urls-btn', 'click', restoreDefaultUrls);
       safeBind('#test-connection-btn', 'click', testConnection);
+      safeBind('#refresh-prices-control-btn', 'click', () => refreshPrices({ source:'manual-control', force:true }));
       safeBind('#reset-template-btn', 'click', resetTemplates);
       safeBind('#save-config-btn', 'click', saveTemplatesToSheets);
       safeBind('#save-watchlist-btn', 'click', saveWatchlist);
@@ -518,6 +529,8 @@
       notes.push(note('Apps Script Dashboard', rows.length ? 'มีข้อมูลล่าสุด' : 'ยังไม่พบ rows', rows.length ? 'good' : 'warn'));
       if (missingSet) notes.push(note('SET Index', 'Yahoo ไม่มี bar ในสัปดาห์ล่าสุด — ไม่ block งานเขียน', 'warn'));
       notes.push(note('Security', 'PIN ไม่ถูกฝังในไฟล์ เก็บเฉพาะเครื่องนี้', 'good'));
+      const lastRefresh = state.config.lastPriceRefreshAt ? formatDateTime(state.config.lastPriceRefreshAt) : 'ยังไม่เคย refresh price จากหน้าเว็บนี้';
+      notes.push(note('Price Refresh', lastRefresh, state.priceRefresh.running ? 'warn' : 'good'));
       $('#system-notes').innerHTML = notes.join('');
     }
     function normalizeStockKey(symbol) {
@@ -700,8 +713,11 @@
       try {
         state.config.appsScriptUrl = cleanUrl($('#apps-script-url') && $('#apps-script-url').value, DEFAULT_APPS_SCRIPT_URL);
         state.config.healthUrl = cleanUrl($('#health-url') && $('#health-url').value, DEFAULT_HEALTH_URL);
+        state.config.fetchWeeklyUrl = cleanUrl($('#fetch-weekly-url') && $('#fetch-weekly-url').value, DEFAULT_FETCH_WEEKLY_URL);
         state.config.pin = ($('#local-pin') && $('#local-pin').value) || '';
         state.config.theme = ($('#theme-select') && $('#theme-select').value) || 'day';
+        state.config.autoRefreshPricesOnOpen = (($('#auto-refresh-prices') && $('#auto-refresh-prices').value) || 'Y') === 'Y';
+        state.config.priceRefreshCooldownMinutes = Number(($('#price-refresh-cooldown') && $('#price-refresh-cooldown').value) || 15);
         // Keep templates, but do not let template preview errors break settings buttons.
         try { syncTemplatesFromEditor(false); } catch (e) { console.warn('template sync skipped', e); }
         state.config = normalizeConfig(state.config);
@@ -717,8 +733,92 @@
       if (event && event.preventDefault) event.preventDefault();
       state.config.appsScriptUrl = DEFAULT_APPS_SCRIPT_URL;
       state.config.healthUrl = DEFAULT_HEALTH_URL;
+      state.config.fetchWeeklyUrl = DEFAULT_FETCH_WEEKLY_URL;
       saveConfigLocal(); hydrateSettings();
-      if ($('#settings-status')) $('#settings-status').innerHTML = alertHtml('good','กู้คืน Apps Script URL และ Health URL เป็นค่าเริ่มต้นแล้ว');
+      if ($('#settings-status')) $('#settings-status').innerHTML = alertHtml('good','กู้คืน Apps Script URL, Health URL และ Fetch Weekly URL เป็นค่าเริ่มต้นแล้ว');
+    }
+    function priceRefreshUrl() {
+      return cleanUrl(state.config.fetchWeeklyUrl || DEFAULT_FETCH_WEEKLY_URL, DEFAULT_FETCH_WEEKLY_URL);
+    }
+    function formatDateTime(value) {
+      if (!value) return '';
+      const d = new Date(value);
+      if (Number.isNaN(d.getTime())) return String(value);
+      return d.toLocaleString('th-TH', { dateStyle:'medium', timeStyle:'short' });
+    }
+    function priceRefreshAgeMinutes() {
+      if (!state.config.lastPriceRefreshAt) return Infinity;
+      const t = Date.parse(state.config.lastPriceRefreshAt);
+      if (!Number.isFinite(t)) return Infinity;
+      return (Date.now() - t) / 60000;
+    }
+    function shouldAutoRefreshPrices() {
+      if (!state.config.autoRefreshPricesOnOpen) return false;
+      if (!state.config.pin) return false;
+      const cooldown = Number(state.config.priceRefreshCooldownMinutes || 15);
+      return priceRefreshAgeMinutes() >= cooldown;
+    }
+    async function maybeAutoRefreshPricesOnOpen() {
+      if (!shouldAutoRefreshPrices()) {
+        renderPriceRefreshStatus();
+        return;
+      }
+      await refreshPrices({ source:'auto-open', force:false, silent:true });
+    }
+    function renderPriceRefreshStatus(message, kind) {
+      const box = $('#price-refresh-status');
+      if (!box) return;
+      const last = state.config.lastPriceRefreshAt ? formatDateTime(state.config.lastPriceRefreshAt) : 'ยังไม่เคย refresh price จากหน้าเว็บนี้';
+      const running = state.priceRefresh && state.priceRefresh.running;
+      const status = message || (running ? 'กำลัง refresh ราคาหุ้น...' : `Last price refresh: ${last}`);
+      box.innerHTML = alertHtml(kind || (running ? 'warn' : ''), status);
+    }
+    async function refreshPrices(options = {}) {
+      const source = options.source || 'manual';
+      if (state.priceRefresh.running) {
+        renderPriceRefreshStatus('กำลัง refresh ราคาหุ้นอยู่แล้ว', 'warn');
+        return false;
+      }
+      saveLocalSettings();
+      if (!state.config.pin) {
+        renderPriceRefreshStatus('ต้องใส่ PIN ก่อนจึงจะสั่ง Refresh Prices ได้', 'bad');
+        switchTab('control');
+        return false;
+      }
+      if (!options.force && source === 'auto-open' && !shouldAutoRefreshPrices()) {
+        renderPriceRefreshStatus();
+        return false;
+      }
+      state.priceRefresh.running = true;
+      renderPriceRefreshStatus(source === 'auto-open' ? 'เปิดเว็บแล้วกำลัง refresh ราคาหุ้นอัตโนมัติ...' : 'กำลัง refresh ราคาหุ้นจาก Vercel API...', 'warn');
+      setHealth('loading', 'กำลัง refresh ราคาหุ้น...');
+      try {
+        const resp = await fetch(priceRefreshUrl(), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-AlphaWeek-Pin': state.config.pin },
+          body: JSON.stringify({ pin: state.config.pin, source }),
+          cache: 'no-store',
+          redirect: 'follow'
+        });
+        const text = await resp.text();
+        let json;
+        try { json = JSON.parse(text); } catch (err) { throw new Error(`non-JSON response (${resp.status}): ${text.slice(0,120)}`); }
+        if (!resp.ok || !json.ok) throw new Error(json.error || `HTTP ${resp.status}`);
+        state.priceRefresh.lastResult = json;
+        state.config.lastPriceRefreshAt = json.refreshed_at || new Date().toISOString();
+        saveConfigLocal();
+        renderPriceRefreshStatus(`Refresh Prices สำเร็จ: ${json.mode || 'weekly'} · ${formatDateTime(state.config.lastPriceRefreshAt)}`, 'good');
+        await loadAll();
+        return true;
+      } catch (err) {
+        renderPriceRefreshStatus(`Refresh Prices ไม่สำเร็จ: ${escapeHTML(err.message)}`, 'bad');
+        setHealth('bad', `Price refresh error: ${err.message}`);
+        return false;
+      } finally {
+        state.priceRefresh.running = false;
+        renderPriceRefreshStatus();
+        renderBrief();
+      }
     }
     async function testConnection(event) {
       if (event && event.preventDefault) event.preventDefault();
@@ -804,7 +904,7 @@
     }
     function collectWatchlistFromManager(onlyValid = true) { return $$('#watchlist-manager .wl-row').map(row => ({ symbol: row.querySelector('.wl-symbol').value.trim(), name_th: row.querySelector('.wl-name').value.trim(), sector: row.querySelector('.wl-sector').value.trim(), note: row.querySelector('.wl-note').value.trim(), active: row.querySelector('.wl-active').value || 'Y' })).filter(x => !onlyValid || x.symbol); }
     function syncWatchlistTextFromManager() { const items = collectWatchlistFromManager(false); $('#watchlist-editor').value = items.map(w => [w.symbol, w.name_th, w.sector, w.note, w.active].map(v => v || '').join(' | ')).join('\n'); }
-    function hydrateSettings() { $('#apps-script-url').value = state.config.appsScriptUrl; $('#health-url').value = state.config.healthUrl; $('#local-pin').value = state.config.pin || ''; $('#theme-select').value = state.config.theme || 'day'; hydrateTemplateEditors(); }
+    function hydrateSettings() { $('#apps-script-url').value = state.config.appsScriptUrl; $('#health-url').value = state.config.healthUrl; if ($('#fetch-weekly-url')) $('#fetch-weekly-url').value = state.config.fetchWeeklyUrl || DEFAULT_FETCH_WEEKLY_URL; $('#local-pin').value = state.config.pin || ''; $('#theme-select').value = state.config.theme || 'day'; if ($('#auto-refresh-prices')) $('#auto-refresh-prices').value = state.config.autoRefreshPricesOnOpen ? 'Y' : 'N'; if ($('#price-refresh-cooldown')) $('#price-refresh-cooldown').value = String(state.config.priceRefreshCooldownMinutes ?? 15); hydrateTemplateEditors(); renderPriceRefreshStatus(); }
     function hydrateTemplateEditors() { const t = state.config.templates || defaultTemplates(); $('#template-weekly').value = t.weekly || ''; $('#template-cautious').value = t.cautious || ''; $('#template-short').value = t.short || ''; }
     function hydrateWatchlistEditor() { const wl = (state.dashboard && state.dashboard.watchlist) || []; $('#watchlist-editor').value = wl.map(w => [w.symbol, w.name_th, w.sector, w.note, w.active].map(v => v || '').join(' | ')).join('\n'); renderWatchlistManager(parseWatchlist($('#watchlist-editor').value)); }
     function syncTemplatesFromEditor(shouldSave = true) { state.config.templates = { weekly: $('#template-weekly').value, cautious: $('#template-cautious').value, short: $('#template-short').value }; if (shouldSave) saveConfigLocal(); renderPromptPreview(); }
@@ -844,9 +944,13 @@
       const c = Object.assign({}, DEFAULT_CONFIG, config || {});
       c.appsScriptUrl = cleanUrl(c.appsScriptUrl, DEFAULT_APPS_SCRIPT_URL);
       c.healthUrl = cleanUrl(c.healthUrl, DEFAULT_HEALTH_URL);
+      c.fetchWeeklyUrl = cleanUrl(c.fetchWeeklyUrl, DEFAULT_FETCH_WEEKLY_URL);
       if (!['day','auto','night'].includes(c.theme)) c.theme = 'day';
+      c.autoRefreshPricesOnOpen = c.autoRefreshPricesOnOpen !== false && c.autoRefreshPricesOnOpen !== 'N';
+      c.priceRefreshCooldownMinutes = Math.max(0, Math.min(1440, Number(c.priceRefreshCooldownMinutes || 15)));
       c.templates = Object.assign({}, defaultTemplates(), c.templates || {});
       if (typeof c.pin !== 'string') c.pin = '';
+      if (typeof c.lastPriceRefreshAt !== 'string') c.lastPriceRefreshAt = '';
       return c;
     }
     function cleanUrl(value, fallback) {
