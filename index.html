@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>AlphaWeek — Weekly Thai Equity Desk</title>
-  <meta name="description" content="AlphaWeek dashboard and writing workflow for weekly Thai equity review." />
+  <title>AlphaWeek — Weekly Thai Equity Brief</title>
+  <meta name="description" content="AlphaWeek weekly Thai equity brief and AI writing desk." />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -14,581 +14,302 @@
       --rose: #DB5F8E;
       --mauve: #B87FB6;
       --rose-dark: #B13B6B;
-      --ink: #2B2B2B;
-      --muted: #6F6470;
-      --line: rgba(43, 43, 43, 0.12);
-      --paper: #FFF8FB;
-      --paper-2: #FDF9C8;
-      --card: rgba(255, 255, 255, 0.82);
+      --ink: #252025;
+      --muted: #70626E;
+      --soft: #A08B99;
+      --line: rgba(43, 43, 43, 0.13);
+      --paper: #FFF9F5;
+      --paper-2: #FFFDF0;
+      --card: rgba(255,255,255,0.78);
+      --cream: #FDF9C8;
       --green: #0E9F6E;
       --red: #E02D3C;
-      --yellow: #B98500;
-      --shadow: 0 18px 60px rgba(184, 127, 182, 0.18);
-      --radius: 22px;
+      --amber: #B98500;
+      --shadow: 0 16px 50px rgba(184, 127, 182, 0.14);
+      --radius: 24px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
     }
-
     * { box-sizing: border-box; }
     html { scroll-behavior: smooth; }
     body {
       margin: 0;
       font-family: "Sarabun", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       color: var(--ink);
-      background:
-        radial-gradient(circle at top left, rgba(219, 95, 142, 0.18), transparent 34rem),
-        radial-gradient(circle at top right, rgba(184, 127, 182, 0.20), transparent 32rem),
-        linear-gradient(180deg, #FFF8FB 0%, #FFFDF3 62%, #FFF8FB 100%);
       min-height: 100vh;
+      background:
+        radial-gradient(circle at top left, rgba(219,95,142,.15), transparent 30rem),
+        radial-gradient(circle at top right, rgba(184,127,182,.16), transparent 28rem),
+        linear-gradient(180deg, #FFF9F5 0%, #FFFDF0 55%, #FFF8FB 100%);
     }
-
     body.day { color-scheme: light; }
-
     body.night {
-      --ink: #F8EDF4;
-      --muted: #D3BCCC;
-      --line: rgba(255, 255, 255, 0.16);
-      --paper: #1C1520;
-      --paper-2: #2B2230;
-      --card: rgba(36, 28, 42, 0.82);
-      --shadow: 0 18px 70px rgba(0, 0, 0, 0.34);
+      --ink: #F8EEF5;
+      --muted: #D6C2D1;
+      --soft: #BDA7B7;
+      --line: rgba(255,255,255,.15);
+      --paper: #19131D;
+      --paper-2: #241A2A;
+      --card: rgba(35,27,41,.78);
+      --cream: #372B2A;
+      --shadow: 0 16px 60px rgba(0,0,0,.35);
       color-scheme: dark;
       background:
-        radial-gradient(circle at top left, rgba(219, 95, 142, 0.18), transparent 34rem),
-        radial-gradient(circle at top right, rgba(184, 127, 182, 0.18), transparent 32rem),
-        linear-gradient(180deg, #16101A 0%, #201827 62%, #16101A 100%);
+        radial-gradient(circle at top left, rgba(219,95,142,.16), transparent 30rem),
+        radial-gradient(circle at top right, rgba(184,127,182,.14), transparent 28rem),
+        linear-gradient(180deg, #151019 0%, #201724 60%, #151019 100%);
     }
-
-    a { color: var(--rose-dark); text-decoration: none; }
-    body.night a { color: #FF9ABF; }
     button, input, textarea, select { font: inherit; }
     button { cursor: pointer; }
-
-    .app { width: min(1180px, calc(100% - 28px)); margin: 0 auto; padding: 24px 0 96px; }
-
-    .topline {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
-      padding: 10px 0;
-      font-size: 0.94rem;
-      color: var(--muted);
-    }
-
-    .status-dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      background: var(--yellow);
-      box-shadow: 0 0 0 4px rgba(185, 133, 0, 0.12);
-      display: inline-block;
-      vertical-align: -1px;
-      margin-right: 6px;
-    }
-    .status-dot.ok { background: var(--green); box-shadow: 0 0 0 4px rgba(14, 159, 110, 0.12); }
-    .status-dot.bad { background: var(--red); box-shadow: 0 0 0 4px rgba(224, 45, 60, 0.12); }
-
-    .masthead {
-      position: relative;
-      overflow: hidden;
-      border: 1px solid var(--line);
-      border-radius: calc(var(--radius) + 8px);
-      background:
-        linear-gradient(135deg, rgba(255, 255, 255, 0.88), rgba(255, 248, 251, 0.70)),
-        repeating-linear-gradient(90deg, rgba(219, 95, 142, 0.08) 0 1px, transparent 1px 62px);
-      box-shadow: var(--shadow);
-      padding: 28px;
-    }
-    body.night .masthead { background: linear-gradient(135deg, rgba(44, 34, 50, 0.92), rgba(26, 20, 31, 0.72)); }
-    .masthead::before {
-      content: "";
-      position: absolute;
-      width: 280px;
-      height: 280px;
-      border-radius: 999px;
-      background: rgba(219, 95, 142, 0.16);
-      top: -110px;
-      right: -90px;
-    }
-    .masthead-inner { position: relative; z-index: 1; display: grid; grid-template-columns: 1.4fr 0.9fr; gap: 22px; align-items: end; }
-    .eyebrow { display: flex; gap: 10px; align-items: center; color: var(--muted); font-weight: 600; letter-spacing: 0.02em; }
-    .brand {
-      margin: 8px 0 4px;
-      font-size: clamp(2.8rem, 10vw, 6.6rem);
-      line-height: 0.88;
-      letter-spacing: -0.08em;
-      font-weight: 800;
-      color: var(--ink);
-    }
-    .tagline { margin: 0; font-size: clamp(1rem, 2vw, 1.25rem); color: var(--muted); max-width: 760px; }
-    .brief-card {
-      border: 1px solid var(--line);
-      background: var(--card);
-      border-radius: var(--radius);
-      padding: 18px;
-      backdrop-filter: blur(12px);
-    }
-    .brief-card strong { display: block; font-size: 1.5rem; margin-top: 4px; }
-
-    .nav-wrap {
-      position: sticky;
-      top: 0;
-      z-index: 30;
-      padding: 14px 0;
-      backdrop-filter: blur(16px);
-    }
-    .nav {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      border: 1px solid var(--line);
-      background: rgba(255, 255, 255, 0.74);
-      border-radius: 999px;
-      padding: 8px;
-      box-shadow: 0 12px 40px rgba(43, 43, 43, 0.06);
-    }
-    body.night .nav { background: rgba(28, 21, 32, 0.78); }
-    .nav button, .pill-btn {
-      border: 0;
-      background: transparent;
-      color: var(--muted);
-      padding: 10px 14px;
-      border-radius: 999px;
-      font-weight: 700;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      transition: all .18s ease;
-    }
-    .nav button.active, .pill-btn.primary {
-      background: linear-gradient(135deg, var(--rose), var(--mauve));
-      color: white;
-      box-shadow: 0 10px 24px rgba(219, 95, 142, 0.24);
-    }
-    .pill-btn {
-      border: 1px solid var(--line);
-      background: var(--card);
-      color: var(--ink);
-    }
-    .pill-btn.danger { color: var(--red); }
-
-    .grid { display: grid; gap: 16px; }
-    .grid.cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-    .grid.cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-    .grid.cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-
-    .panel, .card {
-      border: 1px solid var(--line);
-      background: var(--card);
-      border-radius: var(--radius);
-      box-shadow: 0 10px 32px rgba(43, 43, 43, 0.05);
-      backdrop-filter: blur(12px);
-    }
-    .panel { padding: 20px; }
-    .card { padding: 16px; }
-    .section-title { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 0 0 14px; }
-    .section-title h2, .section-title h3 { margin: 0; line-height: 1.1; }
-    .section-title span { color: var(--muted); font-size: 0.92rem; }
-
-    .kpi .label { color: var(--muted); font-weight: 600; font-size: 0.92rem; }
-    .kpi .value { font-weight: 800; font-size: clamp(1.45rem, 4vw, 2.1rem); margin-top: 4px; letter-spacing: -0.03em; }
-    .kpi .note { color: var(--muted); font-size: 0.9rem; margin-top: 4px; }
-
-    .table-wrap { overflow-x: auto; border-radius: 18px; border: 1px solid var(--line); }
-    table { border-collapse: collapse; width: 100%; min-width: 760px; background: rgba(255,255,255,0.36); }
-    body.night table { background: rgba(0,0,0,0.12); }
-    th, td { padding: 11px 12px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
-    th:first-child, td:first-child, th:nth-child(2), td:nth-child(2) { text-align: left; }
-    th { color: var(--muted); font-size: 0.86rem; font-weight: 800; background: rgba(219, 95, 142, 0.08); }
-    tr:hover td { background: rgba(219, 95, 142, 0.06); }
-
-    .symbol-card { display: grid; gap: 10px; }
-    .symbol-top { display: flex; justify-content: space-between; align-items: start; gap: 10px; }
-    .symbol { font-size: 1.4rem; font-weight: 800; letter-spacing: -0.03em; }
-    .thai-name { color: var(--muted); font-size: 0.9rem; }
-    .price { font-weight: 800; font-size: 1.25rem; }
-    .metric-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; font-size: 0.88rem; color: var(--muted); }
-    .mini-metric { border: 1px solid var(--line); border-radius: 14px; padding: 8px; background: rgba(255,255,255,0.34); }
-    body.night .mini-metric { background: rgba(255,255,255,0.04); }
-    .pos { color: var(--green); font-weight: 800; }
-    .neg { color: var(--red); font-weight: 800; }
-    .flat { color: var(--muted); font-weight: 800; }
-
-    .news-list, .article-list { display: grid; gap: 12px; }
-    .news-item, .article-item { border: 1px solid var(--line); border-radius: 18px; padding: 14px; background: rgba(255,255,255,0.38); }
-    body.night .news-item, body.night .article-item { background: rgba(255,255,255,0.04); }
-    .news-item h4, .article-item h3 { margin: 0 0 6px; line-height: 1.28; }
-    .meta { color: var(--muted); font-size: 0.88rem; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-    .chip { border: 1px solid var(--line); border-radius: 999px; padding: 3px 9px; font-size: 0.78rem; color: var(--muted); background: rgba(255,255,255,0.38); }
-
-    .form-grid { display: grid; gap: 12px; }
-    label { font-weight: 800; display: block; margin-bottom: 6px; }
-    input, textarea, select {
-      width: 100%;
-      border: 1px solid var(--line);
-      border-radius: 16px;
-      padding: 12px 13px;
-      background: rgba(255,255,255,0.72);
-      color: var(--ink);
-      outline: none;
-    }
-    body.night input, body.night textarea, body.night select { background: rgba(255,255,255,0.06); }
-    textarea { min-height: 130px; resize: vertical; }
-    .small { font-size: 0.9rem; color: var(--muted); }
-
-    .tab { display: none; animation: fade .18s ease; }
-    .tab.active { display: grid; gap: 16px; }
-    @keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
-
-    .copy-preview {
-      white-space: pre-wrap;
-      max-height: 420px;
-      overflow: auto;
-      border: 1px dashed rgba(219, 95, 142, 0.46);
-      background: rgba(219, 95, 142, 0.05);
-      border-radius: 18px;
-      padding: 14px;
-      font-size: 0.92rem;
-      line-height: 1.65;
-    }
-
-    .alert {
-      border: 1px solid rgba(185, 133, 0, 0.28);
-      background: rgba(253, 249, 200, 0.62);
-      color: #725300;
-      border-radius: 18px;
-      padding: 12px 14px;
-    }
-    body.night .alert { background: rgba(185, 133, 0, 0.12); color: #FFD978; }
-    .alert.good { border-color: rgba(14, 159, 110, 0.28); background: rgba(14, 159, 110, 0.10); color: var(--green); }
-    .alert.bad { border-color: rgba(224, 45, 60, 0.28); background: rgba(224, 45, 60, 0.10); color: var(--red); }
-
-    .markdown-body { line-height: 1.85; }
-    .markdown-body h1, .markdown-body h2, .markdown-body h3 { line-height: 1.25; }
-    .markdown-body table { min-width: 0; }
-    .markdown-body th, .markdown-body td { text-align: left; white-space: normal; }
-
-    .tv-shell { overflow: hidden; min-height: 74px; }
-
-    .mobile-nav {
-      display: none;
-      position: fixed;
-      left: 10px;
-      right: 10px;
-      bottom: 10px;
-      z-index: 50;
-      border: 1px solid var(--line);
-      background: rgba(255,255,255,0.88);
-      backdrop-filter: blur(18px);
-      border-radius: 22px;
-      box-shadow: var(--shadow);
-      padding: 8px;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 6px;
-    }
-    body.night .mobile-nav { background: rgba(28, 21, 32, 0.88); }
-    .mobile-nav button {
-      border: 0;
-      background: transparent;
-      color: var(--muted);
-      border-radius: 16px;
-      padding: 8px 4px;
-      display: grid;
-      place-items: center;
-      gap: 2px;
-      font-size: 0.72rem;
-      font-weight: 700;
-    }
-    .mobile-nav button i { font-size: 1.2rem; }
-    .mobile-nav button.active { background: linear-gradient(135deg, var(--rose), var(--mauve)); color: white; }
-
-    @media (max-width: 920px) {
-      .masthead-inner { grid-template-columns: 1fr; }
-      .grid.cols-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .grid.cols-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .grid.cols-2 { grid-template-columns: 1fr; }
-    }
-    @media (max-width: 640px) {
-      .app { width: min(100% - 18px, 1180px); padding-top: 12px; }
-      .topline { align-items: flex-start; flex-direction: column; }
-      .masthead { padding: 20px; border-radius: 24px; }
-      .brand { font-size: clamp(2.7rem, 18vw, 5rem); }
-      .nav-wrap { display: none; }
-      .mobile-nav { display: grid; }
-      .grid.cols-4, .grid.cols-3 { grid-template-columns: 1fr; }
-      .section-title { align-items: flex-start; flex-direction: column; }
-      .metric-row { grid-template-columns: 1fr; }
-      table { min-width: 720px; }
-    }
-
-    /* Auto mode follows the device. Day mode remains light even when the device is dark. */
-    @media (prefers-color-scheme: dark) {
-      body.auto-theme { color-scheme: dark; }
-      body.auto-theme:not(.day) {
-        --ink: #F8EDF4;
-        --muted: #D3BCCC;
-        --line: rgba(255, 255, 255, 0.16);
-        --paper: #1C1520;
-        --paper-2: #2B2230;
-        --card: rgba(36, 28, 42, 0.82);
-        --shadow: 0 18px 70px rgba(0, 0, 0, 0.34);
-        background:
-          radial-gradient(circle at top left, rgba(219, 95, 142, 0.18), transparent 34rem),
-          radial-gradient(circle at top right, rgba(184, 127, 182, 0.18), transparent 32rem),
-          linear-gradient(180deg, #16101A 0%, #201827 62%, #16101A 100%);
-      }
-    }
+    a { color: var(--rose-dark); text-decoration: none; }
+    body.night a { color: #FFA0C2; }
+    .app { width: min(1200px, calc(100% - 28px)); margin: 0 auto; padding: 22px 0 96px; }
+    .utility-bar { display:flex; justify-content:space-between; align-items:center; gap:12px; color:var(--muted); font-size:.94rem; margin-bottom:12px; }
+    .health-inline { display:flex; align-items:center; gap:8px; min-width:0; }
+    .dot { width:10px; height:10px; border-radius:999px; background:var(--amber); box-shadow:0 0 0 4px rgba(185,133,0,.12); flex:0 0 auto; }
+    .dot.ok { background:var(--green); box-shadow:0 0 0 4px rgba(14,159,110,.12); }
+    .dot.bad { background:var(--red); box-shadow:0 0 0 4px rgba(224,45,60,.12); }
+    .masthead { border:1px solid var(--line); border-radius:32px; background:linear-gradient(135deg, rgba(255,255,255,.86), rgba(253,249,200,.35)); box-shadow:var(--shadow); overflow:hidden; position:relative; padding:26px; }
+    body.night .masthead { background:linear-gradient(135deg, rgba(40,31,47,.92), rgba(26,20,31,.72)); }
+    .masthead:before { content:""; position:absolute; inset:0; background:repeating-linear-gradient(90deg, rgba(219,95,142,.08) 0 1px, transparent 1px 68px); pointer-events:none; }
+    .masthead-inner { position:relative; z-index:1; display:grid; grid-template-columns:minmax(0,1.35fr) minmax(280px,.75fr); gap:24px; align-items:end; }
+    .eyebrow { color:var(--muted); display:flex; gap:10px; align-items:center; font-weight:700; letter-spacing:.02em; }
+    .brand { font-weight:800; letter-spacing:-.075em; line-height:.86; font-size:clamp(3rem, 10vw, 6.7rem); margin:8px 0 8px; }
+    .tagline { color:var(--muted); margin:0; font-size:clamp(1rem, 2vw, 1.2rem); max-width:760px; }
+    .edition-card { border:1px solid var(--line); border-radius:24px; background:var(--card); padding:18px; backdrop-filter:blur(14px); display:grid; gap:8px; }
+    .edition-card .label { color:var(--muted); font-weight:700; }
+    .edition-card .week { font-size:1.55rem; font-weight:800; }
+    .readiness { display:inline-flex; align-items:center; gap:8px; width:max-content; border:1px solid var(--line); border-radius:999px; padding:8px 12px; background:rgba(255,255,255,.45); font-weight:800; }
+    body.night .readiness { background:rgba(255,255,255,.05); }
+    .nav-wrap { position:sticky; top:0; z-index:40; padding:12px 0; backdrop-filter:blur(16px); }
+    .nav { display:flex; flex-wrap:wrap; gap:8px; border:1px solid var(--line); background:rgba(255,255,255,.75); box-shadow:0 12px 38px rgba(43,43,43,.06); border-radius:999px; padding:8px; }
+    body.night .nav { background:rgba(25,19,29,.78); }
+    .nav button, .btn { border:0; background:transparent; color:var(--muted); border-radius:999px; padding:10px 14px; font-weight:800; display:inline-flex; align-items:center; justify-content:center; gap:8px; transition:.18s ease; }
+    .nav button.active, .btn.primary { background:linear-gradient(135deg, var(--rose), var(--mauve)); color:#fff; box-shadow:0 10px 24px rgba(219,95,142,.25); }
+    .btn { border:1px solid var(--line); background:var(--card); color:var(--ink); }
+    .btn.ghost { background:transparent; }
+    .btn.warn { color:var(--amber); }
+    .btn.danger { color:var(--red); }
+    .tab { display:none; }
+    .tab.active { display:block; animation:rise .18s ease both; }
+    @keyframes rise { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+    .section { margin-top:18px; }
+    .grid { display:grid; gap:16px; }
+    .cols-2 { grid-template-columns:1fr 1fr; }
+    .cols-3 { grid-template-columns:repeat(3,1fr); }
+    .cols-4 { grid-template-columns:repeat(4,1fr); }
+    .layout-main { display:grid; grid-template-columns:minmax(0,1.35fr) minmax(300px,.75fr); gap:16px; }
+    .panel, .paper-card { border:1px solid var(--line); border-radius:var(--radius); background:var(--card); box-shadow:0 10px 34px rgba(43,43,43,.05); backdrop-filter:blur(12px); }
+    .panel { padding:20px; }
+    .paper-card { padding:16px; }
+    .editorial-lead { padding:28px; background:linear-gradient(135deg, rgba(253,249,200,.62), rgba(255,255,255,.72)); }
+    body.night .editorial-lead { background:linear-gradient(135deg, rgba(55,43,42,.5), rgba(35,27,41,.76)); }
+    .section-title { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; margin:0 0 14px; }
+    h1,h2,h3,h4,p { overflow-wrap:anywhere; }
+    .section-title h2, .section-title h3 { margin:0; line-height:1.1; }
+    .section-title span, .muted { color:var(--muted); }
+    .lead-title { font-size:clamp(1.8rem, 4vw, 3.2rem); line-height:.98; letter-spacing:-.045em; margin:8px 0 12px; }
+    .lead-copy { font-size:1.08rem; color:var(--muted); line-height:1.75; margin:0; }
+    .stat-strip { display:flex; flex-wrap:wrap; gap:8px; margin-top:16px; }
+    .badge { display:inline-flex; align-items:center; gap:6px; border:1px solid var(--line); border-radius:999px; padding:7px 10px; color:var(--muted); background:rgba(255,255,255,.38); font-weight:700; }
+    body.night .badge { background:rgba(255,255,255,.04); }
+    .badge.good { color:var(--green); } .badge.bad { color:var(--red); } .badge.warn { color:var(--amber); }
+    .signal-list, .news-list, .article-list { display:grid; gap:12px; }
+    .signal, .news-item, .article-item, .step-card { border:1px solid var(--line); border-radius:18px; background:rgba(255,255,255,.36); padding:14px; }
+    body.night .signal, body.night .news-item, body.night .article-item, body.night .step-card { background:rgba(255,255,255,.04); }
+    .signal-top { display:flex; justify-content:space-between; gap:10px; align-items:start; }
+    .symbol { font-weight:800; font-size:1.35rem; letter-spacing:-.03em; }
+    .meta { color:var(--muted); font-size:.9rem; display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+    .pos { color:var(--green); font-weight:800; } .neg { color:var(--red); font-weight:800; } .flat { color:var(--muted); font-weight:800; }
+    .table-wrap { overflow:auto; border:1px solid var(--line); border-radius:18px; }
+    table { border-collapse:collapse; width:100%; min-width:780px; background:rgba(255,255,255,.32); }
+    body.night table { background:rgba(0,0,0,.12); }
+    th, td { padding:11px 12px; border-bottom:1px solid var(--line); text-align:right; white-space:nowrap; }
+    th:first-child, td:first-child, th:nth-child(2), td:nth-child(2) { text-align:left; }
+    th { background:rgba(219,95,142,.08); color:var(--muted); font-weight:800; font-size:.86rem; }
+    .writing-desk { background:linear-gradient(135deg, rgba(219,95,142,.12), rgba(184,127,182,.11)); }
+    .step-row { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:16px; }
+    .step-card strong { display:block; }
+    textarea, input, select { width:100%; border:1px solid var(--line); background:rgba(255,255,255,.58); color:var(--ink); border-radius:16px; padding:12px 13px; outline:none; }
+    body.night textarea, body.night input, body.night select { background:rgba(255,255,255,.06); }
+    textarea { min-height:150px; resize:vertical; line-height:1.65; }
+    label { display:grid; gap:6px; font-weight:800; color:var(--muted); font-size:.95rem; }
+    .form-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:12px; }
+    .full { grid-column:1 / -1; }
+    .prompt-box, pre.preview { white-space:pre-wrap; overflow:auto; max-height:360px; padding:14px; border:1px solid var(--line); border-radius:18px; background:rgba(255,255,255,.38); color:var(--ink); line-height:1.65; font-family:var(--mono); font-size:.88rem; }
+    body.night .prompt-box, body.night pre.preview { background:rgba(0,0,0,.16); }
+    .alert { border:1px solid var(--line); border-radius:16px; padding:12px 14px; color:var(--muted); background:rgba(255,255,255,.42); }
+    .alert.good { color:var(--green); border-color:rgba(14,159,110,.28); background:rgba(14,159,110,.08); }
+    .alert.bad { color:var(--red); border-color:rgba(224,45,60,.28); background:rgba(224,45,60,.08); }
+    .alert.warn { color:var(--amber); border-color:rgba(185,133,0,.28); background:rgba(185,133,0,.08); }
+    .article-body { line-height:1.75; color:var(--ink); }
+    .article-body h1, .article-body h2, .article-body h3 { line-height:1.18; }
+    .control-section { display:grid; gap:12px; }
+    .connection-result { display:grid; gap:8px; }
+    .mobile-nav { display:none; position:fixed; left:12px; right:12px; bottom:12px; z-index:60; border:1px solid var(--line); border-radius:24px; background:rgba(255,255,255,.82); box-shadow:0 12px 40px rgba(0,0,0,.12); backdrop-filter:blur(16px); padding:8px; grid-template-columns:repeat(4,1fr); }
+    body.night .mobile-nav { background:rgba(25,19,29,.85); }
+    .mobile-nav button { border:0; background:transparent; color:var(--muted); padding:8px 4px; border-radius:16px; display:grid; gap:2px; justify-items:center; font-size:.78rem; font-weight:800; }
+    .mobile-nav button.active { background:linear-gradient(135deg, var(--rose), var(--mauve)); color:#fff; }
+    .hide { display:none !important; }
+    @media (max-width: 940px) { .masthead-inner, .layout-main, .cols-2, .cols-3, .cols-4 { grid-template-columns:1fr; } .step-row { grid-template-columns:1fr 1fr; } }
+    @media (max-width: 680px) { .app { width:min(100% - 18px, 1200px); padding-top:12px; } .masthead { padding:20px; border-radius:26px; } .utility-bar { align-items:flex-start; flex-direction:column; } .nav-wrap { display:none; } .mobile-nav { display:grid; } .form-grid, .step-row { grid-template-columns:1fr; } .panel, .paper-card { padding:15px; border-radius:20px; } .brand { font-size:3.3rem; } }
   </style>
 </head>
 <body class="day">
   <div class="app">
-    <div class="topline">
-      <div><span id="health-dot" class="status-dot"></span><span id="health-text">กำลังเชื่อมต่อ AlphaWeek...</span></div>
-      <div class="small">ข้อมูลเพื่อการทบทวนส่วนตัว ไม่ใช่คำแนะนำการลงทุน</div>
-    </div>
-
-    <header class="masthead">
-      <div class="masthead-inner">
-        <div>
-          <div class="eyebrow"><i class="ti ti-chart-candle"></i> Weekly Thai Equity Desk · Human-in-the-loop</div>
-          <h1 class="brand">AlphaWeek</h1>
-          <p class="tagline">แดชบอร์ดหุ้นไทยรายสัปดาห์ พร้อมข่าวและชุด prompt สำหรับคัดลอกไปให้ AI เขียนบทวิเคราะห์ในสไตล์ที่คุณตรวจเองก่อนโพสต์</p>
-        </div>
-        <div class="brief-card">
-          <div class="small">สัปดาห์ล่าสุด</div>
-          <strong id="hero-week">—</strong>
-          <div id="hero-sub" class="small">กำลังโหลดข้อมูลจาก Google Sheets</div>
-        </div>
-      </div>
+    <header class="utility-bar">
+      <div class="health-inline"><span class="dot" id="health-dot"></span><span id="health-text">กำลังเตรียม AlphaWeek...</span></div>
+      <div class="meta"><span id="app-version">v03</span><button class="btn ghost" id="refresh-btn"><i class="ti ti-refresh"></i> Refresh</button><button class="btn ghost" id="theme-btn"><i class="ti ti-sun"></i> Day</button></div>
     </header>
 
+    <section class="masthead" aria-label="AlphaWeek masthead">
+      <div class="masthead-inner">
+        <div>
+          <div class="eyebrow"><i class="ti ti-news"></i> Weekly Thai Equity Brief</div>
+          <div class="brand">AlphaWeek</div>
+          <p class="tagline">สรุปตลาดหุ้นไทยรายสัปดาห์ พร้อมโต๊ะเขียนบทวิเคราะห์สำหรับนำข้อมูลไปต่อยอดกับ AI โดยคุณยังเป็นคนตรวจและโพสต์เอง</p>
+        </div>
+        <aside class="edition-card">
+          <div class="label">ฉบับสัปดาห์</div>
+          <div class="week" id="edition-week">—</div>
+          <div class="readiness" id="readiness-pill"><span class="dot"></span><span>กำลังตรวจข้อมูล</span></div>
+          <div class="muted" id="edition-sub">รอโหลด health/dashboard</div>
+        </aside>
+      </div>
+    </section>
+
     <div class="nav-wrap">
-      <nav class="nav" aria-label="AlphaWeek tabs">
-        <button class="active" data-tab="dashboard"><i class="ti ti-dashboard"></i> Dashboard</button>
-        <button data-tab="articles"><i class="ti ti-news"></i> บทความ</button>
-        <button data-tab="compose"><i class="ti ti-pencil-plus"></i> สร้างบทความ</button>
-        <button data-tab="settings"><i class="ti ti-settings"></i> ตั้งค่า</button>
-        <button id="refresh-btn" title="Refresh"><i class="ti ti-refresh"></i> Refresh</button>
-        <button id="theme-btn" title="Theme"><i class="ti ti-sun"></i> Day</button>
+      <nav class="nav" aria-label="AlphaWeek sections">
+        <button class="active" data-tab="brief"><i class="ti ti-article"></i> Brief</button>
+        <button data-tab="write"><i class="ti ti-pencil-plus"></i> Write</button>
+        <button data-tab="archive"><i class="ti ti-books"></i> Archive</button>
+        <button data-tab="control"><i class="ti ti-settings"></i> Control Room</button>
       </nav>
     </div>
 
     <main>
-      <section id="tab-dashboard" class="tab active">
-        <div id="dashboard-alert"></div>
-        <div class="grid cols-4" id="kpi-grid"></div>
+      <section id="tab-brief" class="tab active section">
+        <div id="brief-alert"></div>
+        <div class="layout-main">
+          <article class="panel editorial-lead">
+            <div class="eyebrow"><i class="ti ti-sparkles"></i> This week at a glance</div>
+            <h1 class="lead-title" id="lead-title">กำลังจัดหน้าสรุปตลาด...</h1>
+            <p class="lead-copy" id="lead-copy">AlphaWeek จะสรุปความพร้อมของข้อมูล หุ้นที่เคลื่อนไหวเด่น ข่าวประกอบ และสิ่งที่ควรระวังก่อนนำไปเขียนบทวิเคราะห์</p>
+            <div class="stat-strip" id="brief-badges"></div>
+          </article>
+          <aside class="panel">
+            <div class="section-title"><div><h3>Quiet System Notes</h3><span>สถานะระบบแบบไม่รบกวนการอ่าน</span></div></div>
+            <div class="signal-list" id="system-notes"></div>
+          </aside>
+        </div>
 
-        <section class="panel tv-shell" aria-label="TradingView ticker tape">
-          <div class="section-title">
-            <h2>Market Tape</h2>
-            <span>TradingView widget เป็น display เท่านั้น</span>
+        <div class="grid cols-2 section">
+          <section class="panel">
+            <div class="section-title"><div><h2>Market Signals</h2><span>หุ้นที่ควรเปิดดูเป็นพิเศษ</span></div><button class="btn" id="copy-table-btn"><i class="ti ti-copy"></i> Copy Table</button></div>
+            <div class="grid cols-2" id="signal-cards"></div>
+          </section>
+          <section class="panel">
+            <div class="section-title"><div><h2>Global Context</h2><span id="news-count-label">— ข่าว</span></div></div>
+            <div class="news-list" id="news-list"></div>
+          </section>
+        </div>
+
+        <section class="panel section">
+          <div class="section-title"><div><h2>Data Table</h2><span>ตารางข้อมูลที่ใช้ประกอบ prompt</span></div></div>
+          <div id="market-table" class="table-wrap"></div>
+        </section>
+      </section>
+
+      <section id="tab-write" class="tab section">
+        <section class="panel writing-desk">
+          <div class="section-title"><div><h2>AI Writing Desk</h2><span>ตรวจข้อมูล → Copy → เขียนกับ AI → นำบทความกลับมาโพสต์</span></div></div>
+          <div class="step-row">
+            <div class="step-card"><strong>1. Review</strong><span class="muted">ดู Brief และข่าว</span></div>
+            <div class="step-card"><strong>2. Copy</strong><span class="muted">นำ prompt ไปใช้กับ AI</span></div>
+            <div class="step-card"><strong>3. Write</strong><span class="muted">ให้ AI เขียนร่าง</span></div>
+            <div class="step-card"><strong>4. Publish</strong><span class="muted">ตรวจแล้วโพสต์กลับ</span></div>
           </div>
-          <div class="tradingview-widget-container">
-            <div class="tradingview-widget-container__widget"></div>
-            <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js" async>
-            {
-              "symbols": [
-                {"proName":"SET:PTT","title":"PTT"},
-                {"proName":"SET:KBANK","title":"KBANK"},
-                {"proName":"SET:AOT","title":"AOT"},
-                {"proName":"SET:CPALL","title":"CPALL"},
-                {"proName":"SET:ADVANC","title":"ADVANC"},
-                {"proName":"SET:DELTA","title":"DELTA"},
-                {"proName":"SET:BDMS","title":"BDMS"}
-              ],
-              "showSymbolLogo": true,
-              "isTransparent": true,
-              "displayMode": "adaptive",
-              "colorTheme": "light",
-              "locale": "th_TH"
-            }
-            </script>
+          <div class="meta">
+            <button class="btn primary" id="copy-prompt-btn"><i class="ti ti-copy"></i> Copy Weekly Prompt</button>
+            <button class="btn" id="copy-table-btn-write"><i class="ti ti-table-export"></i> Copy Data Table</button>
+            <select id="template-select" style="max-width:260px"><option value="weekly">Weekly analysis</option><option value="cautious">Cautious view</option><option value="short">Short brief</option></select>
           </div>
+          <div id="copy-status" style="margin-top:12px"></div>
         </section>
 
+        <div class="grid cols-2 section">
+          <section class="panel">
+            <div class="section-title"><div><h3>Prompt Preview</h3><span>ตรวจข้อความก่อน copy</span></div></div>
+            <pre class="preview" id="prompt-preview"></pre>
+          </section>
+          <section class="panel">
+            <div class="section-title"><div><h3>Post Article</h3><span>วางบทความที่ตรวจแล้วกลับเข้า feed</span></div></div>
+            <div class="form-grid">
+              <label>สัปดาห์<input id="article-week" placeholder="2026-07-10"></label>
+              <label>ประเภท<select id="article-type"><option value="weekly">บทวิเคราะห์รายสัปดาห์</option><option value="youtube">สรุป YouTube</option><option value="note">บันทึก</option><option value="other">อื่น ๆ</option></select></label>
+              <label class="full">ชื่อบทความ<input id="article-title" placeholder="เช่น AlphaWeek: ตลาดไทยในสัปดาห์ที่ต้องจับตา"></label>
+              <label class="full">เนื้อหา Markdown<textarea id="article-body" placeholder="วางบทความที่ได้จาก AI และตรวจแล้วที่นี่"></textarea></label>
+              <label>Tags<input id="article-tags" placeholder="AOT, KBANK, PTT"></label>
+              <label>Source note<input id="article-source" placeholder="ChatGPT / Gemini / Perplexity / Claude"></label>
+            </div>
+            <div class="meta" style="margin-top:12px"><button class="btn primary" id="post-article-btn"><i class="ti ti-send"></i> Post Article</button><button class="btn" id="reload-articles-btn"><i class="ti ti-refresh"></i> Reload Feed</button></div>
+            <div id="post-status" style="margin-top:12px"></div>
+          </section>
+        </div>
+      </section>
+
+      <section id="tab-archive" class="tab section">
         <section class="panel">
-          <div class="section-title">
-            <div>
-              <h2>ตารางสัปดาห์ล่าสุด</h2>
-              <span id="table-sub">เรียงตามผลตอบแทน 1 สัปดาห์</span>
-            </div>
-            <button class="pill-btn" id="copy-table-btn"><i class="ti ti-copy"></i> Copy ตาราง Markdown</button>
-          </div>
-          <div class="table-wrap" id="market-table"></div>
-        </section>
-
-        <section class="grid cols-2">
-          <div class="panel">
-            <div class="section-title"><h2>หุ้นที่น่าจับตา</h2><span>จาก %1w และ volume ratio</span></div>
-            <div id="watch-cards" class="grid cols-2"></div>
-          </div>
-          <div class="panel">
-            <div class="section-title"><h2>ข่าวใหญ่รอบสัปดาห์</h2><span id="news-count-label">—</span></div>
-            <div id="news-list" class="news-list"></div>
-          </div>
+          <div class="section-title"><div><h2>Archive</h2><span>บทความย้อนหลังและบันทึกการวิเคราะห์</span></div><button class="btn" id="reload-articles-btn-2"><i class="ti ti-refresh"></i> Reload</button></div>
+          <div class="form-grid" style="margin-bottom:14px"><label>ค้นหา<input id="archive-search" placeholder="ค้นหาชื่อ/เนื้อหา/tag"></label><label>ประเภท<select id="archive-filter"><option value="all">ทั้งหมด</option><option value="weekly">รายสัปดาห์</option><option value="youtube">YouTube</option><option value="note">บันทึก</option><option value="other">อื่น ๆ</option></select></label></div>
+          <div class="article-list" id="article-list"></div>
         </section>
       </section>
 
-      <section id="tab-articles" class="tab">
-        <div class="panel">
-          <div class="section-title">
-            <div>
-              <h2>บทความ / Feed</h2>
-              <span>บทความที่โพสต์กลับเข้า Google Sheets</span>
+      <section id="tab-control" class="tab section">
+        <div class="layout-main">
+          <section class="panel control-section">
+            <div class="section-title"><div><h2>Control Room</h2><span>เก็บ Settings จาก v02: PIN, Test Connection, Prompt Templates, Watchlist</span></div></div>
+            <div class="grid cols-2">
+              <label>Apps Script URL<input id="apps-script-url" spellcheck="false"></label>
+              <label>Health URL<input id="health-url" spellcheck="false"></label>
+              <label>PIN สำหรับเขียนข้อมูล<input id="local-pin" type="password" autocomplete="off" placeholder="เก็บเฉพาะในเครื่องนี้"></label>
+              <label>Theme<select id="theme-select"><option value="day">Day / Light</option><option value="auto">Auto</option><option value="night">Night</option></select></label>
             </div>
-            <button class="pill-btn" id="reload-articles-btn"><i class="ti ti-refresh"></i> โหลดบทความ</button>
-          </div>
-          <div id="article-list" class="article-list"></div>
+            <div class="meta"><button class="btn primary" id="save-settings-btn"><i class="ti ti-device-floppy"></i> Save Local Settings</button><button class="btn" id="test-connection-btn"><i class="ti ti-plug-connected"></i> Test Connection</button></div>
+            <div id="settings-status"></div>
+            <div class="connection-result" id="connection-result"></div>
+          </section>
+          <section class="panel control-section">
+            <div class="section-title"><div><h2>Writing Templates</h2><span>Prompt templates เก็บในเครื่องและบันทึกลง Sheets ได้</span></div></div>
+            <label>Weekly<textarea id="template-weekly"></textarea></label>
+            <label>Cautious<textarea id="template-cautious"></textarea></label>
+            <label>Short<textarea id="template-short"></textarea></label>
+            <div class="meta"><button class="btn" id="reset-template-btn"><i class="ti ti-restore"></i> Reset</button><button class="btn primary" id="save-config-btn"><i class="ti ti-cloud-upload"></i> Save Templates to Sheets</button></div>
+            <div id="config-status"></div>
+          </section>
         </div>
-      </section>
-
-      <section id="tab-compose" class="tab">
-        <div class="grid cols-2">
-          <div class="panel">
-            <div class="section-title">
-              <div>
-                <h2>สร้าง Prompt</h2>
-                <span>คัดลอกไป paste ใน AI ตัวใดก็ได้</span>
-              </div>
-              <button class="pill-btn primary" id="copy-prompt-btn"><i class="ti ti-copy"></i> Copy Prompt</button>
-            </div>
-            <div class="form-grid">
-              <div>
-                <label for="template-select">Template</label>
-                <select id="template-select">
-                  <option value="weekly">Weekly Insight — บทวิเคราะห์รายสัปดาห์</option>
-                  <option value="cautious">Risk-aware — เน้นความเสี่ยง</option>
-                  <option value="short">Brief — สรุปสั้นสำหรับอ่านเร็ว</option>
-                </select>
-              </div>
-              <div id="copy-status"></div>
-              <div id="prompt-preview" class="copy-preview"></div>
-            </div>
-          </div>
-
-          <div class="panel">
-            <div class="section-title">
-              <div>
-                <h2>โพสต์บทความ</h2>
-                <span>ต้องใช้ PIN ใน Settings เฉพาะเครื่องนี้</span>
-              </div>
-              <button class="pill-btn primary" id="post-article-btn"><i class="ti ti-send"></i> Post</button>
-            </div>
-            <div class="form-grid">
-              <div class="grid cols-2">
-                <div>
-                  <label for="article-type">ประเภท</label>
-                  <select id="article-type">
-                    <option value="weekly">บทวิเคราะห์รายสัปดาห์</option>
-                    <option value="youtube">สรุป YouTube</option>
-                    <option value="note">บันทึกส่วนตัว</option>
-                    <option value="other">อื่น ๆ</option>
-                  </select>
-                </div>
-                <div>
-                  <label for="article-week">Week ending</label>
-                  <input id="article-week" placeholder="YYYY-MM-DD" />
-                </div>
-              </div>
-              <div>
-                <label for="article-title">ชื่อบทความ</label>
-                <input id="article-title" placeholder="เช่น AlphaWeek: สัปดาห์ที่ตลาดรอทิศทางดอกเบี้ย" />
-              </div>
-              <div>
-                <label for="article-body">เนื้อหา Markdown</label>
-                <textarea id="article-body" placeholder="Paste บทความที่ AI เขียนแล้วและคุณตรวจแล้วที่นี่"></textarea>
-              </div>
-              <div class="grid cols-2">
-                <div>
-                  <label for="article-tags">Tags</label>
-                  <input id="article-tags" placeholder="PTT, KBANK, Macro" />
-                </div>
-                <div>
-                  <label for="article-source">Source note</label>
-                  <input id="article-source" placeholder="ChatGPT / Gemini / Perplexity / Claude" />
-                </div>
-              </div>
-              <div id="post-status"></div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section id="tab-settings" class="tab">
-        <div class="grid cols-2">
-          <div class="panel">
-            <div class="section-title"><h2>Connection</h2><span>ค่าถูกเก็บใน localStorage เครื่องนี้</span></div>
-            <div class="form-grid">
-              <div>
-                <label for="apps-script-url">Apps Script URL</label>
-                <input id="apps-script-url" />
-              </div>
-              <div>
-                <label for="health-url">Health URL</label>
-                <input id="health-url" />
-              </div>
-              <div>
-                <label for="local-pin">PIN สำหรับเขียนข้อมูล</label>
-                <input id="local-pin" type="password" placeholder="ไม่ฝังในไฟล์ HTML — เก็บเฉพาะเครื่องนี้" />
-                <div class="small">PIN ใช้กับ postArticle / saveConfig / updateWatchlist เท่านั้น</div>
-              </div>
-              <div class="grid cols-2">
-                <button class="pill-btn primary" id="save-settings-btn"><i class="ti ti-device-floppy"></i> Save Local Settings</button>
-                <button class="pill-btn" id="test-connection-btn"><i class="ti ti-plug-connected"></i> Test Connection</button>
-              </div>
-              <div id="settings-status"></div>
-            </div>
-          </div>
-
-          <div class="panel">
-            <div class="section-title"><h2>Prompt Templates</h2><span>แก้เฉพาะในเครื่องนี้ หรือบันทึกลง Sheets ด้วย PIN</span></div>
-            <div class="form-grid">
-              <div>
-                <label for="template-weekly">Weekly</label>
-                <textarea id="template-weekly"></textarea>
-              </div>
-              <div>
-                <label for="template-cautious">Risk-aware</label>
-                <textarea id="template-cautious"></textarea>
-              </div>
-              <div>
-                <label for="template-short">Brief</label>
-                <textarea id="template-short"></textarea>
-              </div>
-              <div class="grid cols-2">
-                <button class="pill-btn" id="reset-template-btn"><i class="ti ti-restore"></i> Reset Local Templates</button>
-                <button class="pill-btn primary" id="save-config-btn"><i class="ti ti-cloud-upload"></i> Save Templates to Sheets</button>
-              </div>
-              <div id="config-status"></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="panel">
-          <div class="section-title">
-            <div><h2>Watchlist</h2><span>แก้ด้วยรูปแบบ symbol | name_th | sector | note | active</span></div>
-            <button class="pill-btn primary" id="save-watchlist-btn"><i class="ti ti-list-check"></i> Save Watchlist</button>
-          </div>
+        <section class="panel section">
+          <div class="section-title"><div><h2>Watchlist</h2><span>รูปแบบ: symbol | name_th | sector | note | active</span></div><button class="btn primary" id="save-watchlist-btn"><i class="ti ti-list-check"></i> Save Watchlist</button></div>
           <textarea id="watchlist-editor" placeholder="PTT | ปตท. | พลังงาน | | Y"></textarea>
-          <div id="watchlist-status"></div>
-        </div>
+          <div id="watchlist-status" style="margin-top:12px"></div>
+        </section>
       </section>
     </main>
   </div>
 
-  <nav class="mobile-nav" aria-label="Mobile tabs">
-    <button class="active" data-tab="dashboard"><i class="ti ti-dashboard"></i><span>Dash</span></button>
-    <button data-tab="articles"><i class="ti ti-news"></i><span>Feed</span></button>
-    <button data-tab="compose"><i class="ti ti-pencil-plus"></i><span>เขียน</span></button>
-    <button data-tab="settings"><i class="ti ti-settings"></i><span>ตั้งค่า</span></button>
+  <nav class="mobile-nav" aria-label="Mobile sections">
+    <button class="active" data-tab="brief"><i class="ti ti-article"></i><span>Brief</span></button>
+    <button data-tab="write"><i class="ti ti-pencil-plus"></i><span>Write</span></button>
+    <button data-tab="archive"><i class="ti ti-books"></i><span>Archive</span></button>
+    <button data-tab="control"><i class="ti ti-settings"></i><span>Control</span></button>
   </nav>
 
   <script>
   (function () {
     'use strict';
-
-    const APP_VERSION = 'index-alphaweek-v02';
-    const STORAGE_KEY = 'alphaweek_config_v02';
-    const LEGACY_STORAGE_KEY = 'alphaweek_config_v01';
+    const APP_VERSION = 'index-alphaweek-v03';
+    const STORAGE_KEY = 'alphaweek_config_v03';
+    const LEGACY_KEYS = ['alphaweek_config_v02', 'alphaweek_config_v01'];
     const DEFAULT_CONFIG = {
       appsScriptUrl: 'https://script.google.com/macros/s/AKfycbzh2PhvOrJu16P9ZLX192PEXUZqTHbp26P1y6TAXNUdO-3UCslhogZHBkoPnOcfx1SA/exec',
       healthUrl: 'https://alphaweek.vercel.app/api/health',
@@ -596,623 +317,161 @@
       theme: 'day',
       templates: defaultTemplates()
     };
-
-    const state = {
-      config: loadConfig(),
-      health: null,
-      dashboard: null,
-      articles: [],
-      activeTab: 'dashboard'
-    };
-
+    const state = { config: loadConfig(), health: null, dashboard: null, articles: [], activeTab: 'brief' };
     const $ = (sel) => document.querySelector(sel);
     const $$ = (sel) => Array.from(document.querySelectorAll(sel));
-
     document.addEventListener('DOMContentLoaded', init);
 
-    function init() {
-      applyTheme();
-      bindEvents();
-      hydrateSettings();
-      loadAll();
-    }
-
+    function init() { applyTheme(); bindEvents(); hydrateSettings(); loadAll(); }
     function bindEvents() {
       $$('[data-tab]').forEach(btn => btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
       $('#refresh-btn').addEventListener('click', loadAll);
       $('#theme-btn').addEventListener('click', cycleTheme);
+      $('#theme-select').addEventListener('change', () => { state.config.theme = $('#theme-select').value; saveConfigLocal(); applyTheme(); });
       $('#copy-table-btn').addEventListener('click', copyMarketTable);
+      $('#copy-table-btn-write').addEventListener('click', copyMarketTable);
       $('#copy-prompt-btn').addEventListener('click', copyPrompt);
       $('#template-select').addEventListener('change', renderPromptPreview);
       $('#post-article-btn').addEventListener('click', postArticle);
       $('#reload-articles-btn').addEventListener('click', loadArticles);
+      $('#reload-articles-btn-2').addEventListener('click', loadArticles);
+      $('#archive-search').addEventListener('input', renderArticles);
+      $('#archive-filter').addEventListener('change', renderArticles);
       $('#save-settings-btn').addEventListener('click', saveLocalSettings);
       $('#test-connection-btn').addEventListener('click', testConnection);
       $('#reset-template-btn').addEventListener('click', resetTemplates);
       $('#save-config-btn').addEventListener('click', saveTemplatesToSheets);
       $('#save-watchlist-btn').addEventListener('click', saveWatchlist);
-      ['#template-weekly', '#template-cautious', '#template-short'].forEach(sel => {
-        $(sel).addEventListener('input', syncTemplatesFromEditor);
-      });
+      ['#template-weekly', '#template-cautious', '#template-short'].forEach(sel => $(sel).addEventListener('input', syncTemplatesFromEditor));
     }
-
-    async function loadAll() {
-      setHealth('loading', 'กำลังโหลดข้อมูลล่าสุด...');
-      await Promise.allSettled([loadHealth(), loadDashboard(), loadArticles()]);
-      renderPromptPreview();
-    }
-
+    async function loadAll() { setHealth('loading', 'กำลังโหลดข้อมูลล่าสุด...'); await Promise.allSettled([loadHealth(), loadDashboard(), loadArticles()]); renderPromptPreview(); }
     async function loadHealth() {
-      try {
-        const json = await fetchJSON(state.config.healthUrl);
-        state.health = json;
-        if (json && json.ok) {
-          setHealth('ok', `เชื่อมต่อแล้ว · latest_week ${json.latest_week || '—'} · ข่าว ${json.news_count || 0}`);
-        } else {
-          setHealth('bad', 'Health check ไม่ผ่าน');
-        }
-        renderHero();
-        renderKpis();
-      } catch (err) {
-        setHealth('bad', `Health error: ${err.message}`);
-        renderKpis();
-      }
+      try { const json = await fetchJSON(state.config.healthUrl); state.health = json; setHealth(json && json.ok ? 'ok' : 'bad', json && json.ok ? `Online · ${json.latest_week || '—'} · ${json.news_count || 0} news` : 'Health check ไม่ผ่าน'); renderAll(); }
+      catch (err) { setHealth('bad', `Health error: ${err.message}`); renderAll(); }
     }
-
     async function loadDashboard(week) {
-      try {
-        const url = appsScriptUrl('dashboard', week ? { week } : {});
-        const json = await fetchJSON(url);
-        if (!json.ok) throw new Error(json.error || 'dashboard response not ok');
-        state.dashboard = json.data || {};
-        renderDashboard();
-        hydrateWatchlistEditor();
-      } catch (err) {
-        $('#dashboard-alert').innerHTML = alertHtml('bad', `โหลด Dashboard ไม่สำเร็จ: ${escapeHTML(err.message)}`);
-        renderDashboard();
-      }
+      try { const json = await fetchJSON(appsScriptUrl('dashboard', week ? { week } : {})); if (!json.ok) throw new Error(json.error || 'dashboard response not ok'); state.dashboard = json.data || {}; renderAll(); hydrateWatchlistEditor(); }
+      catch (err) { $('#brief-alert').innerHTML = alertHtml('bad', `โหลด Dashboard ไม่สำเร็จ: ${escapeHTML(err.message)}`); renderAll(); }
     }
-
     async function loadArticles() {
-      try {
-        const json = await fetchJSON(appsScriptUrl('articles', { limit: 100 }));
-        if (!json.ok) throw new Error(json.error || 'articles response not ok');
-        state.articles = (json.data && json.data.articles) || [];
-        renderArticles();
-      } catch (err) {
-        $('#article-list').innerHTML = alertHtml('bad', `โหลดบทความไม่สำเร็จ: ${escapeHTML(err.message)}`);
-      }
+      try { const json = await fetchJSON(appsScriptUrl('articles', { limit: 100 })); if (!json.ok) throw new Error(json.error || 'articles response not ok'); state.articles = (json.data && json.data.articles) || []; renderArticles(); }
+      catch (err) { $('#article-list').innerHTML = alertHtml('bad', `โหลดบทความไม่สำเร็จ: ${escapeHTML(err.message)}`); }
     }
-
-    function renderDashboard() {
-      const d = state.dashboard || {};
-      const rows = normalizeRows(d.rows || []);
-      const news = d.news || [];
-      $('#dashboard-alert').innerHTML = rows.length ? '' : alertHtml('', 'ยังไม่มีข้อมูลในสัปดาห์ล่าสุด หรือกำลังรอ backend โหลดข้อมูล');
-      $('#article-week').value = d.week_ending || (state.health && state.health.latest_week) || '';
-      renderHero();
-      renderKpis();
-      renderMarketTable(rows, d.watchlist || []);
-      renderWatchCards(rows, d.watchlist || []);
-      renderNews(news);
-      renderPromptPreview();
+    function renderAll() { renderEdition(); renderBrief(); renderSignals(); renderNews(); renderMarketTable(); renderArticles(); renderPromptPreview(); }
+    function renderEdition() {
+      const d = state.dashboard || {}; const h = state.health || {}; const week = d.week_ending || h.latest_week || '';
+      $('#edition-week').textContent = week ? formatBE(week) : '—';
+      const rows = normalizeRows(d.rows || []); const news = d.news || []; const ready = rows.length > 0 && (h.ok || d.week_ending);
+      $('#readiness-pill').innerHTML = `<span class="dot ${ready ? 'ok' : ''}"></span><span>${ready ? 'Ready to write' : 'Waiting for data'}</span>`;
+      $('#edition-sub').textContent = `${week || '—'} · ${rows.length || h.symbols || 0} symbols · ${news.length || h.news_count || 0} news`;
     }
-
-    function renderHero() {
-      const week = (state.dashboard && state.dashboard.week_ending) || (state.health && state.health.latest_week) || '—';
-      $('#hero-week').textContent = week === '—' ? '—' : formatBE(week);
-      const symbols = state.health ? state.health.symbols : (state.dashboard && state.dashboard.rows ? state.dashboard.rows.length : 0);
-      const newsCount = state.health ? state.health.news_count : (state.dashboard && state.dashboard.news ? state.dashboard.news.length : 0);
-      $('#hero-sub').textContent = `${week || '—'} · ${symbols || 0} symbols · ${newsCount || 0} news`;
+    function renderBrief() {
+      const d = state.dashboard || {}; const h = state.health || {}; const rows = normalizeRows(d.rows || []); const news = d.news || [];
+      const week = d.week_ending || h.latest_week || '';
+      const missingSet = h.symbols === 7 || rows.every(r => r.symbol !== 'SET');
+      $('#lead-title').textContent = rows.length ? `สัปดาห์นี้พร้อมเขียนบทวิเคราะห์แล้ว` : 'ยังรอข้อมูลสำหรับสัปดาห์ล่าสุด';
+      $('#lead-copy').textContent = rows.length ? `ข้อมูลสัปดาห์สิ้นสุด ${formatBE(week) || week} พร้อมใช้เป็น brief สำหรับเขียนบทวิเคราะห์: มีข้อมูลหุ้น ${rows.length} ตัว ข่าวประกอบ ${news.length || h.news_count || 0} ข่าว และระบบบันทึกลง Sheets แล้ว` : 'เมื่อ backend มีข้อมูลล่าสุด หน้านี้จะสรุปตลาด หุ้นที่เคลื่อนไหวเด่น ข่าวประกอบ และเตรียม prompt สำหรับนำไปเขียนกับ AI';
+      $('#brief-badges').innerHTML = [
+        badge(`${formatBE(week) || 'ยังไม่มีสัปดาห์'}`, 'ti-calendar'),
+        badge(`${rows.length || h.symbols || 0} symbols`, 'ti-chart-bar'),
+        badge(`${news.length || h.news_count || 0} news`, 'ti-news'),
+        badge(missingSet ? 'SET index note' : 'SET included', missingSet ? 'ti-alert-triangle' : 'ti-check', missingSet ? 'warn' : 'good')
+      ].join('');
+      const notes = [];
+      notes.push(note('Vercel Health', h && h.ok ? 'OK' : 'รอตรวจ', h && h.ok ? 'good' : 'warn'));
+      notes.push(note('Apps Script Dashboard', rows.length ? 'มีข้อมูลล่าสุด' : 'ยังไม่พบ rows', rows.length ? 'good' : 'warn'));
+      if (missingSet) notes.push(note('SET Index', 'Yahoo ไม่มี bar ในสัปดาห์ล่าสุด — ไม่ block งานเขียน', 'warn'));
+      notes.push(note('Security', 'PIN ไม่ถูกฝังในไฟล์ เก็บเฉพาะเครื่องนี้', 'good'));
+      $('#system-notes').innerHTML = notes.join('');
     }
-
-    function renderKpis() {
-      const h = state.health || {};
-      const d = state.dashboard || {};
-      const rows = d.rows || [];
-      const weeks = h.weeks_available || d.weeks_available || [];
-      const sourceText = h.sources ? Object.keys(h.sources).map(k => `${k}: ${h.sources[k]}`).join(', ') : '—';
-      const cards = [
-        ['สัปดาห์ล่าสุด', h.latest_week ? formatBE(h.latest_week) : (d.week_ending ? formatBE(d.week_ending) : '—'), h.latest_week || d.week_ending || 'ยังไม่มีข้อมูล'],
-        ['จำนวนหุ้น', String(h.symbols || rows.length || 0), 'จาก watchlist active ล่าสุด'],
-        ['ข่าวประกอบ', String(h.news_count || (d.news || []).length || 0), 'RSS runtime จาก Vercel'],
-        ['แหล่งข้อมูล', sourceText || '—', `${weeks.length || 0} สัปดาห์ย้อนหลัง`]
-      ];
-      $('#kpi-grid').innerHTML = cards.map(([label, value, note]) => `
-        <div class="card kpi">
-          <div class="label">${escapeHTML(label)}</div>
-          <div class="value">${escapeHTML(value)}</div>
-          <div class="note">${escapeHTML(note)}</div>
-        </div>`).join('');
+    function renderSignals() {
+      const d = state.dashboard || {}; const rows = normalizeRows(d.rows || []); const names = mapWatchlist(d.watchlist || []);
+      if (!rows.length) { $('#signal-cards').innerHTML = '<div class="alert">ยังไม่มีข้อมูล Market Signals</div>'; return; }
+      const ranked = rows.slice().sort((a,b) => Math.abs(num(b.change_pct_1w)) + Math.max(0, num(b.volume_ratio)-1)*2 - (Math.abs(num(a.change_pct_1w)) + Math.max(0, num(a.volume_ratio)-1)*2)).slice(0,6);
+      $('#signal-cards').innerHTML = ranked.map(r => `<article class="signal"><div class="signal-top"><div><div class="symbol">${escapeHTML(r.symbol)}</div><div class="muted">${escapeHTML(names[r.symbol] || '')}</div></div><div>${pctHtml(r.change_pct_1w)}</div></div><div class="stat-strip"><span class="badge">Close ${fmtNumber(r.close)}</span><span class="badge">4W ${fmtPct(r.change_pct_4w)}</span><span class="badge">Vol x ${fmtNumber(r.volume_ratio)}</span><span class="badge">${escapeHTML(r.sma20_position || 'SMA —')}</span></div></article>`).join('');
     }
-
-    function renderMarketTable(rows, watchlist) {
-      const names = mapWatchlist(watchlist);
-      const sorted = rows.slice().sort((a, b) => num(b.change_pct_1w) - num(a.change_pct_1w));
-      if (!sorted.length) {
-        $('#market-table').innerHTML = '<div class="alert">ยังไม่มีข้อมูลตาราง</div>';
-        return;
-      }
-      $('#market-table').innerHTML = `
-        <table>
-          <thead>
-            <tr>
-              <th>Symbol</th><th>ชื่อ</th><th>Close</th><th>%1W</th><th>%4W</th><th>%12W</th><th>High</th><th>Low</th><th>Volume x</th><th>SMA20</th><th>Source</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${sorted.map(r => `
-              <tr>
-                <td><strong>${escapeHTML(r.symbol)}</strong></td>
-                <td>${escapeHTML(names[r.symbol] || '')}</td>
-                <td>${fmtNumber(r.close)}</td>
-                <td>${pctHtml(r.change_pct_1w)}</td>
-                <td>${pctHtml(r.change_pct_4w)}</td>
-                <td>${pctHtml(r.change_pct_12w)}</td>
-                <td>${fmtNumber(r.week_high)}</td>
-                <td>${fmtNumber(r.week_low)}</td>
-                <td>${fmtNumber(r.volume_ratio)}</td>
-                <td>${escapeHTML(r.sma20_position || '—')}</td>
-                <td>${escapeHTML(r.source || '—')}</td>
-              </tr>`).join('')}
-          </tbody>
-        </table>`;
-    }
-
-    function renderWatchCards(rows, watchlist) {
-      const names = mapWatchlist(watchlist);
-      const picks = rows.slice().sort((a, b) => {
-        const scoreA = Math.abs(num(a.change_pct_1w)) + Math.max(0, num(a.volume_ratio) - 1) * 2;
-        const scoreB = Math.abs(num(b.change_pct_1w)) + Math.max(0, num(b.volume_ratio) - 1) * 2;
-        return scoreB - scoreA;
-      }).slice(0, 4);
-      $('#watch-cards').innerHTML = picks.length ? picks.map(r => `
-        <div class="card symbol-card">
-          <div class="symbol-top">
-            <div><div class="symbol">${escapeHTML(r.symbol)}</div><div class="thai-name">${escapeHTML(names[r.symbol] || '')}</div></div>
-            <div class="price">${fmtNumber(r.close)}</div>
-          </div>
-          <div class="metric-row">
-            <div class="mini-metric">1W<br>${pctHtml(r.change_pct_1w)}</div>
-            <div class="mini-metric">4W<br>${pctHtml(r.change_pct_4w)}</div>
-            <div class="mini-metric">Vol x<br><strong>${fmtNumber(r.volume_ratio)}</strong></div>
-          </div>
-        </div>`).join('') : '<div class="alert">ยังไม่มีหุ้นที่จะแสดง</div>';
-    }
-
-    function renderNews(news) {
+    function renderNews() {
+      const news = (state.dashboard && state.dashboard.news) || [];
       $('#news-count-label').textContent = `${news.length || 0} ข่าว`;
-      $('#news-list').innerHTML = news.length ? news.map(n => `
-        <article class="news-item">
-          <h4><a href="${escapeAttr(n.url || '#')}" target="_blank" rel="noopener noreferrer">${escapeHTML(n.headline || 'Untitled')}</a></h4>
-          <p class="small">${escapeHTML(n.summary || '')}</p>
-          <div class="meta"><span class="chip">${escapeHTML(n.source || 'RSS')}</span><span>${escapeHTML(n.published_at || '')}</span></div>
-        </article>`).join('') : '<div class="alert">ยังไม่มีข่าวในสัปดาห์นี้</div>';
+      $('#news-list').innerHTML = news.length ? news.map(n => `<article class="news-item"><h4><a href="${escapeAttr(n.url || '#')}" target="_blank" rel="noopener noreferrer">${escapeHTML(n.headline || 'Untitled')}</a></h4><p class="muted">${escapeHTML(n.summary || '')}</p><div class="meta"><span>${escapeHTML(n.source || 'RSS')}</span><span>${escapeHTML(n.published_at || '')}</span></div></article>`).join('') : '<div class="alert">ยังไม่มีข่าวประกอบ</div>';
     }
-
+    function renderMarketTable() {
+      const d = state.dashboard || {}; const rows = normalizeRows(d.rows || []); const names = mapWatchlist(d.watchlist || []);
+      if (!rows.length) { $('#market-table').innerHTML = '<div class="alert">ยังไม่มีข้อมูลตาราง</div>'; return; }
+      const sorted = rows.slice().sort((a,b) => num(b.change_pct_1w) - num(a.change_pct_1w));
+      $('#market-table').innerHTML = `<table><thead><tr><th>Symbol</th><th>ชื่อ</th><th>Close</th><th>%1W</th><th>%4W</th><th>%12W</th><th>High</th><th>Low</th><th>Volume x</th><th>SMA20</th><th>Source</th></tr></thead><tbody>${sorted.map(r => `<tr><td><strong>${escapeHTML(r.symbol)}</strong></td><td>${escapeHTML(names[r.symbol] || '')}</td><td>${fmtNumber(r.close)}</td><td>${pctHtml(r.change_pct_1w)}</td><td>${pctHtml(r.change_pct_4w)}</td><td>${pctHtml(r.change_pct_12w)}</td><td>${fmtNumber(r.week_high)}</td><td>${fmtNumber(r.week_low)}</td><td>${fmtNumber(r.volume_ratio)}</td><td>${escapeHTML(r.sma20_position || '—')}</td><td>${escapeHTML(r.source || '—')}</td></tr>`).join('')}</tbody></table>`;
+    }
     function renderArticles() {
-      const list = state.articles || [];
-      $('#article-list').innerHTML = list.length ? list.map(a => `
-        <article class="article-item">
-          <div class="meta"><span class="chip">${escapeHTML(typeLabel(a.type))}</span><span>${escapeHTML(formatBE(a.week_ending) || '')}</span><span>${escapeHTML(a.posted_at || '')}</span></div>
-          <h3>${escapeHTML(a.title || 'Untitled')}</h3>
-          <div class="markdown-body">${renderMarkdown(a.body_md || '')}</div>
-          <div class="meta"><span>${escapeHTML(a.tags || '')}</span><span>${escapeHTML(a.source_note || '')}</span></div>
-        </article>`).join('') : alertHtml('', 'ยังไม่มีบทความใน Feed');
+      const q = ($('#archive-search') && $('#archive-search').value || '').toLowerCase().trim(); const f = ($('#archive-filter') && $('#archive-filter').value) || 'all';
+      const list = (state.articles || []).filter(a => (f === 'all' || a.type === f) && (!q || [a.title,a.body_md,a.tags,a.week_ending].join(' ').toLowerCase().includes(q)));
+      $('#article-list').innerHTML = list.length ? list.map(a => `<article class="article-item"><div class="meta"><span>${escapeHTML(typeLabel(a.type))}</span><span>${escapeHTML(formatBE(a.week_ending) || a.week_ending || '')}</span><span>${escapeHTML(a.tags || '')}</span></div><h3>${escapeHTML(a.title || 'Untitled')}</h3><div class="article-body">${renderMarkdown(a.body_md || '')}</div></article>`).join('') : '<div class="alert">ยังไม่มีบทความใน Archive</div>';
     }
-
-    function renderPromptPreview() {
-      const prompt = buildPrompt($('#template-select') ? $('#template-select').value : 'weekly');
-      const box = $('#prompt-preview');
-      if (box) box.textContent = prompt;
-    }
-
+    function renderPromptPreview() { const box = $('#prompt-preview'); if (box) box.textContent = buildPrompt($('#template-select') ? $('#template-select').value : 'weekly'); }
     function buildPrompt(templateId) {
-      const d = state.dashboard || {};
-      const rows = normalizeRows(d.rows || []);
-      const news = d.news || [];
-      const week = d.week_ending || (state.health && state.health.latest_week) || 'N/A';
-      const templates = state.config.templates || defaultTemplates();
-      const intro = templates[templateId] || templates.weekly;
-      return `${intro}\n\n` +
-        `ข้อมูลสัปดาห์: ${week} (${formatBE(week) || week})\n` +
-        `ข้อกำกับ: ใช้ข้อมูลนี้เพื่อเขียนบทวิเคราะห์เชิงให้ความรู้ ไม่ใช่คำแนะนำการลงทุน และควรระบุความไม่แน่นอนของข้อมูล/แหล่งข้อมูลด้วย\n\n` +
-        `## ตารางหุ้นรายสัปดาห์\n${marketMarkdownTable(rows, d.watchlist || [])}\n\n` +
-        `## ข่าวต่างประเทศ/เศรษฐกิจที่เกี่ยวข้อง\n${newsMarkdown(news)}\n\n` +
-        `## สิ่งที่อยากให้วิเคราะห์\n` +
-        `1. ภาพรวมตลาดและ sentiment ของสัปดาห์\n` +
-        `2. หุ้นที่ขึ้น/ลงเด่น พร้อมเหตุผลที่อาจเป็นไปได้จากตัวเลข\n` +
-        `3. ประเด็นข่าวโลกที่อาจเชื่อมกับหุ้นไทย\n` +
-        `4. ความเสี่ยงและสิ่งที่ควรติดตามสัปดาห์หน้า\n` +
-        `5. สรุปเป็นภาษาไทย อ่านง่าย สไตล์หนังสือพิมพ์การเงิน แต่ไม่ชี้นำให้ซื้อ/ขาย`;
+      const d = state.dashboard || {}; const rows = normalizeRows(d.rows || []); const news = d.news || []; const week = d.week_ending || (state.health && state.health.latest_week) || 'N/A'; const templates = state.config.templates || defaultTemplates(); const intro = templates[templateId] || templates.weekly;
+      return `${intro}\n\nข้อมูลสัปดาห์: ${week} (${formatBE(week) || week})\nข้อกำกับ: ใช้ข้อมูลนี้เพื่อเขียนบทวิเคราะห์เชิงให้ความรู้ ไม่ใช่คำแนะนำการลงทุน และควรระบุความไม่แน่นอนของข้อมูล/แหล่งข้อมูลด้วย\n\n## ตารางหุ้นรายสัปดาห์\n${marketMarkdownTable(rows, d.watchlist || [])}\n\n## ข่าวต่างประเทศ/เศรษฐกิจที่เกี่ยวข้อง\n${newsMarkdown(news)}\n\n## สิ่งที่อยากให้วิเคราะห์\n1. ภาพรวมตลาดและ sentiment ของสัปดาห์\n2. หุ้นที่ขึ้น/ลงเด่น พร้อมเหตุผลที่อาจเป็นไปได้จากตัวเลข\n3. ประเด็นข่าวโลกที่อาจเชื่อมกับหุ้นไทย\n4. ความเสี่ยงและสิ่งที่ควรติดตามสัปดาห์หน้า\n5. สรุปเป็นภาษาไทย อ่านง่าย สไตล์หนังสือพิมพ์การเงิน แต่ไม่ชี้นำให้ซื้อ/ขาย`;
     }
-
-    function marketMarkdownTable(rows, watchlist) {
-      const names = mapWatchlist(watchlist);
-      const sorted = rows.slice().sort((a, b) => num(b.change_pct_1w) - num(a.change_pct_1w));
-      if (!sorted.length) return '_ยังไม่มีข้อมูลหุ้น_';
-      const header = '| Symbol | ชื่อ | Close | %1W | %4W | %12W | Volume x | SMA20 | Source |\n|---|---:|---:|---:|---:|---:|---:|---|---|';
-      const body = sorted.map(r => `| ${r.symbol} | ${names[r.symbol] || ''} | ${fmtNumber(r.close)} | ${fmtPct(r.change_pct_1w)} | ${fmtPct(r.change_pct_4w)} | ${fmtPct(r.change_pct_12w)} | ${fmtNumber(r.volume_ratio)} | ${r.sma20_position || ''} | ${r.source || ''} |`).join('\n');
-      return `${header}\n${body}`;
-    }
-
-    function newsMarkdown(news) {
-      if (!news.length) return '_ยังไม่มีข่าว_';
-      return news.map((n, i) => `${i + 1}. ${n.headline || 'Untitled'} — ${n.source || 'RSS'}\n   ${n.summary || ''}\n   ${n.url || ''}`).join('\n');
-    }
-
-    async function copyPrompt() {
-      const text = buildPrompt($('#template-select').value);
-      await copyText(text);
-      $('#copy-status').innerHTML = alertHtml('good', 'Copy prompt แล้ว');
-    }
-
-    async function copyMarketTable() {
-      const d = state.dashboard || {};
-      await copyText(marketMarkdownTable(normalizeRows(d.rows || []), d.watchlist || []));
-      $('#dashboard-alert').innerHTML = alertHtml('good', 'Copy ตาราง Markdown แล้ว');
-    }
-
+    function marketMarkdownTable(rows, watchlist) { const names = mapWatchlist(watchlist); const sorted = rows.slice().sort((a,b) => num(b.change_pct_1w) - num(a.change_pct_1w)); if (!sorted.length) return '_ยังไม่มีข้อมูลหุ้น_'; const header = '| Symbol | ชื่อ | Close | %1W | %4W | %12W | Volume x | SMA20 | Source |\n|---|---|---:|---:|---:|---:|---:|---|---|'; return `${header}\n${sorted.map(r => `| ${r.symbol} | ${names[r.symbol] || ''} | ${fmtNumber(r.close)} | ${fmtPct(r.change_pct_1w)} | ${fmtPct(r.change_pct_4w)} | ${fmtPct(r.change_pct_12w)} | ${fmtNumber(r.volume_ratio)} | ${r.sma20_position || ''} | ${r.source || ''} |`).join('\n')}`; }
+    function newsMarkdown(news) { return news.length ? news.map((n,i) => `${i+1}. ${n.headline || 'Untitled'} — ${n.source || 'RSS'}\n   ${n.summary || ''}\n   ${n.url || ''}`).join('\n') : '_ยังไม่มีข่าว_'; }
+    async function copyPrompt() { await copyText(buildPrompt($('#template-select').value)); $('#copy-status').innerHTML = alertHtml('good','Copy prompt แล้ว'); }
+    async function copyMarketTable() { const d = state.dashboard || {}; await copyText(marketMarkdownTable(normalizeRows(d.rows || []), d.watchlist || [])); $('#copy-status').innerHTML = alertHtml('good','Copy ตาราง Markdown แล้ว'); $('#brief-alert').innerHTML = alertHtml('good','Copy ตาราง Markdown แล้ว'); }
     async function postArticle() {
-      const pin = state.config.pin;
-      if (!pin) {
-        $('#post-status').innerHTML = alertHtml('bad', 'กรุณาใส่ PIN ใน Settings ก่อนโพสต์');
-        return;
-      }
-      const article = {
-        week_ending: $('#article-week').value.trim(),
-        type: $('#article-type').value,
-        title: $('#article-title').value.trim(),
-        body_md: $('#article-body').value.trim(),
-        tags: suggestTags($('#article-body').value + ' ' + $('#article-title').value + ' ' + $('#article-tags').value),
-        source_note: $('#article-source').value.trim()
-      };
+      if (!state.config.pin) { $('#post-status').innerHTML = alertHtml('bad','กรุณาใส่ PIN ใน Control Room ก่อนโพสต์'); return; }
+      const article = { week_ending: $('#article-week').value.trim(), type: $('#article-type').value, title: $('#article-title').value.trim(), body_md: $('#article-body').value.trim(), tags: suggestTags($('#article-body').value + ' ' + $('#article-title').value + ' ' + $('#article-tags').value), source_note: $('#article-source').value.trim() };
       if ($('#article-tags').value.trim()) article.tags = $('#article-tags').value.trim();
-      if (!article.title || !article.body_md) {
-        $('#post-status').innerHTML = alertHtml('bad', 'ต้องมีชื่อบทความและเนื้อหา');
-        return;
-      }
-      try {
-        $('#post-status').innerHTML = alertHtml('', 'กำลังโพสต์บทความ...');
-        const json = await postJSON('postArticle', { article });
-        if (!json.ok) throw new Error(json.error || (json.data && json.data.error) || 'post failed');
-        $('#post-status').innerHTML = alertHtml('good', `โพสต์สำเร็จ: ${json.data && json.data.id ? json.data.id : ''}`);
-        $('#article-title').value = '';
-        $('#article-body').value = '';
-        await loadArticles();
-        switchTab('articles');
-      } catch (err) {
-        $('#post-status').innerHTML = alertHtml('bad', `โพสต์ไม่สำเร็จ: ${escapeHTML(err.message)}`);
-      }
+      if (!article.title || !article.body_md) { $('#post-status').innerHTML = alertHtml('bad','ต้องมีชื่อบทความและเนื้อหา'); return; }
+      try { $('#post-status').innerHTML = alertHtml('', 'กำลังโพสต์บทความ...'); const json = await postJSON('postArticle', { article }); if (!json.ok) throw new Error(json.error || (json.data && json.data.error) || 'post failed'); $('#post-status').innerHTML = alertHtml('good', `โพสต์สำเร็จ ${json.data && json.data.id ? json.data.id : ''}`); $('#article-title').value = ''; $('#article-body').value = ''; await loadArticles(); switchTab('archive'); }
+      catch (err) { $('#post-status').innerHTML = alertHtml('bad', `โพสต์ไม่สำเร็จ: ${escapeHTML(err.message)}`); }
     }
-
-    function saveLocalSettings() {
-      state.config.appsScriptUrl = $('#apps-script-url').value.trim() || DEFAULT_CONFIG.appsScriptUrl;
-      state.config.healthUrl = $('#health-url').value.trim() || DEFAULT_CONFIG.healthUrl;
-      state.config.pin = $('#local-pin').value;
-      syncTemplatesFromEditor(false);
-      saveConfigLocal();
-      $('#settings-status').innerHTML = alertHtml('good', 'บันทึก local settings แล้ว');
-    }
-
+    function saveLocalSettings() { state.config.appsScriptUrl = $('#apps-script-url').value.trim() || DEFAULT_CONFIG.appsScriptUrl; state.config.healthUrl = $('#health-url').value.trim() || DEFAULT_CONFIG.healthUrl; state.config.pin = $('#local-pin').value; state.config.theme = $('#theme-select').value || 'day'; syncTemplatesFromEditor(false); saveConfigLocal(); applyTheme(); $('#settings-status').innerHTML = alertHtml('good','บันทึก local settings แล้ว'); }
     async function testConnection() {
-      saveLocalSettings();
-      $('#settings-status').innerHTML = alertHtml('', 'กำลังทดสอบ connection...');
-      try {
-        const health = await fetchJSON(state.config.healthUrl);
-        const dash = await fetchJSON(appsScriptUrl('dashboard'));
-        $('#settings-status').innerHTML = alertHtml('good', `Connection OK · health=${health.ok} · dashboard=${dash.ok}`);
-      } catch (err) {
-        $('#settings-status').innerHTML = alertHtml('bad', `Connection error: ${escapeHTML(err.message)}`);
-      }
+      saveLocalSettings(); $('#settings-status').innerHTML = alertHtml('', 'กำลังทดสอบ connection...'); $('#connection-result').innerHTML = '';
+      const checks = [];
+      checks.push(checkRead('Vercel Health', state.config.healthUrl));
+      checks.push(checkRead('Apps Script Dashboard', appsScriptUrl('dashboard')));
+      checks.push(checkRead('Articles Feed', appsScriptUrl('articles', { limit: 5 })));
+      const results = await Promise.all(checks);
+      $('#settings-status').innerHTML = results.every(r => r.ok) ? alertHtml('good','Connection read checks ผ่าน') : alertHtml('warn','บาง connection ต้องตรวจเพิ่ม');
+      $('#connection-result').innerHTML = results.map(r => note(r.name, r.ok ? 'OK' : r.error, r.ok ? 'good' : 'bad')).join('') + note('PIN Write Test', state.config.pin ? 'มี PIN ในเครื่องนี้ แต่ยังไม่ทดสอบเขียนจริง' : 'ยังไม่ได้ใส่ PIN', state.config.pin ? 'warn' : 'bad');
     }
-
-    async function saveTemplatesToSheets() {
-      if (!state.config.pin) {
-        $('#config-status').innerHTML = alertHtml('bad', 'กรุณาใส่ PIN ก่อนบันทึกลง Sheets');
-        return;
-      }
-      syncTemplatesFromEditor(false);
-      try {
-        const json = await postJSON('saveConfig', {
-          entries: {
-            template_weekly: state.config.templates.weekly,
-            template_cautious: state.config.templates.cautious,
-            template_short: state.config.templates.short,
-            frontend_version: APP_VERSION
-          }
-        });
-        if (!json.ok) throw new Error(json.error || (json.data && json.data.error) || 'saveConfig failed');
-        $('#config-status').innerHTML = alertHtml('good', 'บันทึก templates ลง Sheets แล้ว');
-      } catch (err) {
-        $('#config-status').innerHTML = alertHtml('bad', `บันทึก config ไม่สำเร็จ: ${escapeHTML(err.message)}`);
-      }
-    }
-
-    async function saveWatchlist() {
-      if (!state.config.pin) {
-        $('#watchlist-status').innerHTML = alertHtml('bad', 'กรุณาใส่ PIN ก่อนบันทึก watchlist');
-        return;
-      }
-      const items = parseWatchlist($('#watchlist-editor').value);
-      if (!items.length) {
-        $('#watchlist-status').innerHTML = alertHtml('bad', 'ไม่มีรายการ watchlist ที่ถูกต้อง');
-        return;
-      }
-      try {
-        const json = await postJSON('updateWatchlist', { items });
-        if (!json.ok) throw new Error(json.error || (json.data && json.data.error) || 'updateWatchlist failed');
-        $('#watchlist-status').innerHTML = alertHtml('good', `บันทึก watchlist แล้ว ${items.length} รายการ`);
-        await loadDashboard();
-      } catch (err) {
-        $('#watchlist-status').innerHTML = alertHtml('bad', `บันทึก watchlist ไม่สำเร็จ: ${escapeHTML(err.message)}`);
-      }
-    }
-
-    function hydrateSettings() {
-      $('#apps-script-url').value = state.config.appsScriptUrl;
-      $('#health-url').value = state.config.healthUrl;
-      $('#local-pin').value = state.config.pin || '';
-      hydrateTemplateEditors();
-    }
-
-    function hydrateTemplateEditors() {
-      const t = state.config.templates || defaultTemplates();
-      $('#template-weekly').value = t.weekly || '';
-      $('#template-cautious').value = t.cautious || '';
-      $('#template-short').value = t.short || '';
-    }
-
-    function hydrateWatchlistEditor() {
-      const wl = (state.dashboard && state.dashboard.watchlist) || [];
-      $('#watchlist-editor').value = wl.map(w => [w.symbol, w.name_th, w.sector, w.note, w.active].map(v => v || '').join(' | ')).join('\n');
-    }
-
-    function syncTemplatesFromEditor(shouldSave = true) {
-      state.config.templates = {
-        weekly: $('#template-weekly').value,
-        cautious: $('#template-cautious').value,
-        short: $('#template-short').value
-      };
-      if (shouldSave) saveConfigLocal();
-      renderPromptPreview();
-    }
-
-    function resetTemplates() {
-      state.config.templates = defaultTemplates();
-      hydrateTemplateEditors();
-      saveConfigLocal();
-      renderPromptPreview();
-      $('#config-status').innerHTML = alertHtml('good', 'Reset templates แล้ว');
-    }
-
-    function switchTab(tab) {
-      state.activeTab = tab;
-      $$('.tab').forEach(el => el.classList.toggle('active', el.id === `tab-${tab}`));
-      $$('[data-tab]').forEach(btn => btn.classList.toggle('active', btn.dataset.tab === tab));
-      if (tab === 'compose') renderPromptPreview();
-    }
-
-    function cycleTheme() {
-      const order = ['day', 'auto', 'night'];
-      const current = order.includes(state.config.theme) ? state.config.theme : 'day';
-      const next = order[(order.indexOf(current) + 1) % order.length];
-      state.config.theme = next;
-      saveConfigLocal();
-      applyTheme();
-    }
-
-    function applyTheme() {
-      document.body.classList.remove('auto-theme', 'day', 'night');
-      if (state.config.theme === 'day') document.body.classList.add('day');
-      else if (state.config.theme === 'night') document.body.classList.add('night');
-      else document.body.classList.add('auto-theme');
-      const label = state.config.theme === 'night' ? 'Night' : state.config.theme === 'auto' ? 'Auto' : 'Day';
-      const icon = state.config.theme === 'night' ? 'ti-moon' : state.config.theme === 'auto' ? 'ti-device-desktop' : 'ti-sun';
-      if ($('#theme-btn')) $('#theme-btn').innerHTML = `<i class="ti ${icon}"></i> ${label}`;
-    }
-
-    function setHealth(kind, text) {
-      const dot = $('#health-dot');
-      dot.classList.remove('ok', 'bad');
-      if (kind === 'ok') dot.classList.add('ok');
-      if (kind === 'bad') dot.classList.add('bad');
-      $('#health-text').textContent = text;
-    }
-
-    function appsScriptUrl(action, params = {}) {
-      const base = state.config.appsScriptUrl.replace(/\?+$/, '');
-      const url = new URL(base);
-      url.searchParams.set('action', action);
-      Object.keys(params).forEach(k => {
-        if (params[k] !== undefined && params[k] !== null && params[k] !== '') url.searchParams.set(k, params[k]);
-      });
-      return url.toString();
-    }
-
-    async function postJSON(action, payload) {
-      const body = Object.assign({}, payload, { action, pin: state.config.pin });
-      return fetchJSON(state.config.appsScriptUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify(body),
-        redirect: 'follow'
-      });
-    }
-
-    async function fetchJSON(url, opts = {}) {
-      const resp = await fetch(url, Object.assign({ redirect: 'follow', cache: 'no-store' }, opts));
-      const text = await resp.text();
-      let json;
-      try { json = JSON.parse(text); }
-      catch (e) { throw new Error(`non-JSON response (${resp.status}): ${text.slice(0, 120)}`); }
-      if (!resp.ok) throw new Error(json.error || `HTTP ${resp.status}`);
-      return json;
-    }
-
-    function loadConfig() {
-      try {
-        const currentRaw = localStorage.getItem(STORAGE_KEY);
-        const legacyRaw = localStorage.getItem(LEGACY_STORAGE_KEY);
-        const saved = JSON.parse(currentRaw || legacyRaw || '{}');
-        const merged = mergeConfig(DEFAULT_CONFIG, saved);
-        // v02 defaults to Day mode so the app never appears dark-only on devices set to dark mode.
-        // Existing v01 Auto is migrated to Day; explicit Night remains respected only after user chooses it in v02.
-        if (!currentRaw && merged.theme === 'auto') merged.theme = 'day';
-        if (!['day', 'auto', 'night'].includes(merged.theme)) merged.theme = 'day';
-        return merged;
-      } catch (err) {
-        return JSON.parse(JSON.stringify(DEFAULT_CONFIG));
-      }
-    }
-
-    function mergeConfig(base, saved) {
-      const merged = JSON.parse(JSON.stringify(base));
-      Object.keys(saved || {}).forEach(k => {
-        if (k === 'templates') merged.templates = Object.assign({}, merged.templates, saved.templates || {});
-        else merged[k] = saved[k];
-      });
-      return merged;
-    }
-
-    function saveConfigLocal() {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state.config));
-    }
-
-    function defaultTemplates() {
-      return {
-        weekly: 'โปรดเขียนบทวิเคราะห์หุ้นไทยรายสัปดาห์จากข้อมูลด้านล่าง เป็นภาษาไทย อ่านง่าย สไตล์หนังสือพิมพ์การเงิน มีโครงเรื่องชัดเจน และจบด้วยสิ่งที่ควรติดตามสัปดาห์หน้า',
-        cautious: 'โปรดวิเคราะห์ข้อมูลด้านล่างแบบระมัดระวัง เน้นความเสี่ยง ข้อจำกัดของข้อมูล และหลีกเลี่ยงการฟันธง ใช้ภาษาไทยที่อ่านง่าย ไม่ให้คำแนะนำซื้อขาย',
-        short: 'โปรดสรุปข้อมูลด้านล่างให้สั้น กระชับ เป็น bullet/ย่อหน้าสั้น ๆ สำหรับอ่านเร็ว โดยแยกภาพรวมตลาด หุ้นเด่น ข่าวที่เกี่ยวข้อง และสิ่งที่ควรติดตาม'
-      };
-    }
-
-    function normalizeRows(rows) {
-      return (rows || []).map(r => Object.assign({}, r, {
-        close: numOrBlank(r.close),
-        prev_close: numOrBlank(r.prev_close),
-        change_pct_1w: numOrBlank(r.change_pct_1w),
-        change_pct_4w: numOrBlank(r.change_pct_4w),
-        change_pct_12w: numOrBlank(r.change_pct_12w),
-        week_high: numOrBlank(r.week_high),
-        week_low: numOrBlank(r.week_low),
-        volume_ratio: numOrBlank(r.volume_ratio)
-      }));
-    }
-
-    function mapWatchlist(watchlist) {
-      const out = {};
-      (watchlist || []).forEach(w => { out[w.symbol] = w.name_th || w.symbol; });
-      return out;
-    }
-
-    function parseWatchlist(text) {
-      return text.split('\n').map(line => line.trim()).filter(Boolean).map(line => {
-        const p = line.split('|').map(x => x.trim());
-        return { symbol: p[0] || '', name_th: p[1] || '', sector: p[2] || '', note: p[3] || '', active: (p[4] || 'Y').toUpperCase() };
-      }).filter(x => x.symbol);
-    }
-
-    function suggestTags(text) {
-      const wl = (state.dashboard && state.dashboard.watchlist) || [];
-      const found = [];
-      const up = String(text || '').toUpperCase();
-      wl.forEach(w => { if (w.symbol && up.includes(String(w.symbol).toUpperCase())) found.push(w.symbol); });
-      return Array.from(new Set(found)).join(', ');
-    }
-
-    function typeLabel(type) {
-      return ({ weekly: 'บทวิเคราะห์รายสัปดาห์', youtube: 'สรุป YouTube', note: 'บันทึก', other: 'อื่น ๆ' })[type] || type || 'บทความ';
-    }
-
-    function fmtNumber(v) {
-      if (v === '' || v === null || v === undefined || Number.isNaN(Number(v))) return '—';
-      return Number(v).toLocaleString('en-US', { maximumFractionDigits: 2 });
-    }
-
-    function fmtPct(v) {
-      if (v === '' || v === null || v === undefined || Number.isNaN(Number(v))) return '—';
-      const n = Number(v);
-      return `${n > 0 ? '+' : ''}${n.toFixed(2)}%`;
-    }
-
-    function pctHtml(v) {
-      const cls = num(v) > 0 ? 'pos' : num(v) < 0 ? 'neg' : 'flat';
-      return `<span class="${cls}">${fmtPct(v)}</span>`;
-    }
-
-    function num(v) {
-      const n = Number(v);
-      return Number.isFinite(n) ? n : 0;
-    }
-
-    function numOrBlank(v) {
-      if (v === '' || v === null || v === undefined) return '';
-      const n = Number(v);
-      return Number.isFinite(n) ? n : '';
-    }
-
-    function formatBE(iso) {
-      if (!iso || iso === 'N/A') return '';
-      const d = new Date(`${iso}T00:00:00+07:00`);
-      if (Number.isNaN(d.getTime())) return iso;
-      return new Intl.DateTimeFormat('th-TH-u-ca-buddhist', { day: 'numeric', month: 'short', year: 'numeric' }).format(d);
-    }
-
-    function renderMarkdown(md) {
-      const lines = escapeHTML(md).split('\n');
-      let html = '';
-      let inList = false;
-      for (const raw of lines) {
-        const line = raw.trim();
-        if (!line) { if (inList) { html += '</ul>'; inList = false; } continue; }
-        if (line.startsWith('### ')) { if (inList) { html += '</ul>'; inList = false; } html += `<h3>${inlineMd(line.slice(4))}</h3>`; }
-        else if (line.startsWith('## ')) { if (inList) { html += '</ul>'; inList = false; } html += `<h2>${inlineMd(line.slice(3))}</h2>`; }
-        else if (line.startsWith('# ')) { if (inList) { html += '</ul>'; inList = false; } html += `<h1>${inlineMd(line.slice(2))}</h1>`; }
-        else if (line.startsWith('- ') || /^\d+\.\s/.test(line)) {
-          if (!inList) { html += '<ul>'; inList = true; }
-          html += `<li>${inlineMd(line.replace(/^(-|\d+\.)\s/, ''))}</li>`;
-        } else {
-          if (inList) { html += '</ul>'; inList = false; }
-          html += `<p>${inlineMd(line)}</p>`;
-        }
-      }
-      if (inList) html += '</ul>';
-      return html;
-    }
-
-    function inlineMd(s) {
-      return s.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-    }
-
-    function alertHtml(kind, msg) {
-      const cls = kind === 'good' ? 'alert good' : kind === 'bad' ? 'alert bad' : 'alert';
-      return `<div class="${cls}">${msg}</div>`;
-    }
-
-    function escapeHTML(s) {
-      return String(s ?? '').replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
-    }
-
-    function escapeAttr(s) {
-      return escapeHTML(s).replace(/'/g, '&#39;');
-    }
-
-    async function copyText(text) {
-      if (navigator.clipboard && window.isSecureContext) {
-        await navigator.clipboard.writeText(text);
-        return;
-      }
-      const ta = document.createElement('textarea');
-      ta.value = text;
-      ta.style.position = 'fixed';
-      ta.style.left = '-9999px';
-      document.body.appendChild(ta);
-      ta.focus();
-      ta.select();
-      document.execCommand('copy');
-      ta.remove();
-    }
+    async function checkRead(name, url) { try { const json = await fetchJSON(url); return { name, ok: !!json.ok }; } catch (err) { return { name, ok:false, error: err.message }; } }
+    async function saveTemplatesToSheets() { if (!state.config.pin) { $('#config-status').innerHTML = alertHtml('bad','กรุณาใส่ PIN ก่อนบันทึกลง Sheets'); return; } syncTemplatesFromEditor(false); try { const json = await postJSON('saveConfig', { entries: { template_weekly: state.config.templates.weekly, template_cautious: state.config.templates.cautious, template_short: state.config.templates.short, frontend_version: APP_VERSION }}); if (!json.ok) throw new Error(json.error || (json.data && json.data.error) || 'saveConfig failed'); $('#config-status').innerHTML = alertHtml('good','บันทึก templates ลง Sheets แล้ว'); } catch (err) { $('#config-status').innerHTML = alertHtml('bad',`บันทึก config ไม่สำเร็จ: ${escapeHTML(err.message)}`); } }
+    async function saveWatchlist() { if (!state.config.pin) { $('#watchlist-status').innerHTML = alertHtml('bad','กรุณาใส่ PIN ก่อนบันทึก watchlist'); return; } const items = parseWatchlist($('#watchlist-editor').value); if (!items.length) { $('#watchlist-status').innerHTML = alertHtml('bad','ไม่มีรายการ watchlist ที่ถูกต้อง'); return; } try { const json = await postJSON('updateWatchlist', { items }); if (!json.ok) throw new Error(json.error || (json.data && json.data.error) || 'updateWatchlist failed'); $('#watchlist-status').innerHTML = alertHtml('good',`บันทึก watchlist แล้ว ${items.length} รายการ`); await loadDashboard(); } catch (err) { $('#watchlist-status').innerHTML = alertHtml('bad',`บันทึก watchlist ไม่สำเร็จ: ${escapeHTML(err.message)}`); } }
+    function hydrateSettings() { $('#apps-script-url').value = state.config.appsScriptUrl; $('#health-url').value = state.config.healthUrl; $('#local-pin').value = state.config.pin || ''; $('#theme-select').value = state.config.theme || 'day'; hydrateTemplateEditors(); }
+    function hydrateTemplateEditors() { const t = state.config.templates || defaultTemplates(); $('#template-weekly').value = t.weekly || ''; $('#template-cautious').value = t.cautious || ''; $('#template-short').value = t.short || ''; }
+    function hydrateWatchlistEditor() { const wl = (state.dashboard && state.dashboard.watchlist) || []; $('#watchlist-editor').value = wl.map(w => [w.symbol, w.name_th, w.sector, w.note, w.active].map(v => v || '').join(' | ')).join('\n'); }
+    function syncTemplatesFromEditor(shouldSave = true) { state.config.templates = { weekly: $('#template-weekly').value, cautious: $('#template-cautious').value, short: $('#template-short').value }; if (shouldSave) saveConfigLocal(); renderPromptPreview(); }
+    function resetTemplates() { state.config.templates = defaultTemplates(); hydrateTemplateEditors(); saveConfigLocal(); renderPromptPreview(); $('#config-status').innerHTML = alertHtml('good','Reset templates แล้ว'); }
+    function switchTab(tab) { state.activeTab = tab; $$('.tab').forEach(el => el.classList.toggle('active', el.id === `tab-${tab}`)); $$('[data-tab]').forEach(btn => btn.classList.toggle('active', btn.dataset.tab === tab)); if (tab === 'write') renderPromptPreview(); }
+    function cycleTheme() { const order = ['day','auto','night']; const current = order.includes(state.config.theme) ? state.config.theme : 'day'; state.config.theme = order[(order.indexOf(current)+1)%order.length]; saveConfigLocal(); applyTheme(); hydrateSettings(); }
+    function applyTheme() { document.body.classList.remove('auto-theme','day','night'); if (state.config.theme === 'night') document.body.classList.add('night'); else if (state.config.theme === 'auto') document.body.classList.add('auto-theme'); else document.body.classList.add('day'); const label = state.config.theme === 'night' ? 'Night' : state.config.theme === 'auto' ? 'Auto' : 'Day'; const icon = state.config.theme === 'night' ? 'ti-moon' : state.config.theme === 'auto' ? 'ti-device-desktop' : 'ti-sun'; if ($('#theme-btn')) $('#theme-btn').innerHTML = `<i class="ti ${icon}"></i> ${label}`; if ($('#theme-select')) $('#theme-select').value = state.config.theme || 'day'; }
+    function setHealth(kind, text) { const dot = $('#health-dot'); dot.classList.remove('ok','bad'); if (kind === 'ok') dot.classList.add('ok'); if (kind === 'bad') dot.classList.add('bad'); $('#health-text').textContent = text; }
+    function appsScriptUrl(action, params = {}) { const base = state.config.appsScriptUrl.replace(/\?+$/, ''); const url = new URL(base); url.searchParams.set('action', action); Object.keys(params).forEach(k => { if (params[k] !== undefined && params[k] !== null && params[k] !== '') url.searchParams.set(k, params[k]); }); return url.toString(); }
+    async function postJSON(action, payload) { return fetchJSON(state.config.appsScriptUrl, { method:'POST', headers:{ 'Content-Type':'text/plain;charset=utf-8' }, body: JSON.stringify(Object.assign({}, payload, { action, pin: state.config.pin })), redirect:'follow' }); }
+    async function fetchJSON(url, opts = {}) { const resp = await fetch(url, Object.assign({ redirect:'follow', cache:'no-store' }, opts)); const text = await resp.text(); let json; try { json = JSON.parse(text); } catch (e) { throw new Error(`non-JSON response (${resp.status}): ${text.slice(0,120)}`); } if (!resp.ok) throw new Error(json.error || `HTTP ${resp.status}`); return json; }
+    function loadConfig() { try { const currentRaw = localStorage.getItem(STORAGE_KEY); let raw = currentRaw; if (!raw) for (const k of LEGACY_KEYS) { raw = localStorage.getItem(k); if (raw) break; } const saved = JSON.parse(raw || '{}'); const merged = mergeConfig(DEFAULT_CONFIG, saved); if (!['day','auto','night'].includes(merged.theme)) merged.theme = 'day'; if (!currentRaw && merged.theme === 'auto') merged.theme = 'day'; return merged; } catch (err) { return JSON.parse(JSON.stringify(DEFAULT_CONFIG)); } }
+    function mergeConfig(base, saved) { const merged = JSON.parse(JSON.stringify(base)); Object.keys(saved || {}).forEach(k => { if (k === 'templates') merged.templates = Object.assign({}, merged.templates, saved.templates || {}); else merged[k] = saved[k]; }); return merged; }
+    function saveConfigLocal() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state.config)); }
+    function defaultTemplates() { return { weekly:'โปรดเขียนบทวิเคราะห์หุ้นไทยรายสัปดาห์จากข้อมูลด้านล่าง เป็นภาษาไทย อ่านง่าย สไตล์หนังสือพิมพ์การเงิน มีโครงเรื่องชัดเจน และจบด้วยสิ่งที่ควรติดตามสัปดาห์หน้า', cautious:'โปรดวิเคราะห์ข้อมูลด้านล่างแบบระมัดระวัง เน้นความเสี่ยง ข้อจำกัดของข้อมูล และหลีกเลี่ยงการฟันธง ใช้ภาษาไทยที่อ่านง่าย ไม่ให้คำแนะนำซื้อขาย', short:'โปรดสรุปข้อมูลด้านล่างให้สั้น กระชับ เป็น bullet/ย่อหน้าสั้น ๆ สำหรับอ่านเร็ว โดยแยกภาพรวมตลาด หุ้นเด่น ข่าวที่เกี่ยวข้อง และสิ่งที่ควรติดตาม' }; }
+    function normalizeRows(rows) { return (rows || []).map(r => Object.assign({}, r, { close:numOrBlank(r.close), prev_close:numOrBlank(r.prev_close), change_pct_1w:numOrBlank(r.change_pct_1w), change_pct_4w:numOrBlank(r.change_pct_4w), change_pct_12w:numOrBlank(r.change_pct_12w), week_high:numOrBlank(r.week_high), week_low:numOrBlank(r.week_low), volume_ratio:numOrBlank(r.volume_ratio) })); }
+    function mapWatchlist(watchlist) { const out = {}; (watchlist || []).forEach(w => { out[w.symbol] = w.name_th || w.symbol; }); return out; }
+    function parseWatchlist(text) { return text.split('\n').map(line => line.trim()).filter(Boolean).map(line => { const p = line.split('|').map(x => x.trim()); return { symbol:p[0] || '', name_th:p[1] || '', sector:p[2] || '', note:p[3] || '', active:(p[4] || 'Y').toUpperCase() }; }).filter(x => x.symbol); }
+    function suggestTags(text) { const wl = (state.dashboard && state.dashboard.watchlist) || []; const found = []; const up = String(text || '').toUpperCase(); wl.forEach(w => { if (w.symbol && up.includes(String(w.symbol).toUpperCase())) found.push(w.symbol); }); return Array.from(new Set(found)).join(', '); }
+    function typeLabel(type) { return ({ weekly:'บทวิเคราะห์รายสัปดาห์', youtube:'สรุป YouTube', note:'บันทึก', other:'อื่น ๆ' })[type] || type || 'บทความ'; }
+    function fmtNumber(v) { if (v === '' || v === null || v === undefined || Number.isNaN(Number(v))) return '—'; return Number(v).toLocaleString('en-US', { maximumFractionDigits:2 }); }
+    function fmtPct(v) { if (v === '' || v === null || v === undefined || Number.isNaN(Number(v))) return '—'; const n = Number(v); return `${n > 0 ? '+' : ''}${n.toFixed(2)}%`; }
+    function pctHtml(v) { const cls = num(v) > 0 ? 'pos' : num(v) < 0 ? 'neg' : 'flat'; return `<span class="${cls}">${fmtPct(v)}</span>`; }
+    function num(v) { const n = Number(v); return Number.isFinite(n) ? n : 0; }
+    function numOrBlank(v) { if (v === '' || v === null || v === undefined) return ''; const n = Number(v); return Number.isFinite(n) ? n : ''; }
+    function formatBE(iso) { if (!iso || iso === 'N/A') return ''; const d = new Date(`${iso}T00:00:00+07:00`); if (Number.isNaN(d.getTime())) return iso; return new Intl.DateTimeFormat('th-TH-u-ca-buddhist', { day:'numeric', month:'short', year:'numeric' }).format(d); }
+    function renderMarkdown(md) { const lines = escapeHTML(md).split('\n'); let html = ''; let inList = false; for (const raw of lines) { const line = raw.trim(); if (!line) { if (inList) { html += '</ul>'; inList = false; } continue; } if (line.startsWith('### ')) { if (inList) { html += '</ul>'; inList = false; } html += `<h3>${inlineMd(line.slice(4))}</h3>`; } else if (line.startsWith('## ')) { if (inList) { html += '</ul>'; inList = false; } html += `<h2>${inlineMd(line.slice(3))}</h2>`; } else if (line.startsWith('# ')) { if (inList) { html += '</ul>'; inList = false; } html += `<h1>${inlineMd(line.slice(2))}</h1>`; } else if (line.startsWith('- ') || /^\d+\.\s/.test(line)) { if (!inList) { html += '<ul>'; inList = true; } html += `<li>${inlineMd(line.replace(/^(-|\d+\.)\s/, ''))}</li>`; } else { if (inList) { html += '</ul>'; inList = false; } html += `<p>${inlineMd(line)}</p>`; } } if (inList) html += '</ul>'; return html; }
+    function inlineMd(s) { return s.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>'); }
+    function badge(text, icon, kind) { return `<span class="badge ${kind || ''}"><i class="ti ${icon || 'ti-point'}"></i>${escapeHTML(text)}</span>`; }
+    function note(title, text, kind) { return `<div class="signal"><div class="signal-top"><strong>${escapeHTML(title)}</strong><span class="badge ${kind || ''}">${escapeHTML(kind === 'good' ? 'OK' : kind === 'bad' ? 'Check' : 'Note')}</span></div><div class="muted">${escapeHTML(text)}</div></div>`; }
+    function alertHtml(kind, msg) { const cls = kind === 'good' ? 'alert good' : kind === 'bad' ? 'alert bad' : kind === 'warn' ? 'alert warn' : 'alert'; return `<div class="${cls}">${msg}</div>`; }
+    function escapeHTML(s) { return String(s ?? '').replace(/[&<>"]/g, ch => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[ch])); }
+    function escapeAttr(s) { return escapeHTML(s).replace(/'/g, '&#39;'); }
+    async function copyText(text) { if (navigator.clipboard && window.isSecureContext) { await navigator.clipboard.writeText(text); return; } const ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.left = '-9999px'; document.body.appendChild(ta); ta.focus(); ta.select(); document.execCommand('copy'); ta.remove(); }
   })();
   </script>
 </body>
