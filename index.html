@@ -151,6 +151,20 @@
     .mobile-nav button.active { background:linear-gradient(135deg, var(--rose), var(--mauve)); color:#fff; }
     .hide { display:none !important; }
     @media (max-width: 940px) { .masthead-inner, .layout-main, .cols-2, .cols-3, .cols-4 { grid-template-columns:1fr; } .step-row { grid-template-columns:1fr 1fr; } }
+
+    .manager-list { display:grid; gap:10px; }
+    .manager-card { border:1px solid var(--line); border-radius:18px; background:rgba(255,255,255,.32); padding:14px; display:grid; gap:10px; }
+    body.night .manager-card { background:rgba(255,255,255,.04); }
+    .manager-actions { display:flex; flex-wrap:wrap; gap:8px; }
+    .manager-card.deleted { opacity:.72; border-style:dashed; }
+    .watchlist-table { display:grid; gap:10px; }
+    .wl-row { display:grid; grid-template-columns:1.1fr 1.2fr 1fr 1.2fr auto auto; gap:8px; align-items:end; border:1px solid var(--line); border-radius:16px; padding:10px; background:rgba(255,255,255,.28); }
+    body.night .wl-row { background:rgba(255,255,255,.04); }
+    .wl-row input { min-width:0; }
+    .mini-label { display:grid; gap:5px; font-size:.72rem; color:var(--muted); font-weight:800; text-transform:uppercase; letter-spacing:.06em; }
+    .hidden { display:none !important; }
+    @media (max-width: 900px) { .wl-row { grid-template-columns:1fr 1fr; } }
+
     @media (max-width: 680px) { .app { width:min(100% - 18px, 1200px); padding-top:12px; } .masthead { padding:20px; border-radius:26px; } .utility-bar { align-items:flex-start; flex-direction:column; } .nav-wrap { display:none; } .mobile-nav { display:grid; } .form-grid, .step-row { grid-template-columns:1fr; } .panel, .paper-card { padding:15px; border-radius:20px; } .brand { font-size:3.3rem; } }
   </style>
 </head>
@@ -158,7 +172,7 @@
   <div class="app">
     <header class="utility-bar">
       <div class="health-inline"><span class="dot" id="health-dot"></span><span id="health-text">กำลังเตรียม AlphaWeek...</span></div>
-      <div class="meta"><span id="app-version">v03</span><button class="btn ghost" id="refresh-btn"><i class="ti ti-refresh"></i> Refresh</button><button class="btn ghost" id="theme-btn"><i class="ti ti-sun"></i> Day</button></div>
+      <div class="meta"><span id="app-version">v04</span><button class="btn ghost" id="refresh-btn"><i class="ti ti-refresh"></i> Refresh</button><button class="btn ghost" id="theme-btn"><i class="ti ti-sun"></i> Day</button></div>
     </header>
 
     <section class="masthead" aria-label="AlphaWeek masthead">
@@ -251,7 +265,7 @@
               <label>Tags<input id="article-tags" placeholder="AOT, KBANK, PTT"></label>
               <label>Source note<input id="article-source" placeholder="ChatGPT / Gemini / Perplexity / Claude"></label>
             </div>
-            <div class="meta" style="margin-top:12px"><button class="btn primary" id="post-article-btn"><i class="ti ti-send"></i> Post Article</button><button class="btn" id="reload-articles-btn"><i class="ti ti-refresh"></i> Reload Feed</button></div>
+            <div class="meta" style="margin-top:12px"><button class="btn primary" id="post-article-btn"><i class="ti ti-send"></i> Post Article</button><button class="btn hidden" id="cancel-edit-btn"><i class="ti ti-x"></i> Cancel Edit</button><button class="btn" id="reload-articles-btn"><i class="ti ti-refresh"></i> Reload Feed</button></div>
             <div id="post-status" style="margin-top:12px"></div>
           </section>
         </div>
@@ -289,8 +303,14 @@
           </section>
         </div>
         <section class="panel section">
-          <div class="section-title"><div><h2>Watchlist</h2><span>รูปแบบ: symbol | name_th | sector | note | active</span></div><button class="btn primary" id="save-watchlist-btn"><i class="ti ti-list-check"></i> Save Watchlist</button></div>
-          <textarea id="watchlist-editor" placeholder="PTT | ปตท. | พลังงาน | | Y"></textarea>
+          <div class="section-title"><div><h2>Article Manager</h2><span>ลบ/ซ่อน/กู้คืนบทความแบบ soft delete</span></div><div class="meta"><label style="display:flex;align-items:center;gap:8px;font-size:.85rem"><input type="checkbox" id="show-deleted-articles"> Show deleted</label><button class="btn" id="reload-article-manager-btn"><i class="ti ti-refresh"></i> Reload</button></div></div>
+          <div id="article-manager-status"></div>
+          <div class="manager-list" id="article-manager-list"></div>
+        </section>
+        <section class="panel section">
+          <div class="section-title"><div><h2>Watchlist Manager</h2><span>เพิ่ม/ลดหุ้นเองได้ ใช้ Active เพื่อเปิด/ปิดการแสดงผล</span></div><div class="meta"><button class="btn" id="add-stock-row-btn"><i class="ti ti-plus"></i> Add Stock</button><button class="btn primary" id="save-watchlist-btn"><i class="ti ti-list-check"></i> Save Watchlist</button></div></div>
+          <div class="watchlist-table" id="watchlist-manager"></div>
+          <details style="margin-top:12px"><summary class="muted">Advanced text editor</summary><textarea id="watchlist-editor" placeholder="PTT | ปตท. | พลังงาน | | Y"></textarea></details>
           <div id="watchlist-status" style="margin-top:12px"></div>
         </section>
       </section>
@@ -307,9 +327,9 @@
   <script>
   (function () {
     'use strict';
-    const APP_VERSION = 'index-alphaweek-v03';
-    const STORAGE_KEY = 'alphaweek_config_v03';
-    const LEGACY_KEYS = ['alphaweek_config_v02', 'alphaweek_config_v01'];
+    const APP_VERSION = 'index-alphaweek-v04';
+    const STORAGE_KEY = 'alphaweek_config_v04';
+    const LEGACY_KEYS = ['alphaweek_config_v03', 'alphaweek_config_v02', 'alphaweek_config_v01'];
     const DEFAULT_CONFIG = {
       appsScriptUrl: 'https://script.google.com/macros/s/AKfycbzh2PhvOrJu16P9ZLX192PEXUZqTHbp26P1y6TAXNUdO-3UCslhogZHBkoPnOcfx1SA/exec',
       healthUrl: 'https://alphaweek.vercel.app/api/health',
@@ -317,7 +337,7 @@
       theme: 'day',
       templates: defaultTemplates()
     };
-    const state = { config: loadConfig(), health: null, dashboard: null, articles: [], activeTab: 'brief' };
+    const state = { config: loadConfig(), health: null, dashboard: null, articles: [], allArticles: [], editingArticleId: null, activeTab: 'brief' };
     const $ = (sel) => document.querySelector(sel);
     const $$ = (sel) => Array.from(document.querySelectorAll(sel));
     document.addEventListener('DOMContentLoaded', init);
@@ -333,8 +353,13 @@
       $('#copy-prompt-btn').addEventListener('click', copyPrompt);
       $('#template-select').addEventListener('change', renderPromptPreview);
       $('#post-article-btn').addEventListener('click', postArticle);
+      $('#cancel-edit-btn').addEventListener('click', cancelArticleEdit);
       $('#reload-articles-btn').addEventListener('click', loadArticles);
       $('#reload-articles-btn-2').addEventListener('click', loadArticles);
+      $('#reload-article-manager-btn').addEventListener('click', loadArticleManager);
+      $('#show-deleted-articles').addEventListener('change', loadArticleManager);
+      $('#article-list').addEventListener('click', handleArticleAction);
+      $('#article-manager-list').addEventListener('click', handleArticleAction);
       $('#archive-search').addEventListener('input', renderArticles);
       $('#archive-filter').addEventListener('change', renderArticles);
       $('#save-settings-btn').addEventListener('click', saveLocalSettings);
@@ -342,9 +367,12 @@
       $('#reset-template-btn').addEventListener('click', resetTemplates);
       $('#save-config-btn').addEventListener('click', saveTemplatesToSheets);
       $('#save-watchlist-btn').addEventListener('click', saveWatchlist);
+      $('#add-stock-row-btn').addEventListener('click', () => addWatchlistRow({ active:'Y' }));
+      $('#watchlist-manager').addEventListener('click', handleWatchlistAction);
+      $('#watchlist-manager').addEventListener('input', syncWatchlistTextFromManager);
       ['#template-weekly', '#template-cautious', '#template-short'].forEach(sel => $(sel).addEventListener('input', syncTemplatesFromEditor));
     }
-    async function loadAll() { setHealth('loading', 'กำลังโหลดข้อมูลล่าสุด...'); await Promise.allSettled([loadHealth(), loadDashboard(), loadArticles()]); renderPromptPreview(); }
+    async function loadAll() { setHealth('loading', 'กำลังโหลดข้อมูลล่าสุด...'); await Promise.allSettled([loadHealth(), loadDashboard(), loadArticles(), loadArticleManager()]); renderPromptPreview(); }
     async function loadHealth() {
       try { const json = await fetchJSON(state.config.healthUrl); state.health = json; setHealth(json && json.ok ? 'ok' : 'bad', json && json.ok ? `Online · ${json.latest_week || '—'} · ${json.news_count || 0} news` : 'Health check ไม่ผ่าน'); renderAll(); }
       catch (err) { setHealth('bad', `Health error: ${err.message}`); renderAll(); }
@@ -417,12 +445,70 @@
     async function copyMarketTable() { const d = state.dashboard || {}; await copyText(marketMarkdownTable(normalizeRows(d.rows || []), d.watchlist || [])); $('#copy-status').innerHTML = alertHtml('good','Copy ตาราง Markdown แล้ว'); $('#brief-alert').innerHTML = alertHtml('good','Copy ตาราง Markdown แล้ว'); }
     async function postArticle() {
       if (!state.config.pin) { $('#post-status').innerHTML = alertHtml('bad','กรุณาใส่ PIN ใน Control Room ก่อนโพสต์'); return; }
-      const article = { week_ending: $('#article-week').value.trim(), type: $('#article-type').value, title: $('#article-title').value.trim(), body_md: $('#article-body').value.trim(), tags: suggestTags($('#article-body').value + ' ' + $('#article-title').value + ' ' + $('#article-tags').value), source_note: $('#article-source').value.trim() };
-      if ($('#article-tags').value.trim()) article.tags = $('#article-tags').value.trim();
-      if (!article.title || !article.body_md) { $('#post-status').innerHTML = alertHtml('bad','ต้องมีชื่อบทความและเนื้อหา'); return; }
-      try { $('#post-status').innerHTML = alertHtml('', 'กำลังโพสต์บทความ...'); const json = await postJSON('postArticle', { article }); if (!json.ok) throw new Error(json.error || (json.data && json.data.error) || 'post failed'); $('#post-status').innerHTML = alertHtml('good', `โพสต์สำเร็จ ${json.data && json.data.id ? json.data.id : ''}`); $('#article-title').value = ''; $('#article-body').value = ''; await loadArticles(); switchTab('archive'); }
-      catch (err) { $('#post-status').innerHTML = alertHtml('bad', `โพสต์ไม่สำเร็จ: ${escapeHTML(err.message)}`); }
+      const article = { week_ending: $('#article-week').value.trim(), type: $('#article-type').value, title: $('#article-title').value.trim(), body_md: $('#article-body').value.trim(), tags: $('#article-tags').value.trim(), source_note: $('#article-source').value.trim() };
+      if (!article.title || !article.body_md) { $('#post-status').innerHTML = alertHtml('bad','กรุณาใส่ชื่อและเนื้อหาบทความ'); return; }
+      try {
+        const action = state.editingArticleId ? 'updateArticle' : 'postArticle';
+        const payload = state.editingArticleId ? { id: state.editingArticleId, article } : { article };
+        $('#post-status').innerHTML = alertHtml('', state.editingArticleId ? 'กำลังอัปเดตบทความ...' : 'กำลังโพสต์บทความ...');
+        const json = await postJSON(action, payload);
+        if (!json.ok) throw new Error(json.error || (json.data && json.data.error) || 'article save failed');
+        $('#post-status').innerHTML = alertHtml('good', state.editingArticleId ? 'อัปเดตบทความสำเร็จ' : `โพสต์สำเร็จ ${json.data && json.data.id ? json.data.id : ''}`);
+        clearArticleForm();
+        await Promise.allSettled([loadArticles(), loadArticleManager()]);
+        switchTab('archive');
+      }
+      catch (err) { $('#post-status').innerHTML = alertHtml('bad',`บันทึกบทความไม่สำเร็จ: ${escapeHTML(err.message)}`); }
     }
+    function clearArticleForm() {
+      state.editingArticleId = null;
+      $('#article-title').value = '';
+      $('#article-body').value = '';
+      $('#article-tags').value = '';
+      $('#article-source').value = '';
+      $('#post-article-btn').innerHTML = '<i class="ti ti-send"></i> Post Article';
+      $('#cancel-edit-btn').classList.add('hidden');
+    }
+    function cancelArticleEdit() {
+      clearArticleForm();
+      $('#post-status').innerHTML = alertHtml('', 'ยกเลิกการแก้ไขแล้ว');
+    }
+    function startArticleEdit(id) {
+      const a = findArticle(id);
+      if (!a) return;
+      state.editingArticleId = id;
+      $('#article-week').value = a.week_ending || '';
+      $('#article-type').value = a.type || 'weekly';
+      $('#article-title').value = a.title || '';
+      $('#article-body').value = a.body_md || '';
+      $('#article-tags').value = a.tags || '';
+      $('#article-source').value = a.source_note || '';
+      $('#post-article-btn').innerHTML = '<i class="ti ti-device-floppy"></i> Update Article';
+      $('#cancel-edit-btn').classList.remove('hidden');
+      $('#post-status').innerHTML = alertHtml('warn', `กำลังแก้ไขบทความ ${escapeHTML(id)}`);
+      switchTab('write');
+    }
+    async function deleteArticle(id) {
+      if (!state.config.pin) { $('#article-manager-status').innerHTML = alertHtml('bad','กรุณาใส่ PIN ก่อนลบบทความ'); return; }
+      if (!confirm('ซ่อน/ลบบทความนี้จากหน้า Archive? ข้อมูลจะยังอยู่ใน Google Sheets เพื่อ restore ได้')) return;
+      try { const json = await postJSON('deleteArticle', { id }); if (!json.ok) throw new Error(json.error || (json.data && json.data.error) || 'delete failed'); $('#article-manager-status').innerHTML = alertHtml('good','ซ่อนบทความแล้ว'); await Promise.allSettled([loadArticles(), loadArticleManager()]); }
+      catch (err) { $('#article-manager-status').innerHTML = alertHtml('bad',`ลบบทความไม่สำเร็จ: ${escapeHTML(err.message)}`); }
+    }
+    async function restoreArticle(id) {
+      if (!state.config.pin) { $('#article-manager-status').innerHTML = alertHtml('bad','กรุณาใส่ PIN ก่อน restore บทความ'); return; }
+      try { const json = await postJSON('restoreArticle', { id }); if (!json.ok) throw new Error(json.error || (json.data && json.data.error) || 'restore failed'); $('#article-manager-status').innerHTML = alertHtml('good','Restore บทความแล้ว'); await Promise.allSettled([loadArticles(), loadArticleManager()]); }
+      catch (err) { $('#article-manager-status').innerHTML = alertHtml('bad',`restore ไม่สำเร็จ: ${escapeHTML(err.message)}`); }
+    }
+    function handleArticleAction(event) {
+      const btn = event.target.closest('[data-article-action]');
+      if (!btn) return;
+      const id = btn.dataset.id;
+      if (btn.dataset.articleAction === 'edit') startArticleEdit(id);
+      if (btn.dataset.articleAction === 'delete') deleteArticle(id);
+      if (btn.dataset.articleAction === 'restore') restoreArticle(id);
+    }
+    function findArticle(id) { return (state.allArticles || []).concat(state.articles || []).find(a => String(a.id) === String(id)); }
+    function isDeleted(a) { return String(a.status || 'published').toLowerCase() === 'deleted'; }
     function saveLocalSettings() { state.config.appsScriptUrl = $('#apps-script-url').value.trim() || DEFAULT_CONFIG.appsScriptUrl; state.config.healthUrl = $('#health-url').value.trim() || DEFAULT_CONFIG.healthUrl; state.config.pin = $('#local-pin').value; state.config.theme = $('#theme-select').value || 'day'; syncTemplatesFromEditor(false); saveConfigLocal(); applyTheme(); $('#settings-status').innerHTML = alertHtml('good','บันทึก local settings แล้ว'); }
     async function testConnection() {
       saveLocalSettings(); $('#settings-status').innerHTML = alertHtml('', 'กำลังทดสอบ connection...'); $('#connection-result').innerHTML = '';
@@ -436,10 +522,23 @@
     }
     async function checkRead(name, url) { try { const json = await fetchJSON(url); return { name, ok: !!json.ok }; } catch (err) { return { name, ok:false, error: err.message }; } }
     async function saveTemplatesToSheets() { if (!state.config.pin) { $('#config-status').innerHTML = alertHtml('bad','กรุณาใส่ PIN ก่อนบันทึกลง Sheets'); return; } syncTemplatesFromEditor(false); try { const json = await postJSON('saveConfig', { entries: { template_weekly: state.config.templates.weekly, template_cautious: state.config.templates.cautious, template_short: state.config.templates.short, frontend_version: APP_VERSION }}); if (!json.ok) throw new Error(json.error || (json.data && json.data.error) || 'saveConfig failed'); $('#config-status').innerHTML = alertHtml('good','บันทึก templates ลง Sheets แล้ว'); } catch (err) { $('#config-status').innerHTML = alertHtml('bad',`บันทึก config ไม่สำเร็จ: ${escapeHTML(err.message)}`); } }
-    async function saveWatchlist() { if (!state.config.pin) { $('#watchlist-status').innerHTML = alertHtml('bad','กรุณาใส่ PIN ก่อนบันทึก watchlist'); return; } const items = parseWatchlist($('#watchlist-editor').value); if (!items.length) { $('#watchlist-status').innerHTML = alertHtml('bad','ไม่มีรายการ watchlist ที่ถูกต้อง'); return; } try { const json = await postJSON('updateWatchlist', { items }); if (!json.ok) throw new Error(json.error || (json.data && json.data.error) || 'updateWatchlist failed'); $('#watchlist-status').innerHTML = alertHtml('good',`บันทึก watchlist แล้ว ${items.length} รายการ`); await loadDashboard(); } catch (err) { $('#watchlist-status').innerHTML = alertHtml('bad',`บันทึก watchlist ไม่สำเร็จ: ${escapeHTML(err.message)}`); } }
+    async function saveWatchlist() { if (!state.config.pin) { $('#watchlist-status').innerHTML = alertHtml('bad','กรุณาใส่ PIN ก่อนบันทึก watchlist'); return; } const items = collectWatchlistFromManager(); if (!items.length) { $('#watchlist-status').innerHTML = alertHtml('bad','ไม่มีรายการ watchlist ที่ถูกต้อง'); return; } try { const json = await postJSON('updateWatchlist', { items }); if (!json.ok) throw new Error(json.error || (json.data && json.data.error) || 'updateWatchlist failed'); $('#watchlist-status').innerHTML = alertHtml('good',`บันทึก watchlist แล้ว ${items.length} รายการ`); await loadDashboard(); } catch (err) { $('#watchlist-status').innerHTML = alertHtml('bad',`บันทึก watchlist ไม่สำเร็จ: ${escapeHTML(err.message)}`); } }
+
+    function renderWatchlistManager(items) {
+      const rows = (items || []).length ? items : [{ active:'Y' }];
+      $('#watchlist-manager').innerHTML = rows.map((it, idx) => watchlistRowHtml(it, idx)).join('');
+    }
+    function watchlistRowHtml(it, idx) {
+      const active = String(it.active || 'Y').toUpperCase() !== 'N';
+      return `<div class="wl-row" data-index="${idx}"><label class="mini-label">Symbol<input class="wl-symbol" value="${escapeAttr(it.symbol || '')}" placeholder="AOT.BK"></label><label class="mini-label">Name<input class="wl-name" value="${escapeAttr(it.name_th || '')}" placeholder="AOT"></label><label class="mini-label">Sector<input class="wl-sector" value="${escapeAttr(it.sector || '')}" placeholder="ขนส่ง"></label><label class="mini-label">Note<input class="wl-note" value="${escapeAttr(it.note || '')}" placeholder="note"></label><label class="mini-label">Active<select class="wl-active"><option value="Y" ${active ? 'selected' : ''}>Y</option><option value="N" ${!active ? 'selected' : ''}>N</option></select></label><button class="btn danger" data-watchlist-action="remove" type="button"><i class="ti ti-trash"></i></button></div>`;
+    }
+    function addWatchlistRow(item) { const items = collectWatchlistFromManager(false); items.push(item || { active:'Y' }); renderWatchlistManager(items); syncWatchlistTextFromManager(); }
+    function handleWatchlistAction(event) { const btn = event.target.closest('[data-watchlist-action]'); if (!btn) return; const row = btn.closest('.wl-row'); if (row) row.remove(); syncWatchlistTextFromManager(); }
+    function collectWatchlistFromManager(onlyValid = true) { return $$('#watchlist-manager .wl-row').map(row => ({ symbol: row.querySelector('.wl-symbol').value.trim(), name_th: row.querySelector('.wl-name').value.trim(), sector: row.querySelector('.wl-sector').value.trim(), note: row.querySelector('.wl-note').value.trim(), active: row.querySelector('.wl-active').value || 'Y' })).filter(x => !onlyValid || x.symbol); }
+    function syncWatchlistTextFromManager() { const items = collectWatchlistFromManager(false); $('#watchlist-editor').value = items.map(w => [w.symbol, w.name_th, w.sector, w.note, w.active].map(v => v || '').join(' | ')).join('\n'); }
     function hydrateSettings() { $('#apps-script-url').value = state.config.appsScriptUrl; $('#health-url').value = state.config.healthUrl; $('#local-pin').value = state.config.pin || ''; $('#theme-select').value = state.config.theme || 'day'; hydrateTemplateEditors(); }
     function hydrateTemplateEditors() { const t = state.config.templates || defaultTemplates(); $('#template-weekly').value = t.weekly || ''; $('#template-cautious').value = t.cautious || ''; $('#template-short').value = t.short || ''; }
-    function hydrateWatchlistEditor() { const wl = (state.dashboard && state.dashboard.watchlist) || []; $('#watchlist-editor').value = wl.map(w => [w.symbol, w.name_th, w.sector, w.note, w.active].map(v => v || '').join(' | ')).join('\n'); }
+    function hydrateWatchlistEditor() { const wl = (state.dashboard && state.dashboard.watchlist) || []; $('#watchlist-editor').value = wl.map(w => [w.symbol, w.name_th, w.sector, w.note, w.active].map(v => v || '').join(' | ')).join('\n'); renderWatchlistManager(parseWatchlist($('#watchlist-editor').value)); }
     function syncTemplatesFromEditor(shouldSave = true) { state.config.templates = { weekly: $('#template-weekly').value, cautious: $('#template-cautious').value, short: $('#template-short').value }; if (shouldSave) saveConfigLocal(); renderPromptPreview(); }
     function resetTemplates() { state.config.templates = defaultTemplates(); hydrateTemplateEditors(); saveConfigLocal(); renderPromptPreview(); $('#config-status').innerHTML = alertHtml('good','Reset templates แล้ว'); }
     function switchTab(tab) { state.activeTab = tab; $$('.tab').forEach(el => el.classList.toggle('active', el.id === `tab-${tab}`)); $$('[data-tab]').forEach(btn => btn.classList.toggle('active', btn.dataset.tab === tab)); if (tab === 'write') renderPromptPreview(); }
