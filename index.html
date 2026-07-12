@@ -289,7 +289,7 @@
               <label>PIN สำหรับเขียนข้อมูล<input id="local-pin" type="password" autocomplete="off" placeholder="เก็บเฉพาะในเครื่องนี้"></label>
               <label>Theme<select id="theme-select"><option value="day">Day / Light</option><option value="auto">Auto</option><option value="night">Night</option></select></label>
             </div>
-            <div class="meta"><button class="btn primary" id="save-settings-btn"><i class="ti ti-device-floppy"></i> Save Local Settings</button><button class="btn" id="test-connection-btn"><i class="ti ti-plug-connected"></i> Test Connection</button></div>
+            <div class="meta"><button class="btn primary" id="save-settings-btn"><i class="ti ti-device-floppy"></i> Save Local Settings</button><button class="btn" id="restore-default-urls-btn"><i class="ti ti-rotate-clockwise"></i> Restore Default URLs</button><button class="btn" id="test-connection-btn"><i class="ti ti-plug-connected"></i> Test Connection</button></div>
             <div id="settings-status"></div>
             <div class="connection-result" id="connection-result"></div>
           </section>
@@ -327,12 +327,14 @@
   <script>
   (function () {
     'use strict';
-    const APP_VERSION = 'index-alphaweek-v04';
-    const STORAGE_KEY = 'alphaweek_config_v04';
-    const LEGACY_KEYS = ['alphaweek_config_v03', 'alphaweek_config_v02', 'alphaweek_config_v01'];
+    const APP_VERSION = 'index-alphaweek-v05';
+    const STORAGE_KEY = 'alphaweek_config_v05';
+    const LEGACY_KEYS = ['alphaweek_config_v04', 'alphaweek_config_v03', 'alphaweek_config_v02', 'alphaweek_config_v01'];
+    const DEFAULT_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzh2PhvOrJu16P9ZLX192PEXUZqTHbp26P1y6TAXNUdO-3UCslhogZHBkoPnOcfx1SA/exec';
+    const DEFAULT_HEALTH_URL = 'https://alphaweek.vercel.app/api/health';
     const DEFAULT_CONFIG = {
-      appsScriptUrl: 'https://script.google.com/macros/s/AKfycbzh2PhvOrJu16P9ZLX192PEXUZqTHbp26P1y6TAXNUdO-3UCslhogZHBkoPnOcfx1SA/exec',
-      healthUrl: 'https://alphaweek.vercel.app/api/health',
+      appsScriptUrl: DEFAULT_APPS_SCRIPT_URL,
+      healthUrl: DEFAULT_HEALTH_URL,
       pin: '',
       theme: 'day',
       templates: defaultTemplates()
@@ -363,6 +365,7 @@
       $('#archive-search').addEventListener('input', renderArticles);
       $('#archive-filter').addEventListener('change', renderArticles);
       $('#save-settings-btn').addEventListener('click', saveLocalSettings);
+      $('#restore-default-urls-btn').addEventListener('click', restoreDefaultUrls);
       $('#test-connection-btn').addEventListener('click', testConnection);
       $('#reset-template-btn').addEventListener('click', resetTemplates);
       $('#save-config-btn').addEventListener('click', saveTemplatesToSheets);
@@ -374,7 +377,7 @@
     }
     async function loadAll() { setHealth('loading', 'กำลังโหลดข้อมูลล่าสุด...'); await Promise.allSettled([loadHealth(), loadDashboard(), loadArticles(), loadArticleManager()]); renderPromptPreview(); }
     async function loadHealth() {
-      try { const json = await fetchJSON(state.config.healthUrl); state.health = json; setHealth(json && json.ok ? 'ok' : 'bad', json && json.ok ? `Online · ${json.latest_week || '—'} · ${json.news_count || 0} news` : 'Health check ไม่ผ่าน'); renderAll(); }
+      try { const json = await fetchJSON(cleanUrl(state.config.healthUrl, DEFAULT_HEALTH_URL)); state.health = json; setHealth(json && json.ok ? 'ok' : 'bad', json && json.ok ? `Online · ${json.latest_week || '—'} · ${json.news_count || 0} news` : 'Health check ไม่ผ่าน'); renderAll(); }
       catch (err) { setHealth('bad', `Health error: ${err.message}`); renderAll(); }
     }
     async function loadDashboard(week) {
@@ -509,11 +512,12 @@
     }
     function findArticle(id) { return (state.allArticles || []).concat(state.articles || []).find(a => String(a.id) === String(id)); }
     function isDeleted(a) { return String(a.status || 'published').toLowerCase() === 'deleted'; }
-    function saveLocalSettings() { state.config.appsScriptUrl = $('#apps-script-url').value.trim() || DEFAULT_CONFIG.appsScriptUrl; state.config.healthUrl = $('#health-url').value.trim() || DEFAULT_CONFIG.healthUrl; state.config.pin = $('#local-pin').value; state.config.theme = $('#theme-select').value || 'day'; syncTemplatesFromEditor(false); saveConfigLocal(); applyTheme(); $('#settings-status').innerHTML = alertHtml('good','บันทึก local settings แล้ว'); }
+    function saveLocalSettings() { state.config.appsScriptUrl = cleanUrl($('#apps-script-url').value, DEFAULT_APPS_SCRIPT_URL); state.config.healthUrl = cleanUrl($('#health-url').value, DEFAULT_HEALTH_URL); state.config.pin = $('#local-pin').value; state.config.theme = $('#theme-select').value || 'day'; syncTemplatesFromEditor(false); state.config = normalizeConfig(state.config); saveConfigLocal(); hydrateSettings(); applyTheme(); $('#settings-status').innerHTML = alertHtml('good','บันทึก local settings แล้ว'); }
+    function restoreDefaultUrls() { state.config.appsScriptUrl = DEFAULT_APPS_SCRIPT_URL; state.config.healthUrl = DEFAULT_HEALTH_URL; saveConfigLocal(); hydrateSettings(); $('#settings-status').innerHTML = alertHtml('good','กู้คืน Apps Script URL และ Health URL เป็นค่าเริ่มต้นแล้ว'); }
     async function testConnection() {
       saveLocalSettings(); $('#settings-status').innerHTML = alertHtml('', 'กำลังทดสอบ connection...'); $('#connection-result').innerHTML = '';
       const checks = [];
-      checks.push(checkRead('Vercel Health', state.config.healthUrl));
+      checks.push(checkRead('Vercel Health', cleanUrl(state.config.healthUrl, DEFAULT_HEALTH_URL)));
       checks.push(checkRead('Apps Script Dashboard', appsScriptUrl('dashboard')));
       checks.push(checkRead('Articles Feed', appsScriptUrl('articles', { limit: 5 })));
       const results = await Promise.all(checks);
@@ -545,12 +549,49 @@
     function cycleTheme() { const order = ['day','auto','night']; const current = order.includes(state.config.theme) ? state.config.theme : 'day'; state.config.theme = order[(order.indexOf(current)+1)%order.length]; saveConfigLocal(); applyTheme(); hydrateSettings(); }
     function applyTheme() { document.body.classList.remove('auto-theme','day','night'); if (state.config.theme === 'night') document.body.classList.add('night'); else if (state.config.theme === 'auto') document.body.classList.add('auto-theme'); else document.body.classList.add('day'); const label = state.config.theme === 'night' ? 'Night' : state.config.theme === 'auto' ? 'Auto' : 'Day'; const icon = state.config.theme === 'night' ? 'ti-moon' : state.config.theme === 'auto' ? 'ti-device-desktop' : 'ti-sun'; if ($('#theme-btn')) $('#theme-btn').innerHTML = `<i class="ti ${icon}"></i> ${label}`; if ($('#theme-select')) $('#theme-select').value = state.config.theme || 'day'; }
     function setHealth(kind, text) { const dot = $('#health-dot'); dot.classList.remove('ok','bad'); if (kind === 'ok') dot.classList.add('ok'); if (kind === 'bad') dot.classList.add('bad'); $('#health-text').textContent = text; }
-    function appsScriptUrl(action, params = {}) { const base = state.config.appsScriptUrl.replace(/\?+$/, ''); const url = new URL(base); url.searchParams.set('action', action); Object.keys(params).forEach(k => { if (params[k] !== undefined && params[k] !== null && params[k] !== '') url.searchParams.set(k, params[k]); }); return url.toString(); }
-    async function postJSON(action, payload) { return fetchJSON(state.config.appsScriptUrl, { method:'POST', headers:{ 'Content-Type':'text/plain;charset=utf-8' }, body: JSON.stringify(Object.assign({}, payload, { action, pin: state.config.pin })), redirect:'follow' }); }
+    function appsScriptUrl(action, params = {}) { const base = cleanUrl(state.config.appsScriptUrl, DEFAULT_APPS_SCRIPT_URL).replace(/\?+$/, ''); const url = new URL(base); url.searchParams.set('action', action); Object.keys(params).forEach(k => { if (params[k] !== undefined && params[k] !== null && params[k] !== '') url.searchParams.set(k, params[k]); }); return url.toString(); }
+    async function postJSON(action, payload) { return fetchJSON(cleanUrl(state.config.appsScriptUrl, DEFAULT_APPS_SCRIPT_URL), { method:'POST', headers:{ 'Content-Type':'text/plain;charset=utf-8' }, body: JSON.stringify(Object.assign({}, payload, { action, pin: state.config.pin })), redirect:'follow' }); }
     async function fetchJSON(url, opts = {}) { const resp = await fetch(url, Object.assign({ redirect:'follow', cache:'no-store' }, opts)); const text = await resp.text(); let json; try { json = JSON.parse(text); } catch (e) { throw new Error(`non-JSON response (${resp.status}): ${text.slice(0,120)}`); } if (!resp.ok) throw new Error(json.error || `HTTP ${resp.status}`); return json; }
-    function loadConfig() { try { const currentRaw = localStorage.getItem(STORAGE_KEY); let raw = currentRaw; if (!raw) for (const k of LEGACY_KEYS) { raw = localStorage.getItem(k); if (raw) break; } const saved = JSON.parse(raw || '{}'); const merged = mergeConfig(DEFAULT_CONFIG, saved); if (!['day','auto','night'].includes(merged.theme)) merged.theme = 'day'; if (!currentRaw && merged.theme === 'auto') merged.theme = 'day'; return merged; } catch (err) { return JSON.parse(JSON.stringify(DEFAULT_CONFIG)); } }
-    function mergeConfig(base, saved) { const merged = JSON.parse(JSON.stringify(base)); Object.keys(saved || {}).forEach(k => { if (k === 'templates') merged.templates = Object.assign({}, merged.templates, saved.templates || {}); else merged[k] = saved[k]; }); return merged; }
-    function saveConfigLocal() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state.config)); }
+    function loadConfig() {
+      try {
+        const currentRaw = localStorage.getItem(STORAGE_KEY);
+        let raw = currentRaw;
+        if (!raw) for (const k of LEGACY_KEYS) { raw = localStorage.getItem(k); if (raw) break; }
+        const saved = JSON.parse(raw || '{}');
+        const merged = normalizeConfig(mergeConfig(DEFAULT_CONFIG, saved));
+        if (!currentRaw && merged.theme === 'auto') merged.theme = 'day';
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+        return merged;
+      } catch (err) {
+        const fresh = normalizeConfig(JSON.parse(JSON.stringify(DEFAULT_CONFIG)));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(fresh));
+        return fresh;
+      }
+    }
+    function mergeConfig(base, saved) {
+      const merged = JSON.parse(JSON.stringify(base));
+      Object.keys(saved || {}).forEach(k => {
+        if (k === 'templates') merged.templates = Object.assign({}, merged.templates, saved.templates || {});
+        else merged[k] = saved[k];
+      });
+      return merged;
+    }
+    function normalizeConfig(config) {
+      const c = Object.assign({}, DEFAULT_CONFIG, config || {});
+      c.appsScriptUrl = cleanUrl(c.appsScriptUrl, DEFAULT_APPS_SCRIPT_URL);
+      c.healthUrl = cleanUrl(c.healthUrl, DEFAULT_HEALTH_URL);
+      if (!['day','auto','night'].includes(c.theme)) c.theme = 'day';
+      c.templates = Object.assign({}, defaultTemplates(), c.templates || {});
+      if (typeof c.pin !== 'string') c.pin = '';
+      return c;
+    }
+    function cleanUrl(value, fallback) {
+      const v = String(value || '').trim();
+      if (!v || v === 'PUT_YOUR_APPS_SCRIPT_URL_HERE' || v === 'PUT_YOUR_HEALTH_URL_HERE' || v === 'undefined' || v === 'null') return fallback;
+      if (!/^https:\/\//i.test(v)) return fallback;
+      return v;
+    }
+    function saveConfigLocal() { state.config = normalizeConfig(state.config); localStorage.setItem(STORAGE_KEY, JSON.stringify(state.config)); }
     function defaultTemplates() { return { weekly:'โปรดเขียนบทวิเคราะห์หุ้นไทยรายสัปดาห์จากข้อมูลด้านล่าง เป็นภาษาไทย อ่านง่าย สไตล์หนังสือพิมพ์การเงิน มีโครงเรื่องชัดเจน และจบด้วยสิ่งที่ควรติดตามสัปดาห์หน้า', cautious:'โปรดวิเคราะห์ข้อมูลด้านล่างแบบระมัดระวัง เน้นความเสี่ยง ข้อจำกัดของข้อมูล และหลีกเลี่ยงการฟันธง ใช้ภาษาไทยที่อ่านง่าย ไม่ให้คำแนะนำซื้อขาย', short:'โปรดสรุปข้อมูลด้านล่างให้สั้น กระชับ เป็น bullet/ย่อหน้าสั้น ๆ สำหรับอ่านเร็ว โดยแยกภาพรวมตลาด หุ้นเด่น ข่าวที่เกี่ยวข้อง และสิ่งที่ควรติดตาม' }; }
     function normalizeRows(rows) { return (rows || []).map(r => Object.assign({}, r, { close:numOrBlank(r.close), prev_close:numOrBlank(r.prev_close), change_pct_1w:numOrBlank(r.change_pct_1w), change_pct_4w:numOrBlank(r.change_pct_4w), change_pct_12w:numOrBlank(r.change_pct_12w), week_high:numOrBlank(r.week_high), week_low:numOrBlank(r.week_low), volume_ratio:numOrBlank(r.volume_ratio) })); }
     function mapWatchlist(watchlist) { const out = {}; (watchlist || []).forEach(w => { out[w.symbol] = w.name_th || w.symbol; }); return out; }
