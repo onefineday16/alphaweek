@@ -147,12 +147,19 @@
     .article-body h1, .article-body h2, .article-body h3 { line-height:1.18; }
     .control-section { display:grid; gap:12px; }
     .connection-result { display:grid; gap:8px; }
-    .mobile-nav { display:none; position:fixed; left:12px; right:12px; bottom:12px; z-index:60; border:1px solid var(--line); border-radius:24px; background:rgba(255,255,255,.82); box-shadow:0 12px 40px rgba(0,0,0,.12); backdrop-filter:blur(16px); padding:8px; grid-template-columns:repeat(4,1fr); }
-    body.night .mobile-nav { background:rgba(25,19,29,.85); }
-    .mobile-nav button { border:0; background:transparent; color:var(--muted); padding:8px 4px; border-radius:16px; display:grid; gap:2px; justify-items:center; font-size:.78rem; font-weight:800; }
-    .mobile-nav button.active { background:linear-gradient(135deg, var(--rose), var(--mauve)); color:#fff; }
     .hide { display:none !important; }
-    @media (max-width: 940px) { .masthead-inner, .layout-main, .cols-2, .cols-3, .cols-4 { grid-template-columns:1fr; } .step-row { grid-template-columns:1fr 1fr; } }
+    .watchlist-compact-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin-top:12px; }
+    .watch-card { border:1px solid var(--line); border-radius:16px; background:rgba(255,255,255,.34); padding:12px; min-width:0; display:grid; gap:8px; }
+    body.night .watch-card { background:rgba(255,255,255,.04); }
+    .watch-card.pending { border-style:dashed; }
+    .watch-head { display:flex; justify-content:space-between; gap:8px; align-items:flex-start; }
+    .watch-symbol { font-size:1.08rem; font-weight:800; letter-spacing:-.02em; }
+    .watch-name { color:var(--muted); font-size:.78rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .watch-status { font-size:.68rem; padding:5px 7px; }
+    .watch-metrics { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:5px 8px; font-size:.76rem; color:var(--muted); }
+    .watch-metrics strong { color:var(--ink); }
+    .control-system-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+    @media (max-width: 940px) { .masthead-inner, .layout-main, .cols-2, .cols-3, .cols-4 { grid-template-columns:1fr; } .step-row { grid-template-columns:1fr 1fr; } .watchlist-compact-grid { grid-template-columns:repeat(3,minmax(0,1fr)); } }
 
     .manager-list { display:grid; gap:10px; }
     .manager-card { border:1px solid var(--line); border-radius:18px; background:rgba(255,255,255,.32); padding:14px; display:grid; gap:10px; }
@@ -167,14 +174,14 @@
     .hidden { display:none !important; }
     @media (max-width: 900px) { .wl-row { grid-template-columns:1fr 1fr; } }
 
-    @media (max-width: 680px) { .app { width:min(100% - 18px, 1200px); padding-top:12px; } .masthead { padding:20px; border-radius:26px; } .utility-bar { align-items:flex-start; flex-direction:column; } .nav-wrap { display:none; } .mobile-nav { display:grid; } .form-grid, .step-row { grid-template-columns:1fr; } .panel, .paper-card { padding:15px; border-radius:20px; } .brand { font-size:3.3rem; } }
+    @media (max-width: 680px) { .app { width:min(100% - 18px, 1200px); padding-top:12px; padding-bottom:48px; } .masthead { padding:20px; border-radius:26px; } .utility-bar { align-items:flex-start; flex-direction:column; } .nav-wrap { top:0; padding:8px 0; } .nav { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); border-radius:22px; gap:6px; } .nav button { padding:9px 6px; font-size:.78rem; min-width:0; } .nav button i { font-size:1rem; } .form-grid, .step-row { grid-template-columns:1fr; } .panel, .paper-card { padding:15px; border-radius:20px; } .brand { font-size:3.3rem; } .watchlist-compact-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; } .control-system-grid { grid-template-columns:1fr; } }
   </style>
 </head>
 <body class="day">
   <div class="app">
     <header class="utility-bar">
       <div class="health-inline"><span class="dot" id="health-dot"></span><span id="health-text">กำลังเตรียม AlphaWeek...</span></div>
-      <div class="meta"><span id="app-version">index-alphaweek-v10</span><button class="btn ghost" id="refresh-btn" type="button"><i class="ti ti-refresh"></i> Refresh</button><button class="btn ghost" id="refresh-prices-btn" type="button"><i class="ti ti-currency-baht"></i> Refresh Prices</button><button class="btn ghost" id="theme-btn" type="button"><i class="ti ti-sun"></i> Day</button></div>
+      <div class="meta"><span id="app-version">index-alphaweek-v13-layout</span><button class="btn ghost" id="refresh-btn" type="button"><i class="ti ti-refresh"></i> Refresh</button><button class="btn ghost" id="refresh-prices-btn" type="button"><i class="ti ti-currency-baht"></i> Refresh Prices</button><button class="btn ghost" id="theme-btn" type="button"><i class="ti ti-sun"></i> Day</button></div>
     </header>
     <div class="runtime-error" id="runtime-error"></div>
 
@@ -197,38 +204,23 @@
     <div class="nav-wrap">
       <nav class="nav" aria-label="AlphaWeek sections">
         <button class="active" data-tab="brief" type="button"><i class="ti ti-article"></i> Brief</button>
+        <button data-tab="data" type="button"><i class="ti ti-table"></i> Data</button>
+        <button data-tab="watchlist" type="button"><i class="ti ti-layout-grid"></i> Watchlist</button>
         <button data-tab="write" type="button"><i class="ti ti-pencil-plus"></i> Write</button>
         <button data-tab="archive" type="button"><i class="ti ti-books"></i> Archive</button>
-        <button data-tab="control" type="button"><i class="ti ti-settings"></i> Control Room</button>
+        <button data-tab="control" type="button"><i class="ti ti-settings"></i> Control</button>
       </nav>
     </div>
 
     <main>
       <section id="tab-brief" class="tab active section">
         <div id="brief-alert"></div>
-        <div class="layout-main">
-          <article class="panel editorial-lead">
-            <div class="eyebrow"><i class="ti ti-sparkles"></i> This week at a glance</div>
-            <h1 class="lead-title" id="lead-title">กำลังจัดหน้าสรุปตลาด...</h1>
-            <p class="lead-copy" id="lead-copy">AlphaWeek จะสรุปความพร้อมของข้อมูล หุ้นที่เคลื่อนไหวเด่น ข่าวประกอบ และสิ่งที่ควรระวังก่อนนำไปเขียนบทวิเคราะห์</p>
-            <div class="stat-strip" id="brief-badges"></div>
-          </article>
-          <aside class="panel">
-            <div class="section-title"><div><h3>Quiet System Notes</h3><span>สถานะระบบแบบไม่รบกวนการอ่าน</span></div></div>
-            <div class="signal-list" id="system-notes"></div>
-          </aside>
-        </div>
-
-        <section class="panel section" id="watchlist-coverage-section">
-          <div class="section-title">
-            <div>
-              <h2>Watchlist Coverage</h2>
-              <span>หุ้นที่เปิด Active จะแสดงที่นี่ทันที ส่วนข้อมูลราคาจะขึ้นหลังรอบ fetch weekly ถัดไป</span>
-            </div>
-            <button type="button" class="btn" id="open-watchlist-manager-btn"><i class="ti ti-list-details"></i> Manage Watchlist</button>
-          </div>
-          <div id="watchlist-coverage"></div>
-        </section>
+        <article class="panel editorial-lead">
+          <div class="eyebrow"><i class="ti ti-sparkles"></i> This week at a glance</div>
+          <h1 class="lead-title" id="lead-title">กำลังจัดหน้าสรุปตลาด...</h1>
+          <p class="lead-copy" id="lead-copy">AlphaWeek จะสรุปความพร้อมของข้อมูล หุ้นที่เคลื่อนไหวเด่น ข่าวประกอบ และสิ่งที่ควรระวังก่อนนำไปเขียนบทวิเคราะห์</p>
+          <div class="stat-strip" id="brief-badges"></div>
+        </article>
 
         <section class="panel section" id="latest-article-section">
           <div class="section-title">
@@ -252,9 +244,22 @@
           </section>
         </div>
 
-        <section class="panel section">
-          <div class="section-title"><div><h2>Data Table</h2><span>ตารางข้อมูลที่ใช้ประกอบ prompt</span></div></div>
+      </section>
+
+      <section id="tab-data" class="tab section">
+        <section class="panel">
+          <div class="section-title"><div><h2>Data Table</h2><span>ข้อมูลหลักสำหรับอ่าน เปรียบเทียบ และนำไปประกอบ prompt</span></div><button type="button" class="btn" id="copy-table-btn-data"><i class="ti ti-copy"></i> Copy Table</button></div>
           <div id="market-table" class="table-wrap"></div>
+        </section>
+      </section>
+
+      <section id="tab-watchlist" class="tab section">
+        <section class="panel" id="watchlist-coverage-section">
+          <div class="section-title">
+            <div><h2>Watchlist Coverage</h2><span>Compact view สำหรับดูหุ้นหลายตัวพร้อมกัน</span></div>
+            <button type="button" class="btn" id="open-watchlist-manager-btn"><i class="ti ti-list-details"></i> Manage Watchlist</button>
+          </div>
+          <div id="watchlist-coverage"></div>
         </section>
       </section>
 
@@ -321,6 +326,8 @@
             <div class="alert good">Default URLs are embedded in this file. Refresh Prices is public and does not require PIN. PIN is still used for write actions such as articles/watchlist.</div><div id="settings-status"></div>
             <div id="price-refresh-status"></div>
             <div class="connection-result" id="connection-result"></div>
+            <div class="section-title" style="margin-top:8px"><div><h3>Quiet System Notes</h3><span>Health, data readiness และสถานะ refresh</span></div></div>
+            <div class="control-system-grid" id="system-notes"></div>
           </section>
           <section class="panel control-section">
             <div class="section-title"><div><h2>Writing Templates</h2><span>Prompt templates เก็บในเครื่องและบันทึกลง Sheets ได้</span></div></div>
@@ -346,19 +353,12 @@
     </main>
   </div>
 
-  <nav class="mobile-nav" aria-label="Mobile sections">
-    <button class="active" data-tab="brief" type="button"><i class="ti ti-article"></i><span>Brief</span></button>
-    <button data-tab="write" type="button"><i class="ti ti-pencil-plus"></i><span>Write</span></button>
-    <button data-tab="archive" type="button"><i class="ti ti-books"></i><span>Archive</span></button>
-    <button data-tab="control" type="button"><i class="ti ti-settings"></i><span>Control</span></button>
-  </nav>
-
   <script>
   (function () {
     'use strict';
-    const APP_VERSION = 'index-alphaweek-v12';
-    const STORAGE_KEY = 'alphaweek_config_v12';
-    const LEGACY_KEYS = ['alphaweek_config_v11', 'alphaweek_config_v10', 'alphaweek_config_v09', 'alphaweek_config_v08', 'alphaweek_config_v07', 'alphaweek_config_v06', 'alphaweek_config_v05', 'alphaweek_config_v04', 'alphaweek_config_v03', 'alphaweek_config_v02', 'alphaweek_config_v01'];
+    const APP_VERSION = 'index-alphaweek-v13-layout';
+    const STORAGE_KEY = 'alphaweek_config_v13';
+    const LEGACY_KEYS = ['alphaweek_config_v12', 'alphaweek_config_v11', 'alphaweek_config_v10', 'alphaweek_config_v09', 'alphaweek_config_v08', 'alphaweek_config_v07', 'alphaweek_config_v06', 'alphaweek_config_v05', 'alphaweek_config_v04', 'alphaweek_config_v03', 'alphaweek_config_v02', 'alphaweek_config_v01'];
     const DEFAULT_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzh2PhvOrJu16P9ZLX192PEXUZqTHbp26P1y6TAXNUdO-3UCslhogZHBkoPnOcfx1SA/exec';
     const DEFAULT_HEALTH_URL = 'https://alphaweek.vercel.app/api/health';
     const DEFAULT_FETCH_WEEKLY_URL = 'https://alphaweek.vercel.app/api/fetch-weekly';
@@ -559,21 +559,21 @@
         const hasData = !!r;
         const sector = escapeHTML(w.sector || '—');
         const name = escapeHTML(w.name_th || w.symbol || key);
-        return `<article class="signal ${hasData ? '' : 'pending'}">
-          <div class="signal-top">
-            <div><div class="symbol">${escapeHTML(key)}</div><div class="muted">${name}</div></div>
-            <span class="badge ${hasData ? 'good' : 'warn'}">${hasData ? 'มีข้อมูล weekly' : 'รอ fetch weekly'}</span>
+        return `<article class="watch-card ${hasData ? '' : 'pending'}">
+          <div class="watch-head">
+            <div style="min-width:0"><div class="watch-symbol">${escapeHTML(key)}</div><div class="watch-name" title="${name}">${name}</div></div>
+            <span class="badge watch-status ${hasData ? 'good' : 'warn'}">${hasData ? 'Ready' : 'Waiting'}</span>
           </div>
-          <div class="stat-strip">
-            <span class="badge">${sector}</span>
-            ${hasData ? `<span class="badge">Close ${fmtNumber(r.close)}</span><span class="badge">${fmtPct(r.change_pct_1w)}</span><span class="badge">Vol x ${fmtNumber(r.volume_ratio)}</span>` : `<span class="badge">Active = ${escapeHTML(w.active || 'Y')}</span>`}
+          <div class="watch-metrics">
+            <span>Sector <strong>${sector}</strong></span>
+            ${hasData ? `<span>Close <strong>${fmtNumber(r.close)}</strong></span><span>1W <strong>${fmtPct(r.change_pct_1w)}</strong></span><span>Vol <strong>x ${fmtNumber(r.volume_ratio)}</strong></span>` : `<span>Status <strong>Active ${escapeHTML(w.active || 'Y')}</strong></span><span>Weekly <strong>—</strong></span><span>Volume <strong>—</strong></span>`}
           </div>
         </article>`;
       }).join('');
       const noteText = missing.length
         ? `<div class="alert warn">มีหุ้น Active ${missing.length} ตัวที่ยังไม่มีข้อมูลราคาสัปดาห์ล่าสุด: ${escapeHTML(missing.map(w => normalizeStockKey(w.symbol)).join(', '))}. ต้องรอ cron/Manual Fetch รอบถัดไปก่อนจึงจะมีตัวเลขใน Market Signals</div>`
         : '<div class="alert good">หุ้น Active ทุกตัวมีข้อมูล weekly data แล้ว</div>';
-      box.innerHTML = noteText + `<div class="signal-grid" style="margin-top:12px">${cards}</div>`;
+      box.innerHTML = noteText + `<div class="watchlist-compact-grid">${cards}</div>`;
     }
     function renderSignals() {
       const d = state.dashboard || {}; const rows = normalizeRows(d.rows || []); const names = mapWatchlist(d.watchlist || []);
@@ -830,7 +830,7 @@
     }
     async function checkRead(name, url) { try { const json = await fetchJSON(url); return { name, ok: !!json.ok }; } catch (err) { return { name, ok:false, error: err.message }; } }
     async function saveTemplatesToSheets() { if (!state.config.pin) { $('#config-status').innerHTML = alertHtml('bad','กรุณาใส่ PIN ก่อนบันทึกลง Sheets'); return; } syncTemplatesFromEditor(false); try { const json = await postJSON('saveConfig', { entries: { template_weekly: state.config.templates.weekly, template_cautious: state.config.templates.cautious, template_short: state.config.templates.short, frontend_version: APP_VERSION }}); if (!json.ok) throw new Error(json.error || (json.data && json.data.error) || 'saveConfig failed'); $('#config-status').innerHTML = alertHtml('good','บันทึก templates ลง Sheets แล้ว'); } catch (err) { $('#config-status').innerHTML = alertHtml('bad',`บันทึก config ไม่สำเร็จ: ${escapeHTML(err.message)}`); } }
-    async function saveWatchlist() { if (!state.config.pin) { $('#watchlist-status').innerHTML = alertHtml('bad','กรุณาใส่ PIN ก่อนบันทึก watchlist'); return; } const items = collectWatchlistFromManager(); if (!items.length) { $('#watchlist-status').innerHTML = alertHtml('bad','ไม่มีรายการ watchlist ที่ถูกต้อง'); return; } try { const json = await postJSON('updateWatchlist', { items }); if (!json.ok) throw new Error(json.error || (json.data && json.data.error) || 'updateWatchlist failed'); $('#watchlist-status').innerHTML = alertHtml('good',`บันทึก watchlist แล้ว ${items.length} รายการ`); await loadDashboard(); renderWatchlistCoverage(); switchTab('brief'); } catch (err) { $('#watchlist-status').innerHTML = alertHtml('bad',`บันทึก watchlist ไม่สำเร็จ: ${escapeHTML(err.message)}`); } }
+    async function saveWatchlist() { if (!state.config.pin) { $('#watchlist-status').innerHTML = alertHtml('bad','กรุณาใส่ PIN ก่อนบันทึก watchlist'); return; } const items = collectWatchlistFromManager(); if (!items.length) { $('#watchlist-status').innerHTML = alertHtml('bad','ไม่มีรายการ watchlist ที่ถูกต้อง'); return; } try { const json = await postJSON('updateWatchlist', { items }); if (!json.ok) throw new Error(json.error || (json.data && json.data.error) || 'updateWatchlist failed'); $('#watchlist-status').innerHTML = alertHtml('good',`บันทึก watchlist แล้ว ${items.length} รายการ`); await loadDashboard(); renderWatchlistCoverage(); switchTab('watchlist'); } catch (err) { $('#watchlist-status').innerHTML = alertHtml('bad',`บันทึก watchlist ไม่สำเร็จ: ${escapeHTML(err.message)}`); } }
 
     function renderWatchlistManager(items) {
       const rows = (items || []).length ? items : [{ active:'Y' }];
