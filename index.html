@@ -312,13 +312,13 @@
               <label>Apps Script URL<input id="apps-script-url" value="https://script.google.com/macros/s/AKfycbzh2PhvOrJu16P9ZLX192PEXUZqTHbp26P1y6TAXNUdO-3UCslhogZHBkoPnOcfx1SA/exec" spellcheck="false"></label>
               <label>Health URL<input id="health-url" value="https://alphaweek.vercel.app/api/health" spellcheck="false"></label>
               <label>Fetch Weekly URL<input id="fetch-weekly-url" value="https://alphaweek.vercel.app/api/fetch-weekly" spellcheck="false"></label>
-              <label>PIN สำหรับเขียน/Refresh ราคา<input id="local-pin" type="password" autocomplete="off" placeholder="เก็บเฉพาะในเครื่องนี้"></label>
+              <label>PIN สำหรับเขียนบทความ/Watchlist<input id="local-pin" type="password" autocomplete="off" placeholder="เก็บเฉพาะในเครื่องนี้"></label>
               <label>Theme<select id="theme-select"><option value="day">Day / Light</option><option value="auto">Auto</option><option value="night">Night</option></select></label>
               <label>Auto Refresh Prices on Open<select id="auto-refresh-prices"><option value="Y">Y — auto เมื่อเปิดเว็บ</option><option value="N">N — กดเองเท่านั้น</option></select></label>
               <label>Auto Refresh Cooldown (minutes)<input id="price-refresh-cooldown" type="number" min="0" max="1440" step="1" value="15"></label>
             </div>
             <div class="meta"><button class="btn primary" id="save-settings-btn" type="button"><i class="ti ti-device-floppy"></i> Save Local Settings</button><button class="btn" id="restore-default-urls-btn" type="button"><i class="ti ti-rotate-clockwise"></i> Restore Default URLs</button><button class="btn" id="test-connection-btn" type="button"><i class="ti ti-plug-connected"></i> Test Connection</button><button class="btn primary" id="refresh-prices-control-btn" type="button"><i class="ti ti-currency-baht"></i> Refresh Prices Now</button></div>
-            <div class="alert good">Default URLs are embedded in this file. Only PIN needs manual input. Auto refresh uses your local PIN and is throttled by cooldown.</div><div id="settings-status"></div>
+            <div class="alert good">Default URLs are embedded in this file. Refresh Prices is public and does not require PIN. PIN is still used for write actions such as articles/watchlist.</div><div id="settings-status"></div>
             <div id="price-refresh-status"></div>
             <div class="connection-result" id="connection-result"></div>
           </section>
@@ -356,9 +356,9 @@
   <script>
   (function () {
     'use strict';
-    const APP_VERSION = 'index-alphaweek-v11';
-    const STORAGE_KEY = 'alphaweek_config_v11';
-    const LEGACY_KEYS = ['alphaweek_config_v10', 'alphaweek_config_v09', 'alphaweek_config_v08', 'alphaweek_config_v07', 'alphaweek_config_v06', 'alphaweek_config_v05', 'alphaweek_config_v04', 'alphaweek_config_v03', 'alphaweek_config_v02', 'alphaweek_config_v01'];
+    const APP_VERSION = 'index-alphaweek-v12';
+    const STORAGE_KEY = 'alphaweek_config_v12';
+    const LEGACY_KEYS = ['alphaweek_config_v11', 'alphaweek_config_v10', 'alphaweek_config_v09', 'alphaweek_config_v08', 'alphaweek_config_v07', 'alphaweek_config_v06', 'alphaweek_config_v05', 'alphaweek_config_v04', 'alphaweek_config_v03', 'alphaweek_config_v02', 'alphaweek_config_v01'];
     const DEFAULT_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzh2PhvOrJu16P9ZLX192PEXUZqTHbp26P1y6TAXNUdO-3UCslhogZHBkoPnOcfx1SA/exec';
     const DEFAULT_HEALTH_URL = 'https://alphaweek.vercel.app/api/health';
     const DEFAULT_FETCH_WEEKLY_URL = 'https://alphaweek.vercel.app/api/fetch-weekly';
@@ -528,7 +528,7 @@
       notes.push(note('Vercel Health', h && h.ok ? 'OK' : 'รอตรวจ', h && h.ok ? 'good' : 'warn'));
       notes.push(note('Apps Script Dashboard', rows.length ? 'มีข้อมูลล่าสุด' : 'ยังไม่พบ rows', rows.length ? 'good' : 'warn'));
       if (missingSet) notes.push(note('SET Index', 'Yahoo ไม่มี bar ในสัปดาห์ล่าสุด — ไม่ block งานเขียน', 'warn'));
-      notes.push(note('Security', 'PIN ไม่ถูกฝังในไฟล์ เก็บเฉพาะเครื่องนี้', 'good'));
+      notes.push(note('Security', 'Refresh Prices เป็น public endpoint; PIN ไม่ฝังในไฟล์และใช้เฉพาะ write actions', 'good'));
       const lastRefresh = state.config.lastPriceRefreshAt ? formatDateTime(state.config.lastPriceRefreshAt) : 'ยังไม่เคย refresh price จากหน้าเว็บนี้';
       notes.push(note('Price Refresh', lastRefresh, state.priceRefresh.running ? 'warn' : 'good'));
       $('#system-notes').innerHTML = notes.join('');
@@ -754,7 +754,6 @@
     }
     function shouldAutoRefreshPrices() {
       if (!state.config.autoRefreshPricesOnOpen) return false;
-      if (!state.config.pin) return false;
       const cooldown = Number(state.config.priceRefreshCooldownMinutes || 15);
       return priceRefreshAgeMinutes() >= cooldown;
     }
@@ -780,11 +779,6 @@
         return false;
       }
       saveLocalSettings();
-      if (!state.config.pin) {
-        renderPriceRefreshStatus('ต้องใส่ PIN ก่อนจึงจะสั่ง Refresh Prices ได้', 'bad');
-        switchTab('control');
-        return false;
-      }
       if (!options.force && source === 'auto-open' && !shouldAutoRefreshPrices()) {
         renderPriceRefreshStatus();
         return false;
@@ -795,8 +789,8 @@
       try {
         const resp = await fetch(priceRefreshUrl(), {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-AlphaWeek-Pin': state.config.pin },
-          body: JSON.stringify({ pin: state.config.pin, source }),
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ source }),
           cache: 'no-store',
           redirect: 'follow'
         });
@@ -807,7 +801,10 @@
         state.priceRefresh.lastResult = json;
         state.config.lastPriceRefreshAt = json.refreshed_at || new Date().toISOString();
         saveConfigLocal();
-        renderPriceRefreshStatus(`Refresh Prices สำเร็จ: ${json.mode || 'weekly'} · ${formatDateTime(state.config.lastPriceRefreshAt)}`, 'good');
+        const r = json.result || {};
+        const okCount = r.symbols_ok ?? '—';
+        const failCount = Array.isArray(r.symbols_failed) ? r.symbols_failed.length : 0;
+        renderPriceRefreshStatus(`Refresh Prices สำเร็จ: ${json.mode || 'weekly'} · OK ${okCount} · Failed ${failCount} · ${formatDateTime(state.config.lastPriceRefreshAt)}`, failCount ? 'warn' : 'good');
         await loadAll();
         return true;
       } catch (err) {
