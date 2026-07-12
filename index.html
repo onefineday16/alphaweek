@@ -284,13 +284,13 @@
           <section class="panel control-section">
             <div class="section-title"><div><h2>Control Room</h2><span>เก็บ Settings จาก v02: PIN, Test Connection, Prompt Templates, Watchlist</span></div></div>
             <div class="grid cols-2">
-              <label>Apps Script URL<input id="apps-script-url" spellcheck="false"></label>
-              <label>Health URL<input id="health-url" spellcheck="false"></label>
+              <label>Apps Script URL<input id="apps-script-url" value="https://script.google.com/macros/s/AKfycbzh2PhvOrJu16P9ZLX192PEXUZqTHbp26P1y6TAXNUdO-3UCslhogZHBkoPnOcfx1SA/exec" spellcheck="false"></label>
+              <label>Health URL<input id="health-url" value="https://alphaweek.vercel.app/api/health" spellcheck="false"></label>
               <label>PIN สำหรับเขียนข้อมูล<input id="local-pin" type="password" autocomplete="off" placeholder="เก็บเฉพาะในเครื่องนี้"></label>
               <label>Theme<select id="theme-select"><option value="day">Day / Light</option><option value="auto">Auto</option><option value="night">Night</option></select></label>
             </div>
-            <div class="meta"><button class="btn primary" id="save-settings-btn"><i class="ti ti-device-floppy"></i> Save Local Settings</button><button class="btn" id="restore-default-urls-btn"><i class="ti ti-rotate-clockwise"></i> Restore Default URLs</button><button class="btn" id="test-connection-btn"><i class="ti ti-plug-connected"></i> Test Connection</button></div>
-            <div id="settings-status"></div>
+            <div class="meta"><button class="btn primary" id="save-settings-btn" type="button"><i class="ti ti-device-floppy"></i> Save Local Settings</button><button class="btn" id="restore-default-urls-btn" type="button"><i class="ti ti-rotate-clockwise"></i> Restore Default URLs</button><button class="btn" id="test-connection-btn" type="button"><i class="ti ti-plug-connected"></i> Test Connection</button></div>
+            <div class="alert good">Default URLs are embedded in this file. Only PIN needs manual input.</div><div id="settings-status"></div>
             <div class="connection-result" id="connection-result"></div>
           </section>
           <section class="panel control-section">
@@ -327,9 +327,9 @@
   <script>
   (function () {
     'use strict';
-    const APP_VERSION = 'index-alphaweek-v05';
-    const STORAGE_KEY = 'alphaweek_config_v05';
-    const LEGACY_KEYS = ['alphaweek_config_v04', 'alphaweek_config_v03', 'alphaweek_config_v02', 'alphaweek_config_v01'];
+    const APP_VERSION = 'index-alphaweek-v06';
+    const STORAGE_KEY = 'alphaweek_config_v06';
+    const LEGACY_KEYS = ['alphaweek_config_v05', 'alphaweek_config_v04', 'alphaweek_config_v03', 'alphaweek_config_v02', 'alphaweek_config_v01'];
     const DEFAULT_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzh2PhvOrJu16P9ZLX192PEXUZqTHbp26P1y6TAXNUdO-3UCslhogZHBkoPnOcfx1SA/exec';
     const DEFAULT_HEALTH_URL = 'https://alphaweek.vercel.app/api/health';
     const DEFAULT_CONFIG = {
@@ -345,35 +345,36 @@
     document.addEventListener('DOMContentLoaded', init);
 
     function init() { applyTheme(); bindEvents(); hydrateSettings(); loadAll(); }
+    function safeBind(selector, event, handler) { const el = $(selector); if (el) el.addEventListener(event, handler); }
     function bindEvents() {
       $$('[data-tab]').forEach(btn => btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
-      $('#refresh-btn').addEventListener('click', loadAll);
-      $('#theme-btn').addEventListener('click', cycleTheme);
-      $('#theme-select').addEventListener('change', () => { state.config.theme = $('#theme-select').value; saveConfigLocal(); applyTheme(); });
-      $('#copy-table-btn').addEventListener('click', copyMarketTable);
-      $('#copy-table-btn-write').addEventListener('click', copyMarketTable);
-      $('#copy-prompt-btn').addEventListener('click', copyPrompt);
-      $('#template-select').addEventListener('change', renderPromptPreview);
-      $('#post-article-btn').addEventListener('click', postArticle);
-      $('#cancel-edit-btn').addEventListener('click', cancelArticleEdit);
-      $('#reload-articles-btn').addEventListener('click', loadArticles);
-      $('#reload-articles-btn-2').addEventListener('click', loadArticles);
-      $('#reload-article-manager-btn').addEventListener('click', loadArticleManager);
-      $('#show-deleted-articles').addEventListener('change', loadArticleManager);
-      $('#article-list').addEventListener('click', handleArticleAction);
-      $('#article-manager-list').addEventListener('click', handleArticleAction);
-      $('#archive-search').addEventListener('input', renderArticles);
-      $('#archive-filter').addEventListener('change', renderArticles);
-      $('#save-settings-btn').addEventListener('click', saveLocalSettings);
-      $('#restore-default-urls-btn').addEventListener('click', restoreDefaultUrls);
-      $('#test-connection-btn').addEventListener('click', testConnection);
-      $('#reset-template-btn').addEventListener('click', resetTemplates);
-      $('#save-config-btn').addEventListener('click', saveTemplatesToSheets);
-      $('#save-watchlist-btn').addEventListener('click', saveWatchlist);
-      $('#add-stock-row-btn').addEventListener('click', () => addWatchlistRow({ active:'Y' }));
-      $('#watchlist-manager').addEventListener('click', handleWatchlistAction);
-      $('#watchlist-manager').addEventListener('input', syncWatchlistTextFromManager);
-      ['#template-weekly', '#template-cautious', '#template-short'].forEach(sel => $(sel).addEventListener('input', syncTemplatesFromEditor));
+      safeBind('#refresh-btn', 'click', loadAll);
+      safeBind('#theme-btn', 'click', cycleTheme);
+      safeBind('#theme-select', 'change', () => { state.config.theme = $('#theme-select').value; saveConfigLocal(); applyTheme(); });
+      safeBind('#copy-table-btn', 'click', copyMarketTable);
+      safeBind('#copy-table-btn-write', 'click', copyMarketTable);
+      safeBind('#copy-prompt-btn', 'click', copyPrompt);
+      safeBind('#template-select', 'change', renderPromptPreview);
+      safeBind('#post-article-btn', 'click', postArticle);
+      safeBind('#cancel-edit-btn', 'click', cancelArticleEdit);
+      safeBind('#reload-articles-btn', 'click', loadArticles);
+      safeBind('#reload-articles-btn-2', 'click', loadArticles);
+      safeBind('#reload-article-manager-btn', 'click', loadArticleManager);
+      safeBind('#show-deleted-articles', 'change', loadArticleManager);
+      safeBind('#article-list', 'click', handleArticleAction);
+      safeBind('#article-manager-list', 'click', handleArticleAction);
+      safeBind('#archive-search', 'input', renderArticles);
+      safeBind('#archive-filter', 'change', renderArticles);
+      safeBind('#save-settings-btn', 'click', saveLocalSettings);
+      safeBind('#restore-default-urls-btn', 'click', restoreDefaultUrls);
+      safeBind('#test-connection-btn', 'click', testConnection);
+      safeBind('#reset-template-btn', 'click', resetTemplates);
+      safeBind('#save-config-btn', 'click', saveTemplatesToSheets);
+      safeBind('#save-watchlist-btn', 'click', saveWatchlist);
+      safeBind('#add-stock-row-btn', 'click', () => addWatchlistRow({ active:'Y' }));
+      safeBind('#watchlist-manager', 'click', handleWatchlistAction);
+      safeBind('#watchlist-manager', 'input', syncWatchlistTextFromManager);
+      ['#template-weekly', '#template-cautious', '#template-short'].forEach(sel => safeBind(sel, 'input', syncTemplatesFromEditor));
     }
     async function loadAll() { setHealth('loading', 'กำลังโหลดข้อมูลล่าสุด...'); await Promise.allSettled([loadHealth(), loadDashboard(), loadArticles(), loadArticleManager()]); renderPromptPreview(); }
     async function loadHealth() {
@@ -512,10 +513,34 @@
     }
     function findArticle(id) { return (state.allArticles || []).concat(state.articles || []).find(a => String(a.id) === String(id)); }
     function isDeleted(a) { return String(a.status || 'published').toLowerCase() === 'deleted'; }
-    function saveLocalSettings() { state.config.appsScriptUrl = cleanUrl($('#apps-script-url').value, DEFAULT_APPS_SCRIPT_URL); state.config.healthUrl = cleanUrl($('#health-url').value, DEFAULT_HEALTH_URL); state.config.pin = $('#local-pin').value; state.config.theme = $('#theme-select').value || 'day'; syncTemplatesFromEditor(false); state.config = normalizeConfig(state.config); saveConfigLocal(); hydrateSettings(); applyTheme(); $('#settings-status').innerHTML = alertHtml('good','บันทึก local settings แล้ว'); }
-    function restoreDefaultUrls() { state.config.appsScriptUrl = DEFAULT_APPS_SCRIPT_URL; state.config.healthUrl = DEFAULT_HEALTH_URL; saveConfigLocal(); hydrateSettings(); $('#settings-status').innerHTML = alertHtml('good','กู้คืน Apps Script URL และ Health URL เป็นค่าเริ่มต้นแล้ว'); }
-    async function testConnection() {
-      saveLocalSettings(); $('#settings-status').innerHTML = alertHtml('', 'กำลังทดสอบ connection...'); $('#connection-result').innerHTML = '';
+    function saveLocalSettings(event) {
+      if (event && event.preventDefault) event.preventDefault();
+      try {
+        state.config.appsScriptUrl = cleanUrl($('#apps-script-url') && $('#apps-script-url').value, DEFAULT_APPS_SCRIPT_URL);
+        state.config.healthUrl = cleanUrl($('#health-url') && $('#health-url').value, DEFAULT_HEALTH_URL);
+        state.config.pin = ($('#local-pin') && $('#local-pin').value) || '';
+        state.config.theme = ($('#theme-select') && $('#theme-select').value) || 'day';
+        // Keep templates, but do not let template preview errors break settings buttons.
+        try { syncTemplatesFromEditor(false); } catch (e) { console.warn('template sync skipped', e); }
+        state.config = normalizeConfig(state.config);
+        saveConfigLocal(); hydrateSettings(); applyTheme();
+        if ($('#settings-status')) $('#settings-status').innerHTML = alertHtml('good','บันทึก local settings แล้ว');
+        return true;
+      } catch (err) {
+        if ($('#settings-status')) $('#settings-status').innerHTML = alertHtml('bad', `บันทึก settings ไม่สำเร็จ: ${escapeHTML(err.message)}`);
+        return false;
+      }
+    }
+    function restoreDefaultUrls(event) {
+      if (event && event.preventDefault) event.preventDefault();
+      state.config.appsScriptUrl = DEFAULT_APPS_SCRIPT_URL;
+      state.config.healthUrl = DEFAULT_HEALTH_URL;
+      saveConfigLocal(); hydrateSettings();
+      if ($('#settings-status')) $('#settings-status').innerHTML = alertHtml('good','กู้คืน Apps Script URL และ Health URL เป็นค่าเริ่มต้นแล้ว');
+    }
+    async function testConnection(event) {
+      if (event && event.preventDefault) event.preventDefault();
+      saveLocalSettings(); if ($('#settings-status')) $('#settings-status').innerHTML = alertHtml('', 'กำลังทดสอบ connection...'); if ($('#connection-result')) $('#connection-result').innerHTML = '';
       const checks = [];
       checks.push(checkRead('Vercel Health', cleanUrl(state.config.healthUrl, DEFAULT_HEALTH_URL)));
       checks.push(checkRead('Apps Script Dashboard', appsScriptUrl('dashboard')));
