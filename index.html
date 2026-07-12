@@ -327,9 +327,9 @@
   <script>
   (function () {
     'use strict';
-    const APP_VERSION = 'index-alphaweek-v06';
-    const STORAGE_KEY = 'alphaweek_config_v06';
-    const LEGACY_KEYS = ['alphaweek_config_v05', 'alphaweek_config_v04', 'alphaweek_config_v03', 'alphaweek_config_v02', 'alphaweek_config_v01'];
+    const APP_VERSION = 'index-alphaweek-v07';
+    const STORAGE_KEY = 'alphaweek_config_v07';
+    const LEGACY_KEYS = ['alphaweek_config_v06', 'alphaweek_config_v05', 'alphaweek_config_v04', 'alphaweek_config_v03', 'alphaweek_config_v02', 'alphaweek_config_v01'];
     const DEFAULT_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzh2PhvOrJu16P9ZLX192PEXUZqTHbp26P1y6TAXNUdO-3UCslhogZHBkoPnOcfx1SA/exec';
     const DEFAULT_HEALTH_URL = 'https://alphaweek.vercel.app/api/health';
     const DEFAULT_CONFIG = {
@@ -388,6 +388,52 @@
     async function loadArticles() {
       try { const json = await fetchJSON(appsScriptUrl('articles', { limit: 100 })); if (!json.ok) throw new Error(json.error || 'articles response not ok'); state.articles = (json.data && json.data.articles) || []; renderArticles(); }
       catch (err) { $('#article-list').innerHTML = alertHtml('bad', `โหลดบทความไม่สำเร็จ: ${escapeHTML(err.message)}`); }
+    }
+    async function loadArticleManager() {
+      const target = $('#article-manager-list');
+      const status = $('#article-manager-status');
+      const includeDeleted = !!($('#show-deleted-articles') && $('#show-deleted-articles').checked);
+      try {
+        if (target) target.innerHTML = '<div class="alert">กำลังโหลดรายการบทความ...</div>';
+        const json = await fetchJSON(appsScriptUrl('articles', { limit: 200, include_deleted: includeDeleted ? 1 : 0 }));
+        if (!json.ok) throw new Error(json.error || (json.data && json.data.error) || 'article manager response not ok');
+        state.allArticles = (json.data && json.data.articles) || [];
+        renderArticleManager();
+        if (status) status.innerHTML = '';
+      } catch (err) {
+        if (target) target.innerHTML = alertHtml('bad', `โหลด Article Manager ไม่สำเร็จ: ${escapeHTML(err.message)}`);
+        if (status) status.innerHTML = '';
+      }
+    }
+    function renderArticleManager() {
+      const box = $('#article-manager-list');
+      if (!box) return;
+      const list = state.allArticles || [];
+      if (!list.length) {
+        box.innerHTML = '<div class="alert">ยังไม่มีบทความให้จัดการ</div>';
+        return;
+      }
+      box.innerHTML = list.map(a => {
+        const deleted = isDeleted(a);
+        const id = escapeHTML(a.id || '');
+        const title = escapeHTML(a.title || 'Untitled');
+        const week = escapeHTML(formatBE(a.week_ending) || a.week_ending || '');
+        const type = escapeHTML(typeLabel(a.type));
+        const tags = escapeHTML(a.tags || '');
+        const status = escapeHTML(a.status || (deleted ? 'deleted' : 'published'));
+        const body = escapeHTML((a.body_md || '').slice(0, 180));
+        return `<article class="article-item ${deleted ? 'deleted' : ''}">
+          <div class="meta"><span>${type}</span><span>${week}</span><span>${tags}</span><span>Status: ${status}</span></div>
+          <h3>${title}</h3>
+          <p style="margin:0 0 12px;color:var(--muted);font-size:.92rem">${body}${(a.body_md || '').length > 180 ? '...' : ''}</p>
+          <div class="meta">
+            <button type="button" class="btn" data-article-action="edit" data-id="${id}"><i class="ti ti-edit"></i> Edit</button>
+            ${deleted
+              ? `<button type="button" class="btn primary" data-article-action="restore" data-id="${id}"><i class="ti ti-restore"></i> Restore</button>`
+              : `<button type="button" class="btn danger" data-article-action="delete" data-id="${id}"><i class="ti ti-trash"></i> Hide/Delete</button>`}
+          </div>
+        </article>`;
+      }).join('');
     }
     function renderAll() { renderEdition(); renderBrief(); renderSignals(); renderNews(); renderMarketTable(); renderArticles(); renderPromptPreview(); }
     function renderEdition() {
