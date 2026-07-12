@@ -68,6 +68,8 @@
     .dot { width:10px; height:10px; border-radius:999px; background:var(--amber); box-shadow:0 0 0 4px rgba(185,133,0,.12); flex:0 0 auto; }
     .dot.ok { background:var(--green); box-shadow:0 0 0 4px rgba(14,159,110,.12); }
     .dot.bad { background:var(--red); box-shadow:0 0 0 4px rgba(224,45,60,.12); }
+    .runtime-error { display:none; border:1px solid rgba(224,45,60,.35); background:rgba(224,45,60,.08); color:var(--red); border-radius:18px; padding:12px 14px; margin:12px 0; font-size:.92rem; white-space:pre-wrap; }
+    .runtime-error.show { display:block; }
     .masthead { border:1px solid var(--line); border-radius:32px; background:linear-gradient(135deg, rgba(255,255,255,.86), rgba(253,249,200,.35)); box-shadow:var(--shadow); overflow:hidden; position:relative; padding:26px; }
     body.night .masthead { background:linear-gradient(135deg, rgba(40,31,47,.92), rgba(26,20,31,.72)); }
     .masthead:before { content:""; position:absolute; inset:0; background:repeating-linear-gradient(90deg, rgba(219,95,142,.08) 0 1px, transparent 1px 68px); pointer-events:none; }
@@ -172,8 +174,9 @@
   <div class="app">
     <header class="utility-bar">
       <div class="health-inline"><span class="dot" id="health-dot"></span><span id="health-text">กำลังเตรียม AlphaWeek...</span></div>
-      <div class="meta"><span id="app-version">v04</span><button class="btn ghost" id="refresh-btn"><i class="ti ti-refresh"></i> Refresh</button><button class="btn ghost" id="theme-btn"><i class="ti ti-sun"></i> Day</button></div>
+      <div class="meta"><span id="app-version">index-alphaweek-v10</span><button class="btn ghost" id="refresh-btn" type="button"><i class="ti ti-refresh"></i> Refresh</button><button class="btn ghost" id="theme-btn" type="button"><i class="ti ti-sun"></i> Day</button></div>
     </header>
+    <div class="runtime-error" id="runtime-error"></div>
 
     <section class="masthead" aria-label="AlphaWeek masthead">
       <div class="masthead-inner">
@@ -193,10 +196,10 @@
 
     <div class="nav-wrap">
       <nav class="nav" aria-label="AlphaWeek sections">
-        <button class="active" data-tab="brief"><i class="ti ti-article"></i> Brief</button>
-        <button data-tab="write"><i class="ti ti-pencil-plus"></i> Write</button>
-        <button data-tab="archive"><i class="ti ti-books"></i> Archive</button>
-        <button data-tab="control"><i class="ti ti-settings"></i> Control Room</button>
+        <button class="active" data-tab="brief" type="button"><i class="ti ti-article"></i> Brief</button>
+        <button data-tab="write" type="button"><i class="ti ti-pencil-plus"></i> Write</button>
+        <button data-tab="archive" type="button"><i class="ti ti-books"></i> Archive</button>
+        <button data-tab="control" type="button"><i class="ti ti-settings"></i> Control Room</button>
       </nav>
     </div>
 
@@ -265,8 +268,8 @@
             <div class="step-card"><strong>4. Publish</strong><span class="muted">ตรวจแล้วโพสต์กลับ</span></div>
           </div>
           <div class="meta">
-            <button class="btn primary" id="copy-prompt-btn"><i class="ti ti-copy"></i> Copy Weekly Prompt</button>
-            <button class="btn" id="copy-table-btn-write"><i class="ti ti-table-export"></i> Copy Data Table</button>
+            <button class="btn primary" id="copy-prompt-btn" type="button"><i class="ti ti-copy"></i> Copy Weekly Prompt</button>
+            <button class="btn" id="copy-table-btn-write" type="button"><i class="ti ti-table-export"></i> Copy Data Table</button>
             <select id="template-select" style="max-width:260px"><option value="weekly">Weekly analysis</option><option value="cautious">Cautious view</option><option value="short">Short brief</option></select>
           </div>
           <div id="copy-status" style="margin-top:12px"></div>
@@ -287,7 +290,7 @@
               <label>Tags<input id="article-tags" placeholder="AOT, KBANK, PTT"></label>
               <label>Source note<input id="article-source" placeholder="ChatGPT / Gemini / Perplexity / Claude"></label>
             </div>
-            <div class="meta" style="margin-top:12px"><button class="btn primary" id="post-article-btn"><i class="ti ti-send"></i> Post Article</button><button class="btn hidden" id="cancel-edit-btn"><i class="ti ti-x"></i> Cancel Edit</button><button class="btn" id="reload-articles-btn"><i class="ti ti-refresh"></i> Reload Feed</button></div>
+            <div class="meta" style="margin-top:12px"><button class="btn primary" id="post-article-btn" type="button"><i class="ti ti-send"></i> Post Article</button><button class="btn hidden" id="cancel-edit-btn" type="button"><i class="ti ti-x"></i> Cancel Edit</button><button class="btn" id="reload-articles-btn" type="button"><i class="ti ti-refresh"></i> Reload Feed</button></div>
             <div id="post-status" style="margin-top:12px"></div>
           </section>
         </div>
@@ -295,7 +298,7 @@
 
       <section id="tab-archive" class="tab section">
         <section class="panel">
-          <div class="section-title"><div><h2>Archive</h2><span>บทความย้อนหลังและบันทึกการวิเคราะห์</span></div><button class="btn" id="reload-articles-btn-2"><i class="ti ti-refresh"></i> Reload</button></div>
+          <div class="section-title"><div><h2>Archive</h2><span>บทความย้อนหลังและบันทึกการวิเคราะห์</span></div><button class="btn" id="reload-articles-btn-2" type="button"><i class="ti ti-refresh"></i> Reload</button></div>
           <div class="form-grid" style="margin-bottom:14px"><label>ค้นหา<input id="archive-search" placeholder="ค้นหาชื่อ/เนื้อหา/tag"></label><label>ประเภท<select id="archive-filter"><option value="all">ทั้งหมด</option><option value="weekly">รายสัปดาห์</option><option value="youtube">YouTube</option><option value="note">บันทึก</option><option value="other">อื่น ๆ</option></select></label></div>
           <div class="article-list" id="article-list"></div>
         </section>
@@ -320,17 +323,17 @@
             <label>Weekly<textarea id="template-weekly"></textarea></label>
             <label>Cautious<textarea id="template-cautious"></textarea></label>
             <label>Short<textarea id="template-short"></textarea></label>
-            <div class="meta"><button class="btn" id="reset-template-btn"><i class="ti ti-restore"></i> Reset</button><button class="btn primary" id="save-config-btn"><i class="ti ti-cloud-upload"></i> Save Templates to Sheets</button></div>
+            <div class="meta"><button class="btn" id="reset-template-btn" type="button"><i class="ti ti-restore"></i> Reset</button><button class="btn primary" id="save-config-btn" type="button"><i class="ti ti-cloud-upload"></i> Save Templates to Sheets</button></div>
             <div id="config-status"></div>
           </section>
         </div>
         <section class="panel section">
-          <div class="section-title"><div><h2>Article Manager</h2><span>ลบ/ซ่อน/กู้คืนบทความแบบ soft delete</span></div><div class="meta"><label style="display:flex;align-items:center;gap:8px;font-size:.85rem"><input type="checkbox" id="show-deleted-articles"> Show deleted</label><button class="btn" id="reload-article-manager-btn"><i class="ti ti-refresh"></i> Reload</button></div></div>
+          <div class="section-title"><div><h2>Article Manager</h2><span>ลบ/ซ่อน/กู้คืนบทความแบบ soft delete</span></div><div class="meta"><label style="display:flex;align-items:center;gap:8px;font-size:.85rem"><input type="checkbox" id="show-deleted-articles"> Show deleted</label><button class="btn" id="reload-article-manager-btn" type="button"><i class="ti ti-refresh"></i> Reload</button></div></div>
           <div id="article-manager-status"></div>
           <div class="manager-list" id="article-manager-list"></div>
         </section>
         <section class="panel section">
-          <div class="section-title"><div><h2>Watchlist Manager</h2><span>เพิ่ม/ลดหุ้นเองได้ ใช้ Active เพื่อเปิด/ปิดการแสดงผล และดึง Name/Sector อัตโนมัติได้</span></div><div class="meta"><button class="btn" id="add-stock-row-btn"><i class="ti ti-plus"></i> Add Stock</button><button class="btn" id="lookup-all-stocks-btn"><i class="ti ti-search"></i> Lookup All</button><button class="btn primary" id="save-watchlist-btn"><i class="ti ti-list-check"></i> Save Watchlist</button></div></div>
+          <div class="section-title"><div><h2>Watchlist Manager</h2><span>เพิ่ม/ลดหุ้นเองได้ ใช้ Active เพื่อเปิด/ปิดการแสดงผล และดึง Name/Sector อัตโนมัติได้</span></div><div class="meta"><button class="btn" id="add-stock-row-btn" type="button"><i class="ti ti-plus"></i> Add Stock</button><button class="btn" id="lookup-all-stocks-btn" type="button"><i class="ti ti-search"></i> Lookup All</button><button class="btn primary" id="save-watchlist-btn" type="button"><i class="ti ti-list-check"></i> Save Watchlist</button></div></div>
           <div class="watchlist-table" id="watchlist-manager"></div>
           <details style="margin-top:12px"><summary class="muted">Advanced text editor</summary><textarea id="watchlist-editor" placeholder="PTT | ปตท. | พลังงาน | | Y"></textarea></details>
           <div id="watchlist-status" style="margin-top:12px"></div>
@@ -340,18 +343,18 @@
   </div>
 
   <nav class="mobile-nav" aria-label="Mobile sections">
-    <button class="active" data-tab="brief"><i class="ti ti-article"></i><span>Brief</span></button>
-    <button data-tab="write"><i class="ti ti-pencil-plus"></i><span>Write</span></button>
-    <button data-tab="archive"><i class="ti ti-books"></i><span>Archive</span></button>
-    <button data-tab="control"><i class="ti ti-settings"></i><span>Control</span></button>
+    <button class="active" data-tab="brief" type="button"><i class="ti ti-article"></i><span>Brief</span></button>
+    <button data-tab="write" type="button"><i class="ti ti-pencil-plus"></i><span>Write</span></button>
+    <button data-tab="archive" type="button"><i class="ti ti-books"></i><span>Archive</span></button>
+    <button data-tab="control" type="button"><i class="ti ti-settings"></i><span>Control</span></button>
   </nav>
 
   <script>
   (function () {
     'use strict';
-    const APP_VERSION = 'index-alphaweek-v09';
-    const STORAGE_KEY = 'alphaweek_config_v09';
-    const LEGACY_KEYS = ['alphaweek_config_v08', 'alphaweek_config_v07', 'alphaweek_config_v06', 'alphaweek_config_v05', 'alphaweek_config_v04', 'alphaweek_config_v03', 'alphaweek_config_v02', 'alphaweek_config_v01'];
+    const APP_VERSION = 'index-alphaweek-v10';
+    const STORAGE_KEY = 'alphaweek_config_v10';
+    const LEGACY_KEYS = ['alphaweek_config_v09', 'alphaweek_config_v08', 'alphaweek_config_v07', 'alphaweek_config_v06', 'alphaweek_config_v05', 'alphaweek_config_v04', 'alphaweek_config_v03', 'alphaweek_config_v02', 'alphaweek_config_v01'];
     const DEFAULT_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzh2PhvOrJu16P9ZLX192PEXUZqTHbp26P1y6TAXNUdO-3UCslhogZHBkoPnOcfx1SA/exec';
     const DEFAULT_HEALTH_URL = 'https://alphaweek.vercel.app/api/health';
     const DEFAULT_CONFIG = {
@@ -364,9 +367,28 @@
     const state = { config: loadConfig(), health: null, dashboard: null, articles: [], allArticles: [], editingArticleId: null, activeTab: 'brief' };
     const $ = (sel) => document.querySelector(sel);
     const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+    function reportRuntimeError(message) {
+      const box = document.querySelector('#runtime-error');
+      if (!box) return;
+      box.classList.add('show');
+      box.textContent = String(message || 'Unknown runtime error');
+    }
+    window.addEventListener('error', event => reportRuntimeError(`Runtime error: ${event.message || event.error || 'unknown'}`));
+    window.addEventListener('unhandledrejection', event => reportRuntimeError(`Async error: ${event.reason && event.reason.message ? event.reason.message : event.reason}`));
+    function runFrontendSelfCheck() {
+      const requiredIds = ['brief-alert','watchlist-coverage','latest-article-home','signal-cards','news-list','market-table','article-list','article-manager-list','apps-script-url','health-url','save-settings-btn','restore-default-urls-btn','test-connection-btn','watchlist-manager'];
+      const missingIds = requiredIds.filter(id => !document.getElementById(id));
+      const requiredFns = ['loadAll','loadDashboard','loadArticles','loadArticleManager','renderWatchlistCoverage','renderLatestArticle','lookupWatchlistRow','saveWatchlist','saveLocalSettings','restoreDefaultUrls','testConnection'];
+      const available = { loadAll, loadDashboard, loadArticles, loadArticleManager, renderWatchlistCoverage, renderLatestArticle, lookupWatchlistRow, saveWatchlist, saveLocalSettings, restoreDefaultUrls, testConnection };
+      const missingFns = requiredFns.filter(name => typeof available[name] !== 'function');
+      const result = { ok: missingIds.length === 0 && missingFns.length === 0, missingIds, missingFns, version: APP_VERSION };
+      if (!result.ok) reportRuntimeError(`Frontend self-check failed\nMissing IDs: ${missingIds.join(', ') || '-'}\nMissing functions: ${missingFns.join(', ') || '-'}`);
+      return result;
+    }
+    window.AlphaWeekSelfCheck = runFrontendSelfCheck;
     document.addEventListener('DOMContentLoaded', init);
 
-    function init() { applyTheme(); bindEvents(); hydrateSettings(); loadAll(); }
+    function init() { if ($('#app-version')) $('#app-version').textContent = APP_VERSION; applyTheme(); bindEvents(); hydrateSettings(); const check = runFrontendSelfCheck(); if (check.ok) { const box = $('#runtime-error'); if (box) { box.classList.remove('show'); box.textContent = ''; } } loadAll(); }
     function safeBind(selector, event, handler) { const el = $(selector); if (el) el.addEventListener(event, handler); }
     function bindEvents() {
       $$('[data-tab]').forEach(btn => btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
