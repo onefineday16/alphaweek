@@ -40,6 +40,8 @@
       min-height: 100vh;
     }
 
+    body.day { color-scheme: light; }
+
     body.night {
       --ink: #F8EDF4;
       --muted: #D3BCCC;
@@ -48,6 +50,7 @@
       --paper-2: #2B2230;
       --card: rgba(36, 28, 42, 0.82);
       --shadow: 0 18px 70px rgba(0, 0, 0, 0.34);
+      color-scheme: dark;
       background:
         radial-gradient(circle at top left, rgba(219, 95, 142, 0.18), transparent 34rem),
         radial-gradient(circle at top right, rgba(184, 127, 182, 0.18), transparent 32rem),
@@ -317,6 +320,7 @@
       table { min-width: 720px; }
     }
 
+    /* Auto mode follows the device. Day mode remains light even when the device is dark. */
     @media (prefers-color-scheme: dark) {
       body.auto-theme { color-scheme: dark; }
       body.auto-theme:not(.day) {
@@ -335,7 +339,7 @@
     }
   </style>
 </head>
-<body class="auto-theme">
+<body class="day">
   <div class="app">
     <div class="topline">
       <div><span id="health-dot" class="status-dot"></span><span id="health-text">กำลังเชื่อมต่อ AlphaWeek...</span></div>
@@ -364,7 +368,7 @@
         <button data-tab="compose"><i class="ti ti-pencil-plus"></i> สร้างบทความ</button>
         <button data-tab="settings"><i class="ti ti-settings"></i> ตั้งค่า</button>
         <button id="refresh-btn" title="Refresh"><i class="ti ti-refresh"></i> Refresh</button>
-        <button id="theme-btn" title="Theme"><i class="ti ti-moon"></i> Day/Night</button>
+        <button id="theme-btn" title="Theme"><i class="ti ti-sun"></i> Day</button>
       </nav>
     </div>
 
@@ -582,13 +586,14 @@
   (function () {
     'use strict';
 
-    const APP_VERSION = 'index-alphaweek-v01';
-    const STORAGE_KEY = 'alphaweek_config_v01';
+    const APP_VERSION = 'index-alphaweek-v02';
+    const STORAGE_KEY = 'alphaweek_config_v02';
+    const LEGACY_STORAGE_KEY = 'alphaweek_config_v01';
     const DEFAULT_CONFIG = {
       appsScriptUrl: 'https://script.google.com/macros/s/AKfycbzh2PhvOrJu16P9ZLX192PEXUZqTHbp26P1y6TAXNUdO-3UCslhogZHBkoPnOcfx1SA/exec',
       healthUrl: 'https://alphaweek.vercel.app/api/health',
       pin: '',
-      theme: 'auto',
+      theme: 'day',
       templates: defaultTemplates()
     };
 
@@ -989,8 +994,9 @@
     }
 
     function cycleTheme() {
-      const order = ['auto', 'day', 'night'];
-      const next = order[(order.indexOf(state.config.theme || 'auto') + 1) % order.length];
+      const order = ['day', 'auto', 'night'];
+      const current = order.includes(state.config.theme) ? state.config.theme : 'day';
+      const next = order[(order.indexOf(current) + 1) % order.length];
       state.config.theme = next;
       saveConfigLocal();
       applyTheme();
@@ -1001,8 +1007,9 @@
       if (state.config.theme === 'day') document.body.classList.add('day');
       else if (state.config.theme === 'night') document.body.classList.add('night');
       else document.body.classList.add('auto-theme');
-      const label = state.config.theme === 'night' ? 'Night' : state.config.theme === 'day' ? 'Day' : 'Auto';
-      if ($('#theme-btn')) $('#theme-btn').innerHTML = `<i class="ti ti-moon"></i> ${label}`;
+      const label = state.config.theme === 'night' ? 'Night' : state.config.theme === 'auto' ? 'Auto' : 'Day';
+      const icon = state.config.theme === 'night' ? 'ti-moon' : state.config.theme === 'auto' ? 'ti-device-desktop' : 'ti-sun';
+      if ($('#theme-btn')) $('#theme-btn').innerHTML = `<i class="ti ${icon}"></i> ${label}`;
     }
 
     function setHealth(kind, text) {
@@ -1045,8 +1052,15 @@
 
     function loadConfig() {
       try {
-        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
-        return mergeConfig(DEFAULT_CONFIG, saved);
+        const currentRaw = localStorage.getItem(STORAGE_KEY);
+        const legacyRaw = localStorage.getItem(LEGACY_STORAGE_KEY);
+        const saved = JSON.parse(currentRaw || legacyRaw || '{}');
+        const merged = mergeConfig(DEFAULT_CONFIG, saved);
+        // v02 defaults to Day mode so the app never appears dark-only on devices set to dark mode.
+        // Existing v01 Auto is migrated to Day; explicit Night remains respected only after user chooses it in v02.
+        if (!currentRaw && merged.theme === 'auto') merged.theme = 'day';
+        if (!['day', 'auto', 'night'].includes(merged.theme)) merged.theme = 'day';
+        return merged;
       } catch (err) {
         return JSON.parse(JSON.stringify(DEFAULT_CONFIG));
       }
