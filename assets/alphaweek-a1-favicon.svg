@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">AlphaWeek icon</title>
+  <desc id="desc">Rounded square app icon with the A1 AlphaWeek mark.</desc>
+  <rect x="12" y="12" width="232" height="232" rx="52" fill="#F7FAF7"/>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M50 206 L128 54 L206 206" stroke="#0B2239" stroke-width="17"/>
+    <path d="M86 156 L112 128 L132 146 L168 110" stroke="#3FAE5C" stroke-width="15"/>
+  </g>
+</svg>
