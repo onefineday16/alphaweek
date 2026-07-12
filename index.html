@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>AlphaWeek — Weekly Thai Equity Brief</title>
   <meta name="description" content="AlphaWeek weekly Thai equity brief and AI writing desk." />
+  <link rel="icon" href="assets/favicon.ico" sizes="any">
+  <link rel="icon" type="image/svg+xml" href="assets/alphaweek-a1-favicon.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -70,16 +72,20 @@
     .dot.bad { background:var(--red); box-shadow:0 0 0 4px rgba(224,45,60,.12); }
     .runtime-error { display:none; border:1px solid rgba(224,45,60,.35); background:rgba(224,45,60,.08); color:var(--red); border-radius:18px; padding:12px 14px; margin:12px 0; font-size:.92rem; white-space:pre-wrap; }
     .runtime-error.show { display:block; }
-    .masthead { border:1px solid var(--line); border-radius:32px; background:linear-gradient(135deg, rgba(255,255,255,.86), rgba(253,249,200,.35)); box-shadow:var(--shadow); overflow:hidden; position:relative; padding:26px; }
+    .masthead { border:1px solid var(--line); border-radius:24px; background:linear-gradient(135deg, rgba(255,255,255,.86), rgba(253,249,200,.28)); box-shadow:var(--shadow); overflow:hidden; position:relative; padding:16px 18px; }
     body.night .masthead { background:linear-gradient(135deg, rgba(40,31,47,.92), rgba(26,20,31,.72)); }
     .masthead:before { content:""; position:absolute; inset:0; background:repeating-linear-gradient(90deg, rgba(219,95,142,.08) 0 1px, transparent 1px 68px); pointer-events:none; }
-    .masthead-inner { position:relative; z-index:1; display:grid; grid-template-columns:minmax(0,1.35fr) minmax(280px,.75fr); gap:24px; align-items:end; }
+    .masthead-inner { position:relative; z-index:1; display:grid; grid-template-columns:minmax(0,1fr) auto; gap:16px; align-items:center; }
     .eyebrow { color:var(--muted); display:flex; gap:10px; align-items:center; font-weight:700; letter-spacing:.02em; }
-    .brand { font-weight:800; letter-spacing:-.075em; line-height:.86; font-size:clamp(3rem, 10vw, 6.7rem); margin:8px 0 8px; }
-    .tagline { color:var(--muted); margin:0; font-size:clamp(1rem, 2vw, 1.2rem); max-width:760px; }
-    .edition-card { border:1px solid var(--line); border-radius:24px; background:var(--card); padding:18px; backdrop-filter:blur(14px); display:grid; gap:8px; }
+    .brand-row { display:flex; align-items:center; gap:12px; min-width:0; }
+    .brand-mark { width:46px; height:46px; flex:0 0 auto; }
+    .brand-copy { min-width:0; }
+    .brand { font-weight:800; letter-spacing:-.04em; line-height:1; font-size:clamp(1.4rem, 4vw, 2rem); margin:0 0 4px; }
+    .brand-kicker { color:var(--muted); font-size:.9rem; font-weight:700; }
+    .tagline { color:var(--muted); margin:6px 0 0; font-size:.94rem; line-height:1.5; max-width:720px; }
+    .edition-card { border:1px solid var(--line); border-radius:18px; background:var(--card); padding:11px 13px; backdrop-filter:blur(14px); display:grid; gap:4px; min-width:220px; }
     .edition-card .label { color:var(--muted); font-weight:700; }
-    .edition-card .week { font-size:1.55rem; font-weight:800; }
+    .edition-card .week { font-size:1.05rem; font-weight:800; }
     .readiness { display:inline-flex; align-items:center; gap:8px; width:max-content; border:1px solid var(--line); border-radius:999px; padding:8px 12px; background:rgba(255,255,255,.45); font-weight:800; }
     body.night .readiness { background:rgba(255,255,255,.05); }
     .nav-wrap { position:sticky; top:0; z-index:40; padding:12px 0; backdrop-filter:blur(16px); }
@@ -103,14 +109,14 @@
     .panel, .paper-card { border:1px solid var(--line); border-radius:var(--radius); background:var(--card); box-shadow:0 10px 34px rgba(43,43,43,.05); backdrop-filter:blur(12px); }
     .panel { padding:20px; }
     .paper-card { padding:16px; }
-    .editorial-lead { padding:28px; background:linear-gradient(135deg, rgba(253,249,200,.62), rgba(255,255,255,.72)); }
+    .editorial-lead { padding:18px 20px; background:linear-gradient(135deg, rgba(253,249,200,.50), rgba(255,255,255,.72)); }
     body.night .editorial-lead { background:linear-gradient(135deg, rgba(55,43,42,.5), rgba(35,27,41,.76)); }
     .section-title { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; margin:0 0 14px; }
     h1,h2,h3,h4,p { overflow-wrap:anywhere; }
     .section-title h2, .section-title h3 { margin:0; line-height:1.1; }
     .section-title span, .muted { color:var(--muted); }
-    .lead-title { font-size:clamp(1.8rem, 4vw, 3.2rem); line-height:.98; letter-spacing:-.045em; margin:8px 0 12px; }
-    .lead-copy { font-size:1.08rem; color:var(--muted); line-height:1.75; margin:0; }
+    .lead-title { font-size:clamp(1.35rem, 3vw, 2rem); line-height:1.08; letter-spacing:-.03em; margin:6px 0 8px; }
+    .lead-copy { font-size:.96rem; color:var(--muted); line-height:1.6; margin:0; }
     .stat-strip { display:flex; flex-wrap:wrap; gap:8px; margin-top:16px; }
     .badge { display:inline-flex; align-items:center; gap:6px; border:1px solid var(--line); border-radius:999px; padding:7px 10px; color:var(--muted); background:rgba(255,255,255,.38); font-weight:700; }
     body.night .badge { background:rgba(255,255,255,.04); }
@@ -174,23 +180,26 @@
     .hidden { display:none !important; }
     @media (max-width: 900px) { .wl-row { grid-template-columns:1fr 1fr; } }
 
-    @media (max-width: 680px) { .app { width:min(100% - 18px, 1200px); padding-top:12px; padding-bottom:48px; } .masthead { padding:20px; border-radius:26px; } .utility-bar { align-items:flex-start; flex-direction:column; } .nav-wrap { top:0; padding:8px 0; } .nav { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); border-radius:22px; gap:6px; } .nav button { padding:9px 6px; font-size:.78rem; min-width:0; } .nav button i { font-size:1rem; } .form-grid, .step-row { grid-template-columns:1fr; } .panel, .paper-card { padding:15px; border-radius:20px; } .brand { font-size:3.3rem; } .watchlist-compact-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; } .control-system-grid { grid-template-columns:1fr; } }
+    @media (max-width: 680px) { .app { width:min(100% - 18px, 1200px); padding-top:12px; padding-bottom:48px; } .masthead { padding:14px; border-radius:22px; } .utility-bar { align-items:flex-start; flex-direction:column; } .nav-wrap { top:0; padding:8px 0; } .nav { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); border-radius:22px; gap:6px; } .nav button { padding:9px 6px; font-size:.78rem; min-width:0; } .nav button i { font-size:1rem; } .form-grid, .step-row { grid-template-columns:1fr; } .panel, .paper-card { padding:15px; border-radius:20px; } .brand { font-size:1.55rem; } .brand-mark { width:40px; height:40px; } .edition-card { min-width:0; } .watchlist-compact-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; } .control-system-grid { grid-template-columns:1fr; } }
   </style>
 </head>
 <body class="day">
   <div class="app">
     <header class="utility-bar">
       <div class="health-inline"><span class="dot" id="health-dot"></span><span id="health-text">กำลังเตรียม AlphaWeek...</span></div>
-      <div class="meta"><span id="app-version">index-alphaweek-v13-layout</span><button class="btn ghost" id="refresh-btn" type="button"><i class="ti ti-refresh"></i> Refresh</button><button class="btn ghost" id="refresh-prices-btn" type="button"><i class="ti ti-currency-baht"></i> Refresh Prices</button><button class="btn ghost" id="theme-btn" type="button"><i class="ti ti-sun"></i> Day</button></div>
+      <div class="meta"><span id="app-version">index-alphaweek-v14-brief-logo</span><button class="btn ghost" id="refresh-btn" type="button"><i class="ti ti-refresh"></i> Refresh</button><button class="btn ghost" id="refresh-prices-btn" type="button"><i class="ti ti-currency-baht"></i> Refresh Prices</button><button class="btn ghost" id="theme-btn" type="button"><i class="ti ti-sun"></i> Day</button></div>
     </header>
     <div class="runtime-error" id="runtime-error"></div>
 
     <section class="masthead" aria-label="AlphaWeek masthead">
       <div class="masthead-inner">
-        <div>
-          <div class="eyebrow"><i class="ti ti-news"></i> Weekly Thai Equity Brief</div>
-          <div class="brand">AlphaWeek</div>
-          <p class="tagline">สรุปตลาดหุ้นไทยรายสัปดาห์ พร้อมโต๊ะเขียนบทวิเคราะห์สำหรับนำข้อมูลไปต่อยอดกับ AI โดยคุณยังเป็นคนตรวจและโพสต์เอง</p>
+        <div class="brand-row">
+          <img src="assets/alphaweek-a1-mark.svg" alt="AlphaWeek" class="brand-mark" width="46" height="46">
+          <div class="brand-copy">
+            <div class="brand">AW</div>
+            <div class="brand-kicker">Weekly Thai Equity Brief</div>
+            <p class="tagline">สรุปข้อมูลหุ้นไทยรายสัปดาห์ พร้อมพื้นที่เขียนและจัดเก็บบทวิเคราะห์</p>
+          </div>
         </div>
         <aside class="edition-card">
           <div class="label">ฉบับสัปดาห์</div>
@@ -204,8 +213,6 @@
     <div class="nav-wrap">
       <nav class="nav" aria-label="AlphaWeek sections">
         <button class="active" data-tab="brief" type="button"><i class="ti ti-article"></i> Brief</button>
-        <button data-tab="data" type="button"><i class="ti ti-table"></i> Data</button>
-        <button data-tab="watchlist" type="button"><i class="ti ti-layout-grid"></i> Watchlist</button>
         <button data-tab="write" type="button"><i class="ti ti-pencil-plus"></i> Write</button>
         <button data-tab="archive" type="button"><i class="ti ti-books"></i> Archive</button>
         <button data-tab="control" type="button"><i class="ti ti-settings"></i> Control</button>
@@ -221,6 +228,19 @@
           <p class="lead-copy" id="lead-copy">AlphaWeek จะสรุปความพร้อมของข้อมูล หุ้นที่เคลื่อนไหวเด่น ข่าวประกอบ และสิ่งที่ควรระวังก่อนนำไปเขียนบทวิเคราะห์</p>
           <div class="stat-strip" id="brief-badges"></div>
         </article>
+
+        <section class="panel section" id="market-data-section">
+          <div class="section-title"><div><h2>Market Data</h2><span>ข้อมูลหลักสำหรับอ่าน เปรียบเทียบ และนำไปประกอบ prompt</span></div><button type="button" class="btn" id="copy-table-btn-data"><i class="ti ti-copy"></i> Copy Table</button></div>
+          <div id="market-table" class="table-wrap"></div>
+        </section>
+
+        <section class="panel section" id="watchlist-coverage-section">
+          <div class="section-title">
+            <div><h2>Watchlist Coverage</h2><span>Compact view สำหรับดูหุ้นหลายตัวพร้อมกัน</span></div>
+            <button type="button" class="btn" id="open-watchlist-manager-btn"><i class="ti ti-list-details"></i> Manage Watchlist</button>
+          </div>
+          <div id="watchlist-coverage"></div>
+        </section>
 
         <section class="panel section" id="latest-article-section">
           <div class="section-title">
@@ -246,28 +266,11 @@
 
       </section>
 
-      <section id="tab-data" class="tab section">
-        <section class="panel">
-          <div class="section-title"><div><h2>Data Table</h2><span>ข้อมูลหลักสำหรับอ่าน เปรียบเทียบ และนำไปประกอบ prompt</span></div><button type="button" class="btn" id="copy-table-btn-data"><i class="ti ti-copy"></i> Copy Table</button></div>
-          <div id="market-table" class="table-wrap"></div>
-        </section>
-      </section>
-
-      <section id="tab-watchlist" class="tab section">
-        <section class="panel" id="watchlist-coverage-section">
-          <div class="section-title">
-            <div><h2>Watchlist Coverage</h2><span>Compact view สำหรับดูหุ้นหลายตัวพร้อมกัน</span></div>
-            <button type="button" class="btn" id="open-watchlist-manager-btn"><i class="ti ti-list-details"></i> Manage Watchlist</button>
-          </div>
-          <div id="watchlist-coverage"></div>
-        </section>
-      </section>
-
       <section id="tab-write" class="tab section">
         <section class="panel writing-desk">
           <div class="section-title"><div><h2>AI Writing Desk</h2><span>ตรวจข้อมูล → Copy → เขียนกับ AI → นำบทความกลับมาโพสต์</span></div></div>
           <div class="step-row">
-            <div class="step-card"><strong>1. Review</strong><span class="muted">ดู Brief และข่าว</span></div>
+            <div class="step-card"><strong>1. Review</strong><span class="muted">ดู Brief, Data และ Watchlist</span></div>
             <div class="step-card"><strong>2. Copy</strong><span class="muted">นำ prompt ไปใช้กับ AI</span></div>
             <div class="step-card"><strong>3. Write</strong><span class="muted">ให้ AI เขียนร่าง</span></div>
             <div class="step-card"><strong>4. Publish</strong><span class="muted">ตรวจแล้วโพสต์กลับ</span></div>
@@ -356,7 +359,7 @@
   <script>
   (function () {
     'use strict';
-    const APP_VERSION = 'index-alphaweek-v13-layout';
+    const APP_VERSION = 'index-alphaweek-v14-brief-logo';
     const STORAGE_KEY = 'alphaweek_config_v13';
     const LEGACY_KEYS = ['alphaweek_config_v12', 'alphaweek_config_v11', 'alphaweek_config_v10', 'alphaweek_config_v09', 'alphaweek_config_v08', 'alphaweek_config_v07', 'alphaweek_config_v06', 'alphaweek_config_v05', 'alphaweek_config_v04', 'alphaweek_config_v03', 'alphaweek_config_v02', 'alphaweek_config_v01'];
     const DEFAULT_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzh2PhvOrJu16P9ZLX192PEXUZqTHbp26P1y6TAXNUdO-3UCslhogZHBkoPnOcfx1SA/exec';
@@ -830,7 +833,7 @@
     }
     async function checkRead(name, url) { try { const json = await fetchJSON(url); return { name, ok: !!json.ok }; } catch (err) { return { name, ok:false, error: err.message }; } }
     async function saveTemplatesToSheets() { if (!state.config.pin) { $('#config-status').innerHTML = alertHtml('bad','กรุณาใส่ PIN ก่อนบันทึกลง Sheets'); return; } syncTemplatesFromEditor(false); try { const json = await postJSON('saveConfig', { entries: { template_weekly: state.config.templates.weekly, template_cautious: state.config.templates.cautious, template_short: state.config.templates.short, frontend_version: APP_VERSION }}); if (!json.ok) throw new Error(json.error || (json.data && json.data.error) || 'saveConfig failed'); $('#config-status').innerHTML = alertHtml('good','บันทึก templates ลง Sheets แล้ว'); } catch (err) { $('#config-status').innerHTML = alertHtml('bad',`บันทึก config ไม่สำเร็จ: ${escapeHTML(err.message)}`); } }
-    async function saveWatchlist() { if (!state.config.pin) { $('#watchlist-status').innerHTML = alertHtml('bad','กรุณาใส่ PIN ก่อนบันทึก watchlist'); return; } const items = collectWatchlistFromManager(); if (!items.length) { $('#watchlist-status').innerHTML = alertHtml('bad','ไม่มีรายการ watchlist ที่ถูกต้อง'); return; } try { const json = await postJSON('updateWatchlist', { items }); if (!json.ok) throw new Error(json.error || (json.data && json.data.error) || 'updateWatchlist failed'); $('#watchlist-status').innerHTML = alertHtml('good',`บันทึก watchlist แล้ว ${items.length} รายการ`); await loadDashboard(); renderWatchlistCoverage(); switchTab('watchlist'); } catch (err) { $('#watchlist-status').innerHTML = alertHtml('bad',`บันทึก watchlist ไม่สำเร็จ: ${escapeHTML(err.message)}`); } }
+    async function saveWatchlist() { if (!state.config.pin) { $('#watchlist-status').innerHTML = alertHtml('bad','กรุณาใส่ PIN ก่อนบันทึก watchlist'); return; } const items = collectWatchlistFromManager(); if (!items.length) { $('#watchlist-status').innerHTML = alertHtml('bad','ไม่มีรายการ watchlist ที่ถูกต้อง'); return; } try { const json = await postJSON('updateWatchlist', { items }); if (!json.ok) throw new Error(json.error || (json.data && json.data.error) || 'updateWatchlist failed'); $('#watchlist-status').innerHTML = alertHtml('good',`บันทึก watchlist แล้ว ${items.length} รายการ`); await loadDashboard(); renderWatchlistCoverage(); switchTab('brief'); } catch (err) { $('#watchlist-status').innerHTML = alertHtml('bad',`บันทึก watchlist ไม่สำเร็จ: ${escapeHTML(err.message)}`); } }
 
     function renderWatchlistManager(items) {
       const rows = (items || []).length ? items : [{ active:'Y' }];
