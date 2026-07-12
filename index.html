@@ -164,6 +164,14 @@
     .watch-status { font-size:.68rem; padding:5px 7px; }
     .watch-metrics { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:5px 8px; font-size:.76rem; color:var(--muted); }
     .watch-metrics strong { color:var(--ink); }
+    .watch-jitta { border-top:1px solid var(--line); padding-top:8px; display:grid; gap:6px; font-size:.76rem; color:var(--muted); }
+    .watch-jitta-main { display:flex; flex-wrap:wrap; align-items:center; gap:5px; }
+    .watch-jitta-main strong { color:var(--ink); }
+    .watch-jitta-main .jitta-chip { display:inline-flex; align-items:center; gap:4px; border:1px solid var(--line); border-radius:999px; padding:4px 7px; background:rgba(255,255,255,.34); font-weight:800; color:var(--muted); }
+    body.night .watch-jitta-main .jitta-chip { background:rgba(255,255,255,.04); }
+    .watch-jitta-meta { display:flex; flex-wrap:wrap; align-items:center; gap:6px; font-size:.72rem; }
+    .watch-jitta a { font-weight:800; }
+    .watch-jitta-missing { color:var(--soft); }
     .control-system-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
     @media (max-width: 940px) { .masthead-inner, .layout-main, .cols-2, .cols-3, .cols-4 { grid-template-columns:1fr; } .step-row { grid-template-columns:1fr 1fr; } .watchlist-compact-grid { grid-template-columns:repeat(3,minmax(0,1fr)); } }
 
@@ -187,7 +195,7 @@
   <div class="app">
     <header class="utility-bar">
       <div class="health-inline"><span class="dot" id="health-dot"></span><span id="health-text">กำลังเตรียม AlphaWeek...</span></div>
-      <div class="meta"><span id="app-version">index-alphaweek-v14-brief-logo</span><button class="btn ghost" id="refresh-btn" type="button"><i class="ti ti-refresh"></i> Refresh</button><button class="btn ghost" id="refresh-prices-btn" type="button"><i class="ti ti-currency-baht"></i> Refresh Prices</button><button class="btn ghost" id="theme-btn" type="button"><i class="ti ti-sun"></i> Day</button></div>
+      <div class="meta"><span id="app-version">index-alphaweek-v15-jitta-display</span><button class="btn ghost" id="refresh-btn" type="button"><i class="ti ti-refresh"></i> Refresh</button><button class="btn ghost" id="refresh-prices-btn" type="button"><i class="ti ti-currency-baht"></i> Refresh Prices</button><button class="btn ghost" id="theme-btn" type="button"><i class="ti ti-sun"></i> Day</button></div>
     </header>
     <div class="runtime-error" id="runtime-error"></div>
 
@@ -236,7 +244,7 @@
 
         <section class="panel section" id="watchlist-coverage-section">
           <div class="section-title">
-            <div><h2>Watchlist Coverage</h2><span>Compact view สำหรับดูหุ้นหลายตัวพร้อมกัน</span></div>
+            <div><h2>Watchlist Coverage</h2><span>Compact view สำหรับดูหุ้นหลายตัวพร้อม Jitta manual context</span></div>
             <button type="button" class="btn" id="open-watchlist-manager-btn"><i class="ti ti-list-details"></i> Manage Watchlist</button>
           </div>
           <div id="watchlist-coverage"></div>
@@ -359,9 +367,9 @@
   <script>
   (function () {
     'use strict';
-    const APP_VERSION = 'index-alphaweek-v14-brief-logo';
-    const STORAGE_KEY = 'alphaweek_config_v13';
-    const LEGACY_KEYS = ['alphaweek_config_v12', 'alphaweek_config_v11', 'alphaweek_config_v10', 'alphaweek_config_v09', 'alphaweek_config_v08', 'alphaweek_config_v07', 'alphaweek_config_v06', 'alphaweek_config_v05', 'alphaweek_config_v04', 'alphaweek_config_v03', 'alphaweek_config_v02', 'alphaweek_config_v01'];
+    const APP_VERSION = 'index-alphaweek-v15-jitta-display';
+    const STORAGE_KEY = 'alphaweek_config_v15';
+    const LEGACY_KEYS = ['alphaweek_config_v14', 'alphaweek_config_v13', 'alphaweek_config_v12', 'alphaweek_config_v11', 'alphaweek_config_v10', 'alphaweek_config_v09', 'alphaweek_config_v08', 'alphaweek_config_v07', 'alphaweek_config_v06', 'alphaweek_config_v05', 'alphaweek_config_v04', 'alphaweek_config_v03', 'alphaweek_config_v02', 'alphaweek_config_v01'];
     const DEFAULT_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzh2PhvOrJu16P9ZLX192PEXUZqTHbp26P1y6TAXNUdO-3UCslhogZHBkoPnOcfx1SA/exec';
     const DEFAULT_HEALTH_URL = 'https://alphaweek.vercel.app/api/health';
     const DEFAULT_FETCH_WEEKLY_URL = 'https://alphaweek.vercel.app/api/fetch-weekly';
@@ -521,10 +529,12 @@
       const missingSet = h.symbols === 7 || rows.every(r => r.symbol !== 'SET');
       $('#lead-title').textContent = rows.length ? `สัปดาห์นี้พร้อมเขียนบทวิเคราะห์แล้ว` : 'ยังรอข้อมูลสำหรับสัปดาห์ล่าสุด';
       $('#lead-copy').textContent = rows.length ? `ข้อมูลสัปดาห์สิ้นสุด ${formatBE(week) || week} พร้อมใช้เป็น brief สำหรับเขียนบทวิเคราะห์: มีข้อมูลหุ้น ${rows.length} ตัว ข่าวประกอบ ${news.length || h.news_count || 0} ข่าว และระบบบันทึกลง Sheets แล้ว` : 'เมื่อ backend มีข้อมูลล่าสุด หน้านี้จะสรุปตลาด หุ้นที่เคลื่อนไหวเด่น ข่าวประกอบ และเตรียม prompt สำหรับนำไปเขียนกับ AI';
+      const jittaCount = countJittaSymbols(d);
       $('#brief-badges').innerHTML = [
         badge(`${formatBE(week) || 'ยังไม่มีสัปดาห์'}`, 'ti-calendar'),
         badge(`${rows.length || h.symbols || 0} symbols`, 'ti-chart-bar'),
         badge(`${news.length || h.news_count || 0} news`, 'ti-news'),
+        badge(`${jittaCount} Jitta`, 'ti-database', jittaCount ? 'good' : 'warn'),
         badge(missingSet ? 'SET index note' : 'SET included', missingSet ? 'ti-alert-triangle' : 'ti-check', missingSet ? 'warn' : 'good')
       ].join('');
       const notes = [];
@@ -534,6 +544,7 @@
       notes.push(note('Security', 'Refresh Prices เป็น public endpoint; PIN ไม่ฝังในไฟล์และใช้เฉพาะ write actions', 'good'));
       const lastRefresh = state.config.lastPriceRefreshAt ? formatDateTime(state.config.lastPriceRefreshAt) : 'ยังไม่เคย refresh price จากหน้าเว็บนี้';
       notes.push(note('Price Refresh', lastRefresh, state.priceRefresh.running ? 'warn' : 'good'));
+      notes.push(note('Jitta Manual Data', `${countJittaSymbols(d)} symbols available`, countJittaSymbols(d) ? 'good' : 'warn'));
       $('#system-notes').innerHTML = notes.join('');
     }
     function normalizeStockKey(symbol) {
@@ -543,6 +554,48 @@
       const wl = (state.dashboard && state.dashboard.watchlist) || [];
       return wl.filter(w => String(w.active || 'Y').toUpperCase() !== 'N' && w.symbol);
     }
+    function buildJittaMap(d) {
+      const out = {};
+      const bySymbol = d && d.jitta_by_symbol;
+      if (bySymbol && typeof bySymbol === 'object' && !Array.isArray(bySymbol)) {
+        Object.keys(bySymbol).forEach(symbol => {
+          const key = normalizeStockKey(symbol);
+          if (key) out[key] = bySymbol[symbol] || {};
+        });
+      }
+      const rows = Array.isArray(d && d.jitta_data) ? d.jitta_data : [];
+      rows.forEach(row => {
+        const key = normalizeStockKey(row && row.symbol);
+        if (key) out[key] = row || {};
+      });
+      return out;
+    }
+    function countJittaSymbols(d) {
+      const map = buildJittaMap(d || {});
+      return Object.keys(map).filter(key => hasJittaData(map[key])).length;
+    }
+    function hasJittaData(row) {
+      if (!row) return false;
+      return ['jitta_rank','jitta_score','jitta_line','jitta_gap_pct','jitta_updated_at','jitta_url'].some(k => String(row[k] ?? '').trim() !== '');
+    }
+    function jittaHtml(row) {
+      if (!hasJittaData(row)) return '<div class="watch-jitta watch-jitta-missing"><div class="watch-jitta-main"><strong>Jitta</strong><span>—</span></div></div>';
+      const chips = [];
+      if (notBlank(row.jitta_rank)) chips.push(`<span class="jitta-chip">Rank #${escapeHTML(cleanJittaValue(row.jitta_rank))}</span>`);
+      if (notBlank(row.jitta_score)) chips.push(`<span class="jitta-chip">Score ${escapeHTML(cleanJittaValue(row.jitta_score))}</span>`);
+      if (notBlank(row.jitta_line)) chips.push(`<span class="jitta-chip">Line ${fmtNumber(row.jitta_line)}</span>`);
+      if (notBlank(row.jitta_gap_pct)) chips.push(`<span class="jitta-chip">Gap ${fmtPct(row.jitta_gap_pct)}</span>`);
+      const meta = [];
+      if (notBlank(row.jitta_updated_at)) meta.push(`Updated: ${escapeHTML(formatBE(row.jitta_updated_at) || row.jitta_updated_at)}`);
+      if (isSafeHttpUrl(row.jitta_url)) meta.push(`<a href="${escapeAttr(row.jitta_url)}" target="_blank" rel="noopener noreferrer">Open in Jitta</a>`);
+      return `<div class="watch-jitta">
+        <div class="watch-jitta-main"><strong>Jitta</strong>${chips.join('') || '<span>—</span>'}</div>
+        ${meta.length ? `<div class="watch-jitta-meta">${meta.join('<span>·</span>')}</div>` : ''}
+      </div>`;
+    }
+    function notBlank(v) { return String(v ?? '').trim() !== ''; }
+    function cleanJittaValue(v) { return String(v ?? '').trim(); }
+    function isSafeHttpUrl(v) { return /^https?:\/\//i.test(String(v || '').trim()); }
     function renderWatchlistCoverage() {
       const box = $('#watchlist-coverage');
       if (!box) return;
@@ -550,15 +603,18 @@
       const rows = normalizeRows(d.rows || []);
       const rowMap = {};
       rows.forEach(r => rowMap[normalizeStockKey(r.symbol)] = r);
+      const jittaMap = buildJittaMap(d);
       const active = activeWatchlistItems();
       if (!active.length) {
         box.innerHTML = '<div class="alert">ยังไม่มีหุ้น Active ใน Watchlist เพิ่มหุ้นจาก Control Room แล้วหุ้นจะขึ้นตรงนี้ทันที</div>';
         return;
       }
       const missing = active.filter(w => !rowMap[normalizeStockKey(w.symbol)]);
+      const jittaAvailable = active.filter(w => hasJittaData(jittaMap[normalizeStockKey(w.symbol)])).length;
       const cards = active.map(w => {
         const key = normalizeStockKey(w.symbol);
         const r = rowMap[key];
+        const jitta = jittaMap[key];
         const hasData = !!r;
         const sector = escapeHTML(w.sector || '—');
         const name = escapeHTML(w.name_th || w.symbol || key);
@@ -571,12 +627,17 @@
             <span>Sector <strong>${sector}</strong></span>
             ${hasData ? `<span>Close <strong>${fmtNumber(r.close)}</strong></span><span>1W <strong>${fmtPct(r.change_pct_1w)}</strong></span><span>Vol <strong>x ${fmtNumber(r.volume_ratio)}</strong></span>` : `<span>Status <strong>Active ${escapeHTML(w.active || 'Y')}</strong></span><span>Weekly <strong>—</strong></span><span>Volume <strong>—</strong></span>`}
           </div>
+          ${jittaHtml(jitta)}
         </article>`;
       }).join('');
-      const noteText = missing.length
+      const notes = [];
+      notes.push(missing.length
         ? `<div class="alert warn">มีหุ้น Active ${missing.length} ตัวที่ยังไม่มีข้อมูลราคาสัปดาห์ล่าสุด: ${escapeHTML(missing.map(w => normalizeStockKey(w.symbol)).join(', '))}. ต้องรอ cron/Manual Fetch รอบถัดไปก่อนจึงจะมีตัวเลขใน Market Signals</div>`
-        : '<div class="alert good">หุ้น Active ทุกตัวมีข้อมูล weekly data แล้ว</div>';
-      box.innerHTML = noteText + `<div class="watchlist-compact-grid">${cards}</div>`;
+        : '<div class="alert good">หุ้น Active ทุกตัวมีข้อมูล weekly data แล้ว</div>');
+      notes.push(jittaAvailable
+        ? `<div class="alert good">Jitta manual context พร้อมแสดง ${jittaAvailable} / ${active.length} ตัวใน Watchlist Coverage</div>`
+        : '<div class="alert">ยังไม่มี Jitta manual context ใน watchlist นี้ กรอกข้อมูลที่ Google Sheet tab jitta_data แล้ว refresh หน้าเว็บได้เลย</div>');
+      box.innerHTML = notes.join('') + `<div class="watchlist-compact-grid">${cards}</div>`;
     }
     function renderSignals() {
       const d = state.dashboard || {}; const rows = normalizeRows(d.rows || []); const names = mapWatchlist(d.watchlist || []);
