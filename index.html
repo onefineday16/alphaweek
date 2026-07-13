@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>AlphaWeek — Weekly Thai Equity Brief</title>
   <meta name="description" content="AlphaWeek weekly Thai equity brief and AI writing desk." />
-  <meta name="alphaweek-build" content="V24.1-self-check-fix-2026-07-13" />
+  <meta name="alphaweek-build" content="V26-responsive-fundamentals-2026-07-13" />
   <link rel="icon" href="assets/favicon.ico" sizes="any">
   <link rel="icon" type="image/svg+xml" href="assets/alphaweek-a1-favicon.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -129,12 +129,35 @@
     .symbol { font-weight:800; font-size:1.35rem; letter-spacing:-.03em; }
     .meta { color:var(--muted); font-size:.9rem; display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
     .pos { color:var(--green); font-weight:800; } .neg { color:var(--red); font-weight:800; } .flat { color:var(--muted); font-weight:800; }
-    .table-wrap { overflow:auto; border:1px solid var(--line); border-radius:18px; }
-    table { border-collapse:collapse; width:100%; min-width:780px; background:rgba(255,255,255,.32); }
+    .table-wrap { overflow:hidden; border:1px solid var(--line); border-radius:18px; }
+    table { border-collapse:collapse; width:100%; min-width:0; table-layout:fixed; background:rgba(255,255,255,.32); }
     body.night table { background:rgba(0,0,0,.12); }
-    th, td { padding:11px 12px; border-bottom:1px solid var(--line); text-align:right; white-space:nowrap; }
-    th:first-child, td:first-child, th:nth-child(2), td:nth-child(2) { text-align:left; }
-    th { background:rgba(219,95,142,.08); color:var(--muted); font-weight:800; font-size:.86rem; }
+    th, td { padding:10px 8px; border-bottom:1px solid var(--line); text-align:right; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    th { background:rgba(219,95,142,.08); color:var(--muted); font-weight:800; font-size:.82rem; }
+    .market-table th.col-symbol, .market-table td.col-symbol { text-align:left; }
+    .market-table .col-score { width:78px; }
+    .market-table .col-symbol { width:104px; }
+    .market-table .col-close { width:92px; }
+    .market-table .col-change { width:82px; }
+    .market-table .col-volume { width:92px; }
+    .market-table .col-ratio { width:84px; }
+    .market-table .col-yield { width:104px; }
+    .market-table .col-marketcap { width:118px; }
+    .market-table .col-sma { width:84px; }
+    .market-table td[data-label] { font-variant-numeric:tabular-nums; }
+    .market-help { color:var(--muted); font-size:.78rem; line-height:1.45; margin-top:8px; }
+    @media (max-width: 900px) {
+      .market-table .priority-low { display:none; }
+      .market-table th, .market-table td { padding:9px 7px; font-size:.82rem; }
+    }
+    @media (max-width: 680px) {
+      .market-table .priority-mid { display:none; }
+      .market-table .col-score { width:64px; }
+      .market-table .col-symbol { width:86px; }
+      .market-table .col-close, .market-table .col-change { width:auto; }
+      .market-table th, .market-table td { padding:9px 5px; font-size:.76rem; }
+      .market-table .score-pill { min-width:38px; padding:4px 6px; }
+    }
     .writing-desk { background:linear-gradient(135deg, rgba(219,95,142,.12), rgba(184,127,182,.11)); }
     .step-row { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:16px; }
     .step-card strong { display:block; }
@@ -226,7 +249,7 @@
     .score-fill { height:100%; width:var(--score,0%); border-radius:999px; background:linear-gradient(90deg, var(--rose), var(--mauve)); }
     .score-reason { color:var(--muted); font-size:.82rem; line-height:1.45; }
     .control-system-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
-    .persistence-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; }
+    .persistence-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; }
     .persistence-card { border:1px solid var(--line); border-radius:16px; padding:12px; background:rgba(255,255,255,.30); }
     body.night .persistence-card { background:rgba(255,255,255,.04); }
     .persistence-value { font-size:1.45rem; font-weight:800; }
@@ -252,7 +275,7 @@
   <div class="app">
     <header class="utility-bar">
       <div class="health-inline"><span class="dot" id="health-dot"></span><span id="health-text">กำลังเตรียม AlphaWeek...</span></div>
-      <div class="meta"><span id="app-version">index-alphaweek-v24-data-persistence</span><button class="btn ghost" id="refresh-btn" type="button"><i class="ti ti-refresh"></i> Refresh</button><button class="btn ghost" id="refresh-prices-btn" type="button"><i class="ti ti-currency-baht"></i> Refresh Prices</button><button class="btn ghost" id="theme-btn" type="button"><i class="ti ti-sun"></i> Day</button></div>
+      <div class="meta"><span id="app-version">index-alphaweek-v26-responsive-fundamentals</span><button class="btn ghost" id="refresh-btn" type="button"><i class="ti ti-refresh"></i> Refresh</button><button class="btn ghost" id="refresh-prices-btn" type="button"><i class="ti ti-currency-baht"></i> Refresh Prices</button><button class="btn ghost" id="theme-btn" type="button"><i class="ti ti-sun"></i> Day</button></div>
     </header>
     <div class="runtime-error" id="runtime-error"></div>
 
@@ -299,7 +322,7 @@
           <div class="section-title">
             <div>
               <h2>Market Data Explorer</h2>
-              <span>รวม Attention Score, filter, sort และ pagination ไว้ในตารางหลัก</span>
+              <span>สลับ Overview, Technical และ Financial โดยคงความอ่านง่ายทุกขนาดหน้าจอ</span>
             </div>
             <button type="button" class="btn" id="copy-table-btn-data"><i class="ti ti-copy"></i> Copy Current View</button>
           </div>
@@ -311,13 +334,18 @@
                 <button type="button" class="btn" data-market-universe="SET50">SET50</button>
                 <button type="button" class="btn" data-market-universe="SET100">SET100</button>
               </div>
+              <div class="segmented" id="market-mode-controls" aria-label="Market Data analysis mode">
+                <button type="button" class="btn primary active" data-market-mode="overview">Overview</button>
+                <button type="button" class="btn" data-market-mode="technical">Technical</button>
+                <button type="button" class="btn" data-market-mode="financial">Financial</button>
+              </div>
               <div class="segmented" id="market-view-controls" aria-label="Market Data view">
                 <button type="button" class="btn primary active" data-market-view="table"><i class="ti ti-table"></i> Table</button>
                 <button type="button" class="btn" data-market-view="cards"><i class="ti ti-layout-cards"></i> Cards</button>
               </div>
             </div>
             <div class="market-explorer-right">
-              <input id="market-search" class="market-explorer-search" placeholder="Search symbol / name / signal" aria-label="Search Market Data">
+              <input id="market-search" class="market-explorer-search" placeholder="Search symbol / name / signal / financial" aria-label="Search Market Data">
             </div>
           </div>
           <div id="market-explorer-summary" class="alert market-explorer-summary"></div>
@@ -470,9 +498,9 @@
   <script>
   (function () {
     'use strict';
-    const APP_VERSION = 'index-alphaweek-v24-data-persistence';
-    const STORAGE_KEY = 'alphaweek_config_v24';
-    const LEGACY_KEYS = ['alphaweek_config_v15', 'alphaweek_config_v14', 'alphaweek_config_v13', 'alphaweek_config_v12', 'alphaweek_config_v11', 'alphaweek_config_v10', 'alphaweek_config_v09', 'alphaweek_config_v08', 'alphaweek_config_v07', 'alphaweek_config_v06', 'alphaweek_config_v05', 'alphaweek_config_v04', 'alphaweek_config_v03', 'alphaweek_config_v02', 'alphaweek_config_v01'];
+    const APP_VERSION = 'index-alphaweek-v26-responsive-fundamentals';
+    const STORAGE_KEY = 'alphaweek_config_v26';
+    const LEGACY_KEYS = ['alphaweek_config_v24', 'alphaweek_config_v15', 'alphaweek_config_v14', 'alphaweek_config_v13', 'alphaweek_config_v12', 'alphaweek_config_v11', 'alphaweek_config_v10', 'alphaweek_config_v09', 'alphaweek_config_v08', 'alphaweek_config_v07', 'alphaweek_config_v06', 'alphaweek_config_v05', 'alphaweek_config_v04', 'alphaweek_config_v03', 'alphaweek_config_v02', 'alphaweek_config_v01'];
     const DEFAULT_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzh2PhvOrJu16P9ZLX192PEXUZqTHbp26P1y6TAXNUdO-3UCslhogZHBkoPnOcfx1SA/exec';
     const DEFAULT_HEALTH_URL = 'https://alphaweek.vercel.app/api/health';
     const DEFAULT_FETCH_WEEKLY_URL = 'https://alphaweek.vercel.app/api/fetch-weekly';
@@ -487,7 +515,7 @@
       lastPriceRefreshAt: '',
       templates: defaultTemplates()
     };
-    const state = { config: loadConfig(), health: null, dashboard: null, dashboardLoad: { ok:false, error:'', lastSuccessAt:'' }, articles: [], allArticles: [], editingArticleId: null, activeTab: 'brief', scoreboardUniverse: 'watchlist', marketExplorer: { universe:'all', view:'table', query:'', sortKey:'score', sortDir:'desc', page:1, pageSize:20 }, priceRefresh: { running:false, lastResult:null, statusMessage:'', statusKind:'' }, universeRefresh: { running:false, cancelRequested:false, universe:'watchlist', batchSize:5, total:0, queue:[], originalQueue:[], currentBatch:[], completed:[], skipped:[], errors:[], startedAt:null, finishedAt:null } };
+    const state = { config: loadConfig(), health: null, dashboard: null, dashboardLoad: { ok:false, error:'', lastSuccessAt:'' }, articles: [], allArticles: [], editingArticleId: null, activeTab: 'brief', scoreboardUniverse: 'watchlist', marketExplorer: { universe:'all', mode:'overview', view:'table', query:'', sortKey:'score', sortDir:'desc', page:1, pageSize:20 }, priceRefresh: { running:false, lastResult:null, statusMessage:'', statusKind:'' }, universeRefresh: { running:false, cancelRequested:false, universe:'watchlist', batchSize:5, total:0, queue:[], originalQueue:[], currentBatch:[], completed:[], skipped:[], errors:[], startedAt:null, finishedAt:null } };
     const $ = (sel) => document.querySelector(sel);
     const $$ = (sel) => Array.from(document.querySelectorAll(sel));
     function reportRuntimeError(message) {
@@ -499,7 +527,7 @@
     window.addEventListener('error', event => reportRuntimeError(`Runtime error: ${event.message || event.error || 'unknown'}`));
     window.addEventListener('unhandledrejection', event => reportRuntimeError(`Async error: ${event.reason && event.reason.message ? event.reason.message : event.reason}`));
     function runFrontendSelfCheck() {
-      const requiredIds = ['brief-alert','latest-article-home','news-list','market-table','market-cards','market-pagination','market-explorer-summary','market-universe-controls','market-view-controls','market-search','article-list','article-manager-list','apps-script-url','health-url','save-settings-btn','restore-default-urls-btn','test-connection-btn','refresh-prices-btn','refresh-prices-control-btn','fetch-weekly-url','auto-refresh-prices','price-refresh-cooldown','price-refresh-status','universe-refresh-universe','universe-refresh-batch-size','universe-refresh-start-btn','universe-refresh-stop-btn','universe-refresh-progress','watchlist-manager','persistence-check','persistence-alert'];
+      const requiredIds = ['brief-alert','latest-article-home','news-list','market-table','market-cards','market-pagination','market-explorer-summary','market-universe-controls','market-mode-controls','market-view-controls','market-search','article-list','article-manager-list','apps-script-url','health-url','save-settings-btn','restore-default-urls-btn','test-connection-btn','refresh-prices-btn','refresh-prices-control-btn','fetch-weekly-url','auto-refresh-prices','price-refresh-cooldown','price-refresh-status','universe-refresh-universe','universe-refresh-batch-size','universe-refresh-start-btn','universe-refresh-stop-btn','universe-refresh-progress','watchlist-manager','persistence-check','persistence-alert'];
       const missingIds = requiredIds.filter(id => !document.getElementById(id));
       const requiredFns = ['loadAll','loadDashboard','loadArticles','loadArticleManager','renderMarketDataExplorer','renderLatestArticle','lookupWatchlistRow','saveWatchlist','saveLocalSettings','restoreDefaultUrls','testConnection','refreshPrices','startUniverseRefresh','stopUniverseRefresh','buildUniverseRefreshQueue','renderUniverseRefreshProgress','maybeAutoRefreshPricesOnOpen','currentEffectiveTheme','bindSystemThemeListener','renderPersistenceCheck'];
       const available = { loadAll, loadDashboard, loadArticles, loadArticleManager, renderMarketDataExplorer, renderLatestArticle, lookupWatchlistRow, saveWatchlist, saveLocalSettings, restoreDefaultUrls, testConnection, refreshPrices, startUniverseRefresh, stopUniverseRefresh, buildUniverseRefreshQueue, renderUniverseRefreshProgress, maybeAutoRefreshPricesOnOpen, currentEffectiveTheme, bindSystemThemeListener, renderPersistenceCheck };
@@ -522,6 +550,7 @@
       safeBind('#copy-table-btn', 'click', copyMarketTable);
       safeBind('#copy-table-btn-data', 'click', copyMarketTable);
       safeBind('#market-universe-controls', 'click', handleMarketUniverseClick);
+      safeBind('#market-mode-controls', 'click', handleMarketModeClick);
       safeBind('#market-view-controls', 'click', handleMarketViewClick);
       safeBind('#market-search', 'input', handleMarketSearch);
       safeBind('#market-table', 'click', handleMarketTableClick);
@@ -659,10 +688,13 @@
       notes.push(note('Vercel Health', h && h.ok ? 'OK' : 'รอตรวจ', h && h.ok ? 'good' : 'warn'));
       notes.push(note('Apps Script Dashboard', rows.length ? 'มีข้อมูลล่าสุด' : 'ยังไม่พบ rows', rows.length ? 'good' : 'warn'));
       if (missingSet) notes.push(note('SET Index', 'Yahoo ไม่มี bar ในสัปดาห์ล่าสุด — ไม่ block งานเขียน', 'warn'));
-      notes.push(note('Security', 'Refresh Prices เป็น public endpoint; PIN ไม่ฝังในไฟล์และใช้เฉพาะ write actions', 'good'));
+      notes.push(note('Security', 'Market Refresh เป็น public endpoint; PIN ไม่ฝังในไฟล์และใช้เฉพาะ write actions', 'good'));
       notes.push(note('Theme', state.config.theme === 'auto' ? `Auto · ${currentEffectiveTheme() === 'night' ? 'Night' : 'Day'} ตามโหมดเครื่อง` : `${state.config.theme === 'night' ? 'Night' : 'Day'} manual`, 'good'));
-      const lastRefresh = state.config.lastPriceRefreshAt ? formatDateTime(state.config.lastPriceRefreshAt) : 'ยังไม่เคย refresh price จากหน้าเว็บนี้';
-      notes.push(note('Price Refresh', lastRefresh, state.priceRefresh.running ? 'warn' : 'good'));
+      const lastRefresh = state.config.lastPriceRefreshAt ? formatDateTime(state.config.lastPriceRefreshAt) : 'ยังไม่เคย refresh market data จากหน้าเว็บนี้';
+      notes.push(note('Market Refresh', lastRefresh, state.priceRefresh.running ? 'warn' : 'good'));
+      const fs = d.fundamentals_status || {};
+      const fSources = fs.sources ? Object.keys(fs.sources).join(', ') : '';
+      notes.push(note('Fundamentals', fs.total_symbols ? `${fs.covered_symbols || 0}/${fs.total_symbols} symbols · ${fs.coverage_pct || 0}%${fSources ? ' · ' + fSources : ''}` : 'รอ refresh ครั้งแรก', (fs.covered_symbols || 0) > 0 ? 'good' : 'warn'));
       $('#system-notes').innerHTML = notes.join('');
     }
     function renderPersistenceCheck() {
@@ -675,12 +707,14 @@
       const set50 = members.filter(x => normalizeUniverseKey(x.index_name) === 'SET50' && String(x.active || 'Y').toUpperCase() !== 'N' && x.symbol);
       const set100 = members.filter(x => normalizeUniverseKey(x.index_name) === 'SET100' && String(x.active || 'Y').toUpperCase() !== 'N' && x.symbol);
       const weekly = normalizeRows(d.rows || []);
+      const fundamentals = d.fundamentals_status || {};
       const loaded = !!(state.dashboardLoad && state.dashboardLoad.ok);
       const checks = [
         ['Watchlist', watchlist.length, loaded && watchlist.length > 0],
         ['SET50', set50.length, loaded && set50.length >= 45],
         ['SET100', set100.length, loaded && set100.length >= 90],
-        ['Weekly data', weekly.length, loaded && weekly.length > 0]
+        ['Weekly data', weekly.length, loaded && weekly.length > 0],
+        ['Fundamentals', `${fundamentals.covered_symbols || 0}/${fundamentals.total_symbols || 0}`, loaded && (fundamentals.covered_symbols || 0) > 0]
       ];
       box.innerHTML = checks.map(([label,value,ok]) => `<div class="persistence-card"><div class="muted">${escapeHTML(label)}</div><div class="persistence-value">${escapeHTML(value)}</div><span class="badge ${ok ? 'good' : 'warn'}">${ok ? 'OK' : 'Check'}</span></div>`).join('');
       if (!loaded) {
@@ -689,7 +723,8 @@
         alertBox.innerHTML = alertHtml('warn', 'index_members โหลดสำเร็จ แต่ SET50/SET100 เป็นศูนย์หรือน้อยผิดปกติ กรุณาตรวจ Google Sheet ก่อน Refresh/Deploy ต่อ');
       } else {
         const last = state.dashboardLoad.lastSuccessAt ? formatDateTime(state.dashboardLoad.lastSuccessAt) : '—';
-        alertBox.innerHTML = alertHtml('good', `Google Sheets loaded · Week ${escapeHTML(d.week_ending || '—')} · Last success ${escapeHTML(last)} · Save mode Merge/Upsert`);
+        const fLast = fundamentals.latest_fetched_at ? ` · Fundamentals ${escapeHTML(fundamentals.latest_fetched_at)}` : ' · Fundamentals pending first refresh';
+        alertBox.innerHTML = alertHtml('good', `Google Sheets loaded · Week ${escapeHTML(d.week_ending || '—')} · Last success ${escapeHTML(last)} · Save mode Merge/Upsert${fLast}`);
       }
     }
 
@@ -738,15 +773,15 @@
           const one = num(r.change_pct_1w);
           const four = num(r.change_pct_4w);
           const twelve = num(r.change_pct_12w);
-          const vol = num(r.volume_ratio);
+          const vol = numOrBlank(r.volume_ratio);
           const smaText = String(r.sma20_position || '').toLowerCase();
           const sma = /above|over|เหนือ/.test(smaText) ? 8 : (/below|under|ใต้/.test(smaText) ? -8 : 0);
-          const volBoost = Math.max(-8, Math.min(14, (vol - 1) * 8));
+          const volBoost = vol === '' ? 0 : Math.max(-8, Math.min(14, (vol - 1) * 8));
           const momentum = Math.max(-26, Math.min(26, one * 2.1 + four * 0.9 + twelve * 0.25));
           const raw = 50 + momentum + volBoost + sma;
           const score = Math.round(Math.max(0, Math.min(100, raw)));
           const label = score >= 70 ? 'Strong read' : score >= 55 ? 'Watch' : score >= 40 ? 'Neutral' : 'Weak';
-          const reason = `${fmtPct(one)} 1W · ${fmtPct(four)} 4W · Vol x ${fmtNumber(vol)}${r.sma20_position ? ' · ' + r.sma20_position : ''}`;
+          const reason = `${fmtPct(one)} 1W · ${fmtPct(four)} 4W · Vol x20D ${fmtMultiple(vol)}${r.sma20_position ? ' · ' + r.sma20_position : ''}`;
           return Object.assign({}, r, { key, name_th: m.name_th || '', sector: m.sector || '', score, score_label: label, score_reason: reason });
         })
         .sort((a,b) => b.score - a.score);
@@ -819,7 +854,7 @@
           <div class="watch-metrics">
             <span>1W <strong>${fmtPct(r.change_pct_1w)}</strong></span>
             <span>4W <strong>${fmtPct(r.change_pct_4w)}</strong></span>
-            <span>Vol <strong>x ${fmtNumber(r.volume_ratio)}</strong></span>
+            <span>Vol x20D <strong>${fmtMultiple(r.volume_ratio)}</strong></span>
             <span>SMA <strong>${escapeHTML(r.sma20_position || '—')}</strong></span>
           </div>
           <div class="score-reason">${escapeHTML(r.score_reason)}</div>
@@ -834,8 +869,8 @@
       const info = scoreboardCoverage(normalizedRows, selectedMembers, selectedUniverse);
       const scored = scoreMarketItems(normalizedRows, selectedMembers);
       if (!scored.length) return `_${coverageText(info)} · ยังไม่มีข้อมูลสำหรับ Market Scoreboard_`;
-      const header = '| Rank | Symbol | Name | Score | Label | %1W | %4W | Volume x | SMA20 |\n|---:|---|---|---:|---|---:|---:|---:|---|';
-      return `**Market Scoreboard — ${info.label}**\n${coverageText(info)}\n\n${header}\n${scored.slice(0, 10).map((r, i) => `| ${i + 1} | ${r.key} | ${r.name_th || ''} | ${r.score} | ${r.score_label} | ${fmtPct(r.change_pct_1w)} | ${fmtPct(r.change_pct_4w)} | ${fmtNumber(r.volume_ratio)} | ${r.sma20_position || ''} |`).join('\n')}\n\n_Attention Score ranks price movement and volume only. It is not investment advice._`;
+      const header = '| Rank | Symbol | Name | Score | Label | %1W | %4W | Vol x20D | SMA20 |\n|---:|---|---|---:|---|---:|---:|---:|---|';
+      return `**Market Scoreboard — ${info.label}**\n${coverageText(info)}\n\n${header}\n${scored.slice(0, 10).map((r, i) => `| ${i + 1} | ${r.key} | ${r.name_th || ''} | ${r.score} | ${r.score_label} | ${fmtPct(r.change_pct_1w)} | ${fmtPct(r.change_pct_4w)} | ${fmtMultiple(r.volume_ratio)} | ${r.sma20_position || ''} |`).join('\n')}\n\n_Attention Score ranks price movement and volume only. It is not investment advice._`;
     }
     async function copyScoreboard() {
       const d = state.dashboard || {};
@@ -892,18 +927,23 @@
       return { rows:scored, info, universe };
     }
     function getMarketSortValue(row, key) {
-      if (key === 'rank') return num(row.score_rank);
+      if (key === 'rank') return marketNumberOrNull(row.score_rank);
       if (key === 'symbol') return String(row.key || row.symbol || '').toUpperCase();
       if (key === 'name') return String(row.name_th || '').toUpperCase();
-      if (key === 'score') return num(row.score);
-      if (key === 'close') return num(row.close);
-      if (key === 'change1w') return num(row.change_pct_1w);
-      if (key === 'change4w') return num(row.change_pct_4w);
-      if (key === 'change12w') return num(row.change_pct_12w);
-      if (key === 'volume') return num(row.volume_ratio);
+      if (key === 'score') return marketNumberOrNull(row.score);
+      if (key === 'close') return marketNumberOrNull(row.close);
+      if (key === 'change1w') return marketNumberOrNull(row.change_pct_1w);
+      if (key === 'change4w') return marketNumberOrNull(row.change_pct_4w);
+      if (key === 'change12w') return marketNumberOrNull(row.change_pct_12w);
+      if (key === 'volume') return marketNumberOrNull(row.volume_ratio);
+      if (key === 'pe') return marketNumberOrNull(row.pe_ttm);
+      if (key === 'pbv') return marketNumberOrNull(row.pbv);
+      if (key === 'dividend') return marketNumberOrNull(row.dividend_yield_pct);
+      if (key === 'marketcap') return marketNumberOrNull(row.market_cap);
+      if (key === 'roe') return marketNumberOrNull(row.roe_pct);
       if (key === 'sma') return String(row.sma20_position || '').toUpperCase();
       if (key === 'source') return String(row.source || '').toUpperCase();
-      return num(row.score);
+      return marketNumberOrNull(row.score);
     }
     function sortedMarketRows(rows) {
       const key = state.marketExplorer.sortKey || 'score';
@@ -911,6 +951,11 @@
       return (rows || []).slice().sort((a,b) => {
         const av = getMarketSortValue(a, key);
         const bv = getMarketSortValue(b, key);
+        const aMissing = av === null || av === undefined || av === '';
+        const bMissing = bv === null || bv === undefined || bv === '';
+        if (aMissing && bMissing) return num(a.score_rank) - num(b.score_rank);
+        if (aMissing) return 1;
+        if (bMissing) return -1;
         if (typeof av === 'string' || typeof bv === 'string') return String(av).localeCompare(String(bv)) * dir;
         if (av === bv) return num(a.score_rank) - num(b.score_rank);
         return (av - bv) * dir;
@@ -936,12 +981,79 @@
         btn.classList.toggle('active', active);
         btn.classList.toggle('primary', active);
       });
+      const mode = state.marketExplorer.mode || 'overview';
+      $$('[data-market-mode]').forEach(btn => {
+        const active = btn.dataset.marketMode === mode;
+        btn.classList.toggle('active', active);
+        btn.classList.toggle('primary', active);
+      });
       const view = state.marketExplorer.view || 'table';
       $$('[data-market-view]').forEach(btn => {
         const active = btn.dataset.marketView === view;
         btn.classList.toggle('active', active);
         btn.classList.toggle('primary', active);
       });
+    }
+    function marketModeLabel(mode) {
+      return ({ overview:'Overview', technical:'Technical', financial:'Financial' })[mode] || 'Overview';
+    }
+    function marketNumberOrNull(value) {
+      if (value === '' || value === null || value === undefined) return null;
+      const n = Number(value);
+      return Number.isFinite(n) ? n : null;
+    }
+    function marketColumnDefinitions(mode) {
+      if (mode === 'technical') {
+        return [
+          { key:'symbol', label:'Symbol', cls:'col-symbol', render:r => `<strong title="${escapeAttr(r.name_th || r.key || r.symbol)}">${escapeHTML(r.key || r.symbol)}</strong>` },
+          { key:'close', label:'Close', cls:'col-close', render:r => fmtNumber(r.close) },
+          { key:'change1w', label:'1W', cls:'col-change', render:r => pctHtml(r.change_pct_1w) },
+          { key:'change4w', label:'4W', cls:'col-change priority-mid', render:r => pctHtml(r.change_pct_4w) },
+          { key:'change12w', label:'12W', cls:'col-change priority-low', render:r => pctHtml(r.change_pct_12w) },
+          { key:'volume', label:'Vol x20D', cls:'col-volume', title:'ค่าเฉลี่ย Volume รายวันของสัปดาห์ล่าสุด ÷ ค่าเฉลี่ย 20 วันซื้อขายก่อนหน้า', render:r => fmtMultiple(r.volume_ratio) },
+          { key:'sma', label:'SMA20', cls:'col-sma priority-mid', render:r => escapeHTML(r.sma20_position || '—') }
+        ];
+      }
+      if (mode === 'financial') {
+        return [
+          { key:'symbol', label:'Symbol', cls:'col-symbol', render:r => `<strong title="${escapeAttr(r.name_th || r.key || r.symbol)}">${escapeHTML(r.key || r.symbol)}</strong>` },
+          { key:'pe', label:'P/E', cls:'col-ratio', render:r => fmtPE(r.pe_ttm) },
+          { key:'pbv', label:'P/BV', cls:'col-ratio priority-mid', render:r => fmtRatio(r.pbv) },
+          { key:'dividend', label:'Div. Yield', cls:'col-yield', render:r => fmtYield(r.dividend_yield_pct) },
+          { key:'marketcap', label:'Mkt Cap', cls:'col-marketcap priority-low', render:r => fmtMarketCap(r.market_cap) },
+          { key:'roe', label:'ROE', cls:'col-yield priority-low', render:r => fmtPlainPct(r.roe_pct) }
+        ];
+      }
+      return [
+        { key:'score', label:'Score', cls:'col-score', render:r => `<span class="score-pill">${escapeHTML(r.score)}</span>` },
+        { key:'symbol', label:'Symbol', cls:'col-symbol', render:r => `<strong title="${escapeAttr(r.name_th || r.key || r.symbol)}">${escapeHTML(r.key || r.symbol)}</strong>` },
+        { key:'close', label:'Close', cls:'col-close', render:r => fmtNumber(r.close) },
+        { key:'change1w', label:'1W', cls:'col-change', render:r => pctHtml(r.change_pct_1w) },
+        { key:'volume', label:'Vol x20D', cls:'col-volume priority-mid', title:'ค่าเฉลี่ย Volume รายวันของสัปดาห์ล่าสุด ÷ ค่าเฉลี่ย 20 วันซื้อขายก่อนหน้า', render:r => fmtMultiple(r.volume_ratio) },
+        { key:'pe', label:'P/E', cls:'col-ratio priority-mid', render:r => fmtPE(r.pe_ttm) },
+        { key:'dividend', label:'Div. Yield', cls:'col-yield priority-low', render:r => fmtYield(r.dividend_yield_pct) }
+      ];
+    }
+    function marketCardMetrics(r, mode) {
+      if (mode === 'financial') {
+        return [
+          ['P/E', fmtPE(r.pe_ttm)], ['P/BV', fmtRatio(r.pbv)],
+          ['Div. Yield', fmtYield(r.dividend_yield_pct)], ['Mkt Cap', fmtMarketCap(r.market_cap)],
+          ['ROE', fmtPlainPct(r.roe_pct)], ['EPS TTM', fmtNumber(r.eps_ttm)]
+        ];
+      }
+      if (mode === 'technical') {
+        return [
+          ['Close', fmtNumber(r.close)], ['1W', fmtPct(r.change_pct_1w)],
+          ['4W', fmtPct(r.change_pct_4w)], ['12W', fmtPct(r.change_pct_12w)],
+          ['Vol x20D', fmtMultiple(r.volume_ratio)], ['SMA20', escapeHTML(r.sma20_position || '—')]
+        ];
+      }
+      return [
+        ['Close', fmtNumber(r.close)], ['1W', fmtPct(r.change_pct_1w)],
+        ['Vol x20D', fmtMultiple(r.volume_ratio)], ['P/E', fmtPE(r.pe_ttm)],
+        ['Div. Yield', fmtYield(r.dividend_yield_pct)], ['P/BV', fmtRatio(r.pbv)]
+      ];
     }
     function renderMarketDataExplorer() {
       renderMarketUniverseButtons();
@@ -953,6 +1065,7 @@
       if ($('#market-search') && $('#market-search').value !== state.marketExplorer.query) $('#market-search').value = state.marketExplorer.query || '';
       const data = filteredMarketRows();
       const view = state.marketExplorer.view || 'table';
+      const mode = state.marketExplorer.mode || 'overview';
       const pageSize = state.marketExplorer.pageSize || 20;
       const totalPages = Math.max(1, Math.ceil((data.rows.length || 0) / pageSize));
       state.marketExplorer.page = Math.max(1, Math.min(totalPages, Number(state.marketExplorer.page || 1)));
@@ -963,8 +1076,12 @@
         ? `All · Showing ${data.unfilteredCount} symbols with weekly data`
         : coverageText(data.info);
       const filterText = data.query || state.marketExplorer.query ? ` · Filtered ${data.filteredCount} of ${data.unfilteredCount}` : '';
+      const fs = (state.dashboard && state.dashboard.fundamentals_status) || {};
+      const fundamentalsText = fs.total_symbols
+        ? ` · Fundamentals ${fs.covered_symbols || 0}/${fs.total_symbols} (${fs.coverage_pct || 0}%)`
+        : ' · Fundamentals pending';
       summaryBox.className = 'alert market-explorer-summary good';
-      summaryBox.innerHTML = `${escapeHTML(infoText + filterText)} · Page ${page}/${totalPages} · 20 per page · Sort ${escapeHTML(state.marketExplorer.sortKey)} ${escapeHTML(state.marketExplorer.sortDir)}<br><span class="muted">Attention Score ranks price movement and volume only. It is not investment advice.</span>`;
+      summaryBox.innerHTML = `${escapeHTML(infoText + filterText)} · ${escapeHTML(marketModeLabel(mode))} · Page ${page}/${totalPages} · 20 per page · Sort ${escapeHTML(state.marketExplorer.sortKey)} ${escapeHTML(state.marketExplorer.sortDir)}${escapeHTML(fundamentalsText)}<br><span class="muted">Attention Score ranks price movement and volume only. Financial metrics provide context and do not change the score.</span>`;
       tableBox.classList.toggle('hidden', view !== 'table');
       cardBox.classList.toggle('hidden', view !== 'cards');
       if (!data.rows.length) {
@@ -973,54 +1090,31 @@
         pageBox.innerHTML = '';
         return;
       }
-      const tableRows = pageRows.map(r => `<tr>
-        <td><strong>#${escapeHTML(r.score_rank)}</strong></td>
-        <td><span class="score-pill">${escapeHTML(r.score)}</span></td>
-        <td>${escapeHTML(r.score_label)}</td>
-        <td><strong>${escapeHTML(r.key || r.symbol)}</strong></td>
-        <td>${escapeHTML(r.name_th || '')}</td>
-        <td>${fmtNumber(r.close)}</td>
-        <td>${pctHtml(r.change_pct_1w)}</td>
-        <td>${pctHtml(r.change_pct_4w)}</td>
-        <td>${pctHtml(r.change_pct_12w)}</td>
-        <td>${fmtNumber(r.volume_ratio)}</td>
-        <td>${escapeHTML(r.sma20_position || '—')}</td>
-        <td>${escapeHTML(r.source || '—')}</td>
-      </tr>`).join('');
-      tableBox.innerHTML = `<table><thead><tr>
-        <th>${sortButton('#','rank')}</th>
-        <th>${sortButton('Score','score')}</th>
-        <th>${sortButton('Signal','score')}</th>
-        <th>${sortButton('Symbol','symbol')}</th>
-        <th>${sortButton('ชื่อ','name')}</th>
-        <th>${sortButton('Close','close')}</th>
-        <th>${sortButton('%1W','change1w')}</th>
-        <th>${sortButton('%4W','change4w')}</th>
-        <th>${sortButton('%12W','change12w')}</th>
-        <th>${sortButton('Volume x','volume')}</th>
-        <th>${sortButton('SMA20','sma')}</th>
-        <th>${sortButton('Source','source')}</th>
-      </tr></thead><tbody>${tableRows}</tbody></table>`;
-      cardBox.innerHTML = pageRows.map(r => `<article class="score-card ${r.score_rank === 1 ? 'leader' : ''}">
-        <div class="score-top">
-          <div style="min-width:0">
-            <div class="score-rank">#${escapeHTML(r.score_rank)} · ${escapeHTML(r.score_label)}</div>
-            <div class="watch-symbol">${escapeHTML(r.key || r.symbol)}</div>
-            <div class="watch-name" title="${escapeAttr(r.name_th || r.symbol || r.key)}">${escapeHTML(r.name_th || r.symbol || r.key)}</div>
+
+      const columns = marketColumnDefinitions(mode);
+      const tableRows = pageRows.map(r => `<tr>${columns.map(col => `<td class="${escapeAttr(col.cls || '')}" data-label="${escapeAttr(col.label)}">${col.render(r)}</td>`).join('')}</tr>`).join('');
+      const headers = columns.map(col => `<th class="${escapeAttr(col.cls || '')}"${col.title ? ` title="${escapeAttr(col.title)}"` : ''}>${sortButton(col.label, col.key)}</th>`).join('');
+      tableBox.innerHTML = `<table class="market-table market-table-${escapeAttr(mode)}"><thead><tr>${headers}</tr></thead><tbody>${tableRows}</tbody></table><div class="market-help">${mode === 'overview' ? 'Overview แสดงคอลัมน์หลักและซ่อนคอลัมน์ลำดับรองอัตโนมัติบนหน้าจอแคบ จึงไม่ต้องเลื่อนซ้าย–ขวา' : mode === 'technical' ? 'Vol x20D เปรียบเทียบ Volume สัปดาห์ล่าสุดกับ 20 วันซื้อขายก่อนหน้า' : 'ค่า Financial เป็นข้อมูล snapshot ล่าสุด; — หมายถึงแหล่งข้อมูลยังไม่ส่งค่าที่ใช้งานได้'}</div>`;
+
+      cardBox.innerHTML = pageRows.map(r => {
+        const metrics = marketCardMetrics(r, mode).map(([label,value]) => `<span>${escapeHTML(label)} <strong>${value}</strong></span>`).join('');
+        const sourceMeta = r.source ? ` · Price ${escapeHTML(r.source)}` : '';
+        const fundamentalMeta = r.fetched_at ? ` · Fundamentals ${escapeHTML(r.fetched_at)}` : '';
+        return `<article class="score-card ${r.score_rank === 1 ? 'leader' : ''}">
+          <div class="score-top">
+            <div style="min-width:0">
+              <div class="score-rank">#${escapeHTML(r.score_rank)} · ${escapeHTML(r.score_label)}</div>
+              <div class="watch-symbol">${escapeHTML(r.key || r.symbol)}</div>
+              <div class="watch-name" title="${escapeAttr(r.name_th || r.symbol || r.key)}">${escapeHTML(r.name_th || r.symbol || r.key)}</div>
+            </div>
+            <div style="text-align:right"><div class="score-value">${escapeHTML(r.score)}</div><div class="score-label">score</div></div>
           </div>
-          <div style="text-align:right"><div class="score-value">${escapeHTML(r.score)}</div><div class="score-label">score</div></div>
-        </div>
-        <div class="score-meter" aria-label="Score ${escapeAttr(r.score)}"><div class="score-fill" style="--score:${escapeAttr(r.score)}%"></div></div>
-        <div class="watch-metrics">
-          <span>Close <strong>${fmtNumber(r.close)}</strong></span>
-          <span>1W <strong>${fmtPct(r.change_pct_1w)}</strong></span>
-          <span>4W <strong>${fmtPct(r.change_pct_4w)}</strong></span>
-          <span>12W <strong>${fmtPct(r.change_pct_12w)}</strong></span>
-          <span>Vol <strong>x ${fmtNumber(r.volume_ratio)}</strong></span>
-          <span>SMA <strong>${escapeHTML(r.sma20_position || '—')}</strong></span>
-        </div>
-        <div class="score-reason">${escapeHTML(r.score_reason)}</div>
-      </article>`).join('');
+          <div class="score-meter" aria-label="Score ${escapeAttr(r.score)}"><div class="score-fill" style="--score:${escapeAttr(r.score)}%"></div></div>
+          <div class="watch-metrics">${metrics}</div>
+          <div class="score-reason">${escapeHTML(r.score_reason)}</div>
+          <div class="muted" style="font-size:.72rem">${escapeHTML(marketModeLabel(mode))}${sourceMeta}${fundamentalMeta}</div>
+        </article>`;
+      }).join('');
       const pages = Array.from({length: totalPages}, (_, i) => i + 1).map(n => `<button type="button" class="btn ${n === page ? 'primary' : ''}" data-market-page="${n}">${n}</button>`).join('');
       pageBox.innerHTML = `<button type="button" class="btn" data-market-page="prev" ${page <= 1 ? 'disabled' : ''}>Prev</button>${pages}<button type="button" class="btn" data-market-page="next" ${page >= totalPages ? 'disabled' : ''}>Next</button>`;
     }
@@ -1029,6 +1123,25 @@
       if (!btn) return;
       state.marketExplorer.universe = normalizeUniverseKey(btn.dataset.marketUniverse || 'all').toLowerCase() === 'all' ? 'all' : normalizeUniverseKey(btn.dataset.marketUniverse);
       state.scoreboardUniverse = state.marketExplorer.universe === 'all' ? 'watchlist' : state.marketExplorer.universe;
+      state.marketExplorer.page = 1;
+      renderMarketDataExplorer();
+      renderPromptPreview();
+    }
+    function handleMarketModeClick(event) {
+      const btn = event.target.closest('[data-market-mode]');
+      if (!btn) return;
+      const mode = ['overview','technical','financial'].includes(btn.dataset.marketMode) ? btn.dataset.marketMode : 'overview';
+      state.marketExplorer.mode = mode;
+      if (mode === 'overview') {
+        state.marketExplorer.sortKey = 'score';
+        state.marketExplorer.sortDir = 'desc';
+      } else if (mode === 'technical') {
+        state.marketExplorer.sortKey = 'change1w';
+        state.marketExplorer.sortDir = 'desc';
+      } else {
+        state.marketExplorer.sortKey = 'pe';
+        state.marketExplorer.sortDir = 'asc';
+      }
       state.marketExplorer.page = 1;
       renderMarketDataExplorer();
       renderPromptPreview();
@@ -1097,7 +1210,7 @@
           </div>
           <div class="watch-metrics">
             <span>Sector <strong>${sector}</strong></span>
-            ${hasData ? `<span>Close <strong>${fmtNumber(r.close)}</strong></span><span>1W <strong>${fmtPct(r.change_pct_1w)}</strong></span><span>Vol <strong>x ${fmtNumber(r.volume_ratio)}</strong></span>` : `<span>Status <strong>Active ${escapeHTML(w.active || 'Y')}</strong></span><span>Weekly <strong>—</strong></span><span>Volume <strong>—</strong></span>`}
+            ${hasData ? `<span>Close <strong>${fmtNumber(r.close)}</strong></span><span>1W <strong>${fmtPct(r.change_pct_1w)}</strong></span><span>Vol x20D <strong>${fmtMultiple(r.volume_ratio)}</strong></span>` : `<span>Status <strong>Active ${escapeHTML(w.active || 'Y')}</strong></span><span>Weekly <strong>—</strong></span><span>Volume <strong>—</strong></span>`}
           </div>
         </article>`;
       }).join('');
@@ -1112,7 +1225,7 @@
       const d = state.dashboard || {}; const rows = normalizeRows(d.rows || []); const names = mapWatchlist(d.watchlist || []);
       if (!rows.length) { signalBox.innerHTML = '<div class="alert">ยังไม่มีข้อมูล Market Signals</div>'; return; }
       const ranked = rows.slice().sort((a,b) => Math.abs(num(b.change_pct_1w)) + Math.max(0, num(b.volume_ratio)-1)*2 - (Math.abs(num(a.change_pct_1w)) + Math.max(0, num(a.volume_ratio)-1)*2)).slice(0,6);
-      signalBox.innerHTML = ranked.map(r => `<article class="signal"><div class="signal-top"><div><div class="symbol">${escapeHTML(r.symbol)}</div><div class="muted">${escapeHTML(names[normalizeStockKey(r.symbol)] || names[r.symbol] || '')}</div></div><div>${pctHtml(r.change_pct_1w)}</div></div><div class="stat-strip"><span class="badge">Close ${fmtNumber(r.close)}</span><span class="badge">4W ${fmtPct(r.change_pct_4w)}</span><span class="badge">Vol x ${fmtNumber(r.volume_ratio)}</span><span class="badge">${escapeHTML(r.sma20_position || 'SMA —')}</span></div></article>`).join('');
+      signalBox.innerHTML = ranked.map(r => `<article class="signal"><div class="signal-top"><div><div class="symbol">${escapeHTML(r.symbol)}</div><div class="muted">${escapeHTML(names[normalizeStockKey(r.symbol)] || names[r.symbol] || '')}</div></div><div>${pctHtml(r.change_pct_1w)}</div></div><div class="stat-strip"><span class="badge">Close ${fmtNumber(r.close)}</span><span class="badge">4W ${fmtPct(r.change_pct_4w)}</span><span class="badge">Vol x20D ${fmtMultiple(r.volume_ratio)}</span><span class="badge">${escapeHTML(r.sma20_position || 'SMA —')}</span></div></article>`).join('');
     }
     function renderNews() {
       const news = (state.dashboard && state.dashboard.news) || [];
@@ -1203,11 +1316,22 @@ ${newsMarkdown(news)}
 6. สรุปเป็นภาษาไทย อ่านง่าย สไตล์หนังสือพิมพ์การเงิน แต่ไม่ชี้นำให้ซื้อ/ขาย`;
     }
     function marketMarkdownTable(rows, watchlist) {
-      const data = filteredMarketRows();
-      const list = data.rows || [];
-      if (!list.length) return '_ยังไม่มีข้อมูลหุ้นตาม filter ปัจจุบัน_';
-      const header = '| Rank | Symbol | Name | Score | Signal | Close | %1W | %4W | %12W | Volume x | SMA20 | Source |\n|---:|---|---|---:|---|---:|---:|---:|---:|---:|---|---|';
-      return `${header}\n${list.map(r => `| ${r.score_rank} | ${r.key || r.symbol} | ${r.name_th || ''} | ${r.score} | ${r.score_label} | ${fmtNumber(r.close)} | ${fmtPct(r.change_pct_1w)} | ${fmtPct(r.change_pct_4w)} | ${fmtPct(r.change_pct_12w)} | ${fmtNumber(r.volume_ratio)} | ${r.sma20_position || ''} | ${r.source || ''} |`).join('\n')}\n\n_Attention Score ranks price movement and volume only. It is not investment advice._`;
+      const list = Array.isArray(rows) ? rows : filteredMarketRows().rows;
+      if (!list.length) return '_ยังไม่มีข้อมูลใน Market Data Explorer_';
+      const mode = state.marketExplorer.mode || 'overview';
+      let header = '';
+      let body = '';
+      if (mode === 'technical') {
+        header = '| Symbol | Close | 1W | 4W | 12W | Vol x20D | SMA20 |\n|---|---:|---:|---:|---:|---:|---|';
+        body = list.map(r => `| ${r.key || r.symbol} | ${fmtNumber(r.close)} | ${fmtPct(r.change_pct_1w)} | ${fmtPct(r.change_pct_4w)} | ${fmtPct(r.change_pct_12w)} | ${fmtMultiple(r.volume_ratio)} | ${r.sma20_position || ''} |`).join('\n');
+      } else if (mode === 'financial') {
+        header = '| Symbol | P/E | P/BV | Div. Yield | Market Cap | ROE |\n|---|---:|---:|---:|---:|---:|';
+        body = list.map(r => `| ${r.key || r.symbol} | ${fmtPE(r.pe_ttm)} | ${fmtRatio(r.pbv)} | ${fmtYield(r.dividend_yield_pct)} | ${fmtMarketCap(r.market_cap)} | ${fmtPlainPct(r.roe_pct)} |`).join('\n');
+      } else {
+        header = '| Score | Symbol | Close | 1W | Vol x20D | P/E | Div. Yield |\n|---:|---|---:|---:|---:|---:|---:|';
+        body = list.map(r => `| ${r.score} | ${r.key || r.symbol} | ${fmtNumber(r.close)} | ${fmtPct(r.change_pct_1w)} | ${fmtMultiple(r.volume_ratio)} | ${fmtPE(r.pe_ttm)} | ${fmtYield(r.dividend_yield_pct)} |`).join('\n');
+      }
+      return `**Market Data Explorer — ${marketModeLabel(mode)}**\n\n${header}\n${body}\n\n_Attention Score ranks price movement and volume only. Financial metrics are contextual and are not investment advice._`;
     }
     function newsMarkdown(news) { return news.length ? news.map((n,i) => `${i+1}. ${n.headline || 'Untitled'} — ${n.source || 'RSS'}\n   ${n.summary || ''}\n   ${n.url || ''}`).join('\n') : '_ยังไม่มีข่าว_'; }
     async function copyPrompt() { await copyText(buildPrompt($('#template-select').value)); $('#copy-status').innerHTML = alertHtml('good','Copy prompt แล้ว'); }
@@ -1361,7 +1485,7 @@ ${newsMarkdown(news)}
         return false;
       }
       state.priceRefresh.running = true;
-      renderPriceRefreshStatus(source === 'auto-open' ? 'เปิดเว็บแล้วกำลัง refresh ราคาหุ้นอัตโนมัติ...' : 'กำลัง refresh ราคาหุ้นจาก Vercel API...', 'warn');
+      renderPriceRefreshStatus(source === 'auto-open' ? 'เปิดเว็บแล้วกำลัง refresh market data อัตโนมัติ...' : 'กำลัง refresh ราคาและ fundamentals จาก Vercel API...', 'warn');
       setHealth('loading', 'กำลัง refresh ราคาหุ้น...');
       try {
         const resp = await fetch(priceRefreshUrl(), {
@@ -1713,12 +1837,33 @@ ${newsMarkdown(news)}
     }
     function saveConfigLocal() { state.config = normalizeConfig(state.config); localStorage.setItem(STORAGE_KEY, JSON.stringify(state.config)); }
     function defaultTemplates() { return { weekly:'โปรดเขียนบทวิเคราะห์หุ้นไทยรายสัปดาห์จากข้อมูลด้านล่าง เป็นภาษาไทย อ่านง่าย สไตล์หนังสือพิมพ์การเงิน มีโครงเรื่องชัดเจน และจบด้วยสิ่งที่ควรติดตามสัปดาห์หน้า', cautious:'โปรดวิเคราะห์ข้อมูลด้านล่างแบบระมัดระวัง เน้นความเสี่ยง ข้อจำกัดของข้อมูล และหลีกเลี่ยงการฟันธง ใช้ภาษาไทยที่อ่านง่าย ไม่ให้คำแนะนำซื้อขาย', short:'โปรดสรุปข้อมูลด้านล่างให้สั้น กระชับ เป็น bullet/ย่อหน้าสั้น ๆ สำหรับอ่านเร็ว โดยแยกภาพรวมตลาด หุ้นเด่น ข่าวที่เกี่ยวข้อง และสิ่งที่ควรติดตาม' }; }
-    function normalizeRows(rows) { return (rows || []).map(r => Object.assign({}, r, { close:numOrBlank(r.close), prev_close:numOrBlank(r.prev_close), change_pct_1w:numOrBlank(r.change_pct_1w), change_pct_4w:numOrBlank(r.change_pct_4w), change_pct_12w:numOrBlank(r.change_pct_12w), week_high:numOrBlank(r.week_high), week_low:numOrBlank(r.week_low), volume_ratio:numOrBlank(r.volume_ratio) })); }
+    function normalizeRows(rows) { return (rows || []).map(r => Object.assign({}, r, {
+      close:numOrBlank(r.close), prev_close:numOrBlank(r.prev_close),
+      change_pct_1w:numOrBlank(r.change_pct_1w), change_pct_4w:numOrBlank(r.change_pct_4w), change_pct_12w:numOrBlank(r.change_pct_12w),
+      week_high:numOrBlank(r.week_high), week_low:numOrBlank(r.week_low), volume_ratio:numOrBlank(r.volume_ratio),
+      pe_ttm:numOrBlank(r.pe_ttm), pbv:numOrBlank(r.pbv), dividend_yield_pct:numOrBlank(r.dividend_yield_pct),
+      market_cap:numOrBlank(r.market_cap), eps_ttm:numOrBlank(r.eps_ttm), roe_pct:numOrBlank(r.roe_pct),
+      debt_to_equity:numOrBlank(r.debt_to_equity), revenue_growth_yoy_pct:numOrBlank(r.revenue_growth_yoy_pct),
+      net_profit_growth_yoy_pct:numOrBlank(r.net_profit_growth_yoy_pct)
+    })); }
     function mapWatchlist(watchlist) { const out = {}; (watchlist || []).forEach(w => { out[normalizeStockKey(w.symbol)] = w.name_th || w.symbol; out[w.symbol] = w.name_th || w.symbol; }); return out; }
     function parseWatchlist(text) { return text.split('\n').map(line => line.trim()).filter(Boolean).map(line => { const p = line.split('|').map(x => x.trim()); return { symbol:p[0] || '', name_th:p[1] || '', sector:p[2] || '', note:p[3] || '', active:(p[4] || 'Y').toUpperCase() }; }).filter(x => x.symbol); }
     function suggestTags(text) { const wl = (state.dashboard && state.dashboard.watchlist) || []; const found = []; const up = String(text || '').toUpperCase(); wl.forEach(w => { const key = normalizeStockKey(w.symbol); if (key && up.includes(key)) found.push(key); }); return Array.from(new Set(found)).join(', '); }
     function typeLabel(type) { return ({ weekly:'บทวิเคราะห์รายสัปดาห์', youtube:'สรุป YouTube', note:'บันทึก', other:'อื่น ๆ' })[type] || type || 'บทความ'; }
     function fmtNumber(v) { if (v === '' || v === null || v === undefined || Number.isNaN(Number(v))) return '—'; return Number(v).toLocaleString('en-US', { maximumFractionDigits:2 }); }
+    function fmtMultiple(v) { if (v === '' || v === null || v === undefined || Number.isNaN(Number(v))) return '—'; return `${Number(v).toFixed(2)}x`; }
+    function fmtPE(v) { if (v === '' || v === null || v === undefined || Number.isNaN(Number(v))) return '—'; const n = Number(v); return n > 0 ? n.toFixed(2) : 'N/M'; }
+    function fmtRatio(v) { if (v === '' || v === null || v === undefined || Number.isNaN(Number(v))) return '—'; const n = Number(v); return n > 0 ? n.toFixed(2) : '—'; }
+    function fmtYield(v) { if (v === '' || v === null || v === undefined || Number.isNaN(Number(v))) return '—'; return `${Number(v).toFixed(2)}%`; }
+    function fmtPlainPct(v) { if (v === '' || v === null || v === undefined || Number.isNaN(Number(v))) return '—'; return `${Number(v).toFixed(2)}%`; }
+    function fmtMarketCap(v) {
+      if (v === '' || v === null || v === undefined || Number.isNaN(Number(v))) return '—';
+      const n = Number(v);
+      if (Math.abs(n) >= 1e12) return `฿${(n / 1e12).toFixed(2)}T`;
+      if (Math.abs(n) >= 1e9) return `฿${(n / 1e9).toFixed(2)}B`;
+      if (Math.abs(n) >= 1e6) return `฿${(n / 1e6).toFixed(2)}M`;
+      return fmtNumber(n);
+    }
     function fmtPct(v) { if (v === '' || v === null || v === undefined || Number.isNaN(Number(v))) return '—'; const n = Number(v); return `${n > 0 ? '+' : ''}${n.toFixed(2)}%`; }
     function pctHtml(v) { const cls = num(v) > 0 ? 'pos' : num(v) < 0 ? 'neg' : 'flat'; return `<span class="${cls}">${fmtPct(v)}</span>`; }
     function num(v) { const n = Number(v); return Number.isFinite(n) ? n : 0; }
