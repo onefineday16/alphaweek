@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>AlphaWeek — Weekly Thai Equity Brief</title>
   <meta name="description" content="AlphaWeek weekly Thai equity brief and AI writing desk." />
-  <meta name="alphaweek-build" content="V26-responsive-fundamentals-2026-07-13" />
+  <meta name="alphaweek-build" content="V26.1-refresh-split-2026-07-13" />
   <link rel="icon" href="assets/favicon.ico" sizes="any">
   <link rel="icon" type="image/svg+xml" href="assets/alphaweek-a1-favicon.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -275,7 +275,7 @@
   <div class="app">
     <header class="utility-bar">
       <div class="health-inline"><span class="dot" id="health-dot"></span><span id="health-text">กำลังเตรียม AlphaWeek...</span></div>
-      <div class="meta"><span id="app-version">index-alphaweek-v26-responsive-fundamentals</span><button class="btn ghost" id="refresh-btn" type="button"><i class="ti ti-refresh"></i> Refresh</button><button class="btn ghost" id="refresh-prices-btn" type="button"><i class="ti ti-currency-baht"></i> Refresh Prices</button><button class="btn ghost" id="theme-btn" type="button"><i class="ti ti-sun"></i> Day</button></div>
+      <div class="meta"><span id="app-version">index-alphaweek-v26.1-refresh-split</span><button class="btn ghost" id="refresh-btn" type="button"><i class="ti ti-refresh"></i> Refresh</button><button class="btn ghost" id="refresh-prices-btn" type="button"><i class="ti ti-currency-baht"></i> Refresh Prices</button><button class="btn ghost" id="theme-btn" type="button"><i class="ti ti-sun"></i> Day</button></div>
     </header>
     <div class="runtime-error" id="runtime-error"></div>
 
@@ -437,9 +437,10 @@
               <label>Auto Refresh Prices on Open<select id="auto-refresh-prices"><option value="Y">Y — auto เมื่อเปิดเว็บ</option><option value="N">N — กดเองเท่านั้น (แนะนำ)</option></select></label>
               <label>Auto Refresh Cooldown (minutes)<input id="price-refresh-cooldown" type="number" min="0" max="1440" step="1" value="15"></label>
             </div>
-            <div class="meta"><button class="btn primary" id="save-settings-btn" type="button"><i class="ti ti-device-floppy"></i> Save Local Settings</button><button class="btn" id="restore-default-urls-btn" type="button"><i class="ti ti-rotate-clockwise"></i> Restore Default URLs</button><button class="btn" id="test-connection-btn" type="button"><i class="ti ti-plug-connected"></i> Test Connection</button><button class="btn primary" id="refresh-prices-control-btn" type="button"><i class="ti ti-currency-baht"></i> Refresh Prices Now</button></div>
-            <div class="alert good">Default URLs are embedded. Refresh Prices uses merge-safe save and preserves symbols not included in the current batch. Auto Refresh is off by default in V24.</div><div id="settings-status"></div>
+            <div class="meta"><button class="btn primary" id="save-settings-btn" type="button"><i class="ti ti-device-floppy"></i> Save Local Settings</button><button class="btn" id="restore-default-urls-btn" type="button"><i class="ti ti-rotate-clockwise"></i> Restore Default URLs</button><button class="btn" id="test-connection-btn" type="button"><i class="ti ti-plug-connected"></i> Test Connection</button><button class="btn primary" id="refresh-prices-control-btn" type="button"><i class="ti ti-currency-baht"></i> Refresh Prices Now</button><button class="btn primary" id="refresh-financial-control-btn" type="button"><i class="ti ti-report-money"></i> Refresh Financial</button><button class="btn" id="refresh-financial-force-btn" type="button"><i class="ti ti-refresh-alert"></i> Force Financial</button></div>
+            <div class="alert good">V26.1 separates refresh flows: Prices update price/technical data only. Financial runs in small free Yahoo batches, caches values for 7 days, and never blocks Price Refresh.</div><div id="settings-status"></div>
             <div id="price-refresh-status"></div>
+            <div id="financial-refresh-status"></div>
 
             <div class="universe-refresh-box" id="universe-refresh-box">
               <div class="section-title">
@@ -498,9 +499,9 @@
   <script>
   (function () {
     'use strict';
-    const APP_VERSION = 'index-alphaweek-v26-responsive-fundamentals';
-    const STORAGE_KEY = 'alphaweek_config_v26';
-    const LEGACY_KEYS = ['alphaweek_config_v24', 'alphaweek_config_v15', 'alphaweek_config_v14', 'alphaweek_config_v13', 'alphaweek_config_v12', 'alphaweek_config_v11', 'alphaweek_config_v10', 'alphaweek_config_v09', 'alphaweek_config_v08', 'alphaweek_config_v07', 'alphaweek_config_v06', 'alphaweek_config_v05', 'alphaweek_config_v04', 'alphaweek_config_v03', 'alphaweek_config_v02', 'alphaweek_config_v01'];
+    const APP_VERSION = 'index-alphaweek-v26.1-refresh-split';
+    const STORAGE_KEY = 'alphaweek_config_v261';
+    const LEGACY_KEYS = ['alphaweek_config_v26', 'alphaweek_config_v24', 'alphaweek_config_v15', 'alphaweek_config_v14', 'alphaweek_config_v13', 'alphaweek_config_v12', 'alphaweek_config_v11', 'alphaweek_config_v10', 'alphaweek_config_v09', 'alphaweek_config_v08', 'alphaweek_config_v07', 'alphaweek_config_v06', 'alphaweek_config_v05', 'alphaweek_config_v04', 'alphaweek_config_v03', 'alphaweek_config_v02', 'alphaweek_config_v01'];
     const DEFAULT_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzh2PhvOrJu16P9ZLX192PEXUZqTHbp26P1y6TAXNUdO-3UCslhogZHBkoPnOcfx1SA/exec';
     const DEFAULT_HEALTH_URL = 'https://alphaweek.vercel.app/api/health';
     const DEFAULT_FETCH_WEEKLY_URL = 'https://alphaweek.vercel.app/api/fetch-weekly';
@@ -513,9 +514,10 @@
       autoRefreshPricesOnOpen: false,
       priceRefreshCooldownMinutes: 15,
       lastPriceRefreshAt: '',
+      lastFinancialRefreshAt: '',
       templates: defaultTemplates()
     };
-    const state = { config: loadConfig(), health: null, dashboard: null, dashboardLoad: { ok:false, error:'', lastSuccessAt:'' }, articles: [], allArticles: [], editingArticleId: null, activeTab: 'brief', scoreboardUniverse: 'watchlist', marketExplorer: { universe:'all', mode:'overview', view:'table', query:'', sortKey:'score', sortDir:'desc', page:1, pageSize:20 }, priceRefresh: { running:false, lastResult:null, statusMessage:'', statusKind:'' }, universeRefresh: { running:false, cancelRequested:false, universe:'watchlist', batchSize:5, total:0, queue:[], originalQueue:[], currentBatch:[], completed:[], skipped:[], errors:[], startedAt:null, finishedAt:null } };
+    const state = { config: loadConfig(), health: null, dashboard: null, dashboardLoad: { ok:false, error:'', lastSuccessAt:'' }, articles: [], allArticles: [], editingArticleId: null, activeTab: 'brief', scoreboardUniverse: 'watchlist', marketExplorer: { universe:'all', mode:'overview', view:'table', query:'', sortKey:'score', sortDir:'desc', page:1, pageSize:20 }, priceRefresh: { running:false, lastResult:null, statusMessage:'', statusKind:'' }, financialRefresh: { running:false, lastResult:null, statusMessage:'', statusKind:'', total:0, processed:0, refreshed:[], skipped:[], failed:[], warnings:[] }, universeRefresh: { running:false, cancelRequested:false, universe:'watchlist', batchSize:5, total:0, queue:[], originalQueue:[], currentBatch:[], completed:[], skipped:[], errors:[], startedAt:null, finishedAt:null } };
     const $ = (sel) => document.querySelector(sel);
     const $$ = (sel) => Array.from(document.querySelectorAll(sel));
     function reportRuntimeError(message) {
@@ -527,10 +529,10 @@
     window.addEventListener('error', event => reportRuntimeError(`Runtime error: ${event.message || event.error || 'unknown'}`));
     window.addEventListener('unhandledrejection', event => reportRuntimeError(`Async error: ${event.reason && event.reason.message ? event.reason.message : event.reason}`));
     function runFrontendSelfCheck() {
-      const requiredIds = ['brief-alert','latest-article-home','news-list','market-table','market-cards','market-pagination','market-explorer-summary','market-universe-controls','market-mode-controls','market-view-controls','market-search','article-list','article-manager-list','apps-script-url','health-url','save-settings-btn','restore-default-urls-btn','test-connection-btn','refresh-prices-btn','refresh-prices-control-btn','fetch-weekly-url','auto-refresh-prices','price-refresh-cooldown','price-refresh-status','universe-refresh-universe','universe-refresh-batch-size','universe-refresh-start-btn','universe-refresh-stop-btn','universe-refresh-progress','watchlist-manager','persistence-check','persistence-alert'];
+      const requiredIds = ['brief-alert','latest-article-home','news-list','market-table','market-cards','market-pagination','market-explorer-summary','market-universe-controls','market-mode-controls','market-view-controls','market-search','article-list','article-manager-list','apps-script-url','health-url','save-settings-btn','restore-default-urls-btn','test-connection-btn','refresh-prices-btn','refresh-prices-control-btn','refresh-financial-control-btn','refresh-financial-force-btn','fetch-weekly-url','auto-refresh-prices','price-refresh-cooldown','price-refresh-status','financial-refresh-status','universe-refresh-universe','universe-refresh-batch-size','universe-refresh-start-btn','universe-refresh-stop-btn','universe-refresh-progress','watchlist-manager','persistence-check','persistence-alert'];
       const missingIds = requiredIds.filter(id => !document.getElementById(id));
-      const requiredFns = ['loadAll','loadDashboard','loadArticles','loadArticleManager','renderMarketDataExplorer','renderLatestArticle','lookupWatchlistRow','saveWatchlist','saveLocalSettings','restoreDefaultUrls','testConnection','refreshPrices','startUniverseRefresh','stopUniverseRefresh','buildUniverseRefreshQueue','renderUniverseRefreshProgress','maybeAutoRefreshPricesOnOpen','currentEffectiveTheme','bindSystemThemeListener','renderPersistenceCheck'];
-      const available = { loadAll, loadDashboard, loadArticles, loadArticleManager, renderMarketDataExplorer, renderLatestArticle, lookupWatchlistRow, saveWatchlist, saveLocalSettings, restoreDefaultUrls, testConnection, refreshPrices, startUniverseRefresh, stopUniverseRefresh, buildUniverseRefreshQueue, renderUniverseRefreshProgress, maybeAutoRefreshPricesOnOpen, currentEffectiveTheme, bindSystemThemeListener, renderPersistenceCheck };
+      const requiredFns = ['loadAll','loadDashboard','loadArticles','loadArticleManager','renderMarketDataExplorer','renderLatestArticle','lookupWatchlistRow','saveWatchlist','saveLocalSettings','restoreDefaultUrls','testConnection','refreshPrices','refreshFinancial','startUniverseRefresh','stopUniverseRefresh','buildUniverseRefreshQueue','renderUniverseRefreshProgress','maybeAutoRefreshPricesOnOpen','currentEffectiveTheme','bindSystemThemeListener','renderPersistenceCheck'];
+      const available = { loadAll, loadDashboard, loadArticles, loadArticleManager, renderMarketDataExplorer, renderLatestArticle, lookupWatchlistRow, saveWatchlist, saveLocalSettings, restoreDefaultUrls, testConnection, refreshPrices, refreshFinancial, startUniverseRefresh, stopUniverseRefresh, buildUniverseRefreshQueue, renderUniverseRefreshProgress, maybeAutoRefreshPricesOnOpen, currentEffectiveTheme, bindSystemThemeListener, renderPersistenceCheck };
       const missingFns = requiredFns.filter(name => typeof available[name] !== 'function');
       const result = { ok: missingIds.length === 0 && missingFns.length === 0, missingIds, missingFns, version: APP_VERSION };
       if (!result.ok) reportRuntimeError(`Frontend self-check failed\nMissing IDs: ${missingIds.join(', ') || '-'}\nMissing functions: ${missingFns.join(', ') || '-'}`);
@@ -574,6 +576,8 @@
       safeBind('#restore-default-urls-btn', 'click', restoreDefaultUrls);
       safeBind('#test-connection-btn', 'click', testConnection);
       safeBind('#refresh-prices-control-btn', 'click', () => refreshPrices({ source:'manual-control', force:true }));
+      safeBind('#refresh-financial-control-btn', 'click', () => refreshFinancial({ source:'manual-financial', force:false }));
+      safeBind('#refresh-financial-force-btn', 'click', () => refreshFinancial({ source:'manual-financial-force', force:true }));
       safeBind('#universe-refresh-start-btn', 'click', startUniverseRefresh);
       safeBind('#universe-refresh-stop-btn', 'click', stopUniverseRefresh);
       safeBind('#reset-template-btn', 'click', resetTemplates);
@@ -690,8 +694,10 @@
       if (missingSet) notes.push(note('SET Index', 'Yahoo ไม่มี bar ในสัปดาห์ล่าสุด — ไม่ block งานเขียน', 'warn'));
       notes.push(note('Security', 'Market Refresh เป็น public endpoint; PIN ไม่ฝังในไฟล์และใช้เฉพาะ write actions', 'good'));
       notes.push(note('Theme', state.config.theme === 'auto' ? `Auto · ${currentEffectiveTheme() === 'night' ? 'Night' : 'Day'} ตามโหมดเครื่อง` : `${state.config.theme === 'night' ? 'Night' : 'Day'} manual`, 'good'));
-      const lastRefresh = state.config.lastPriceRefreshAt ? formatDateTime(state.config.lastPriceRefreshAt) : 'ยังไม่เคย refresh market data จากหน้าเว็บนี้';
-      notes.push(note('Market Refresh', lastRefresh, state.priceRefresh.running ? 'warn' : 'good'));
+      const lastRefresh = state.config.lastPriceRefreshAt ? formatDateTime(state.config.lastPriceRefreshAt) : 'ยังไม่เคย refresh ราคา/technical จากหน้าเว็บนี้';
+      notes.push(note('Price Refresh', lastRefresh, state.priceRefresh.running ? 'warn' : 'good'));
+      const lastFinancial = state.config.lastFinancialRefreshAt ? formatDateTime(state.config.lastFinancialRefreshAt) : 'ยังไม่เคย refresh Financial จากหน้าเว็บนี้';
+      notes.push(note('Financial Refresh', lastFinancial, state.financialRefresh.running ? 'warn' : ((d.fundamentals_status && d.fundamentals_status.covered_symbols) ? 'good' : 'warn')));
       const fs = d.fundamentals_status || {};
       const fSources = fs.sources ? Object.keys(fs.sources).join(', ') : '';
       notes.push(note('Fundamentals', fs.total_symbols ? `${fs.covered_symbols || 0}/${fs.total_symbols} symbols · ${fs.coverage_pct || 0}%${fSources ? ' · ' + fSources : ''}` : 'รอ refresh ครั้งแรก', (fs.covered_symbols || 0) > 0 ? 'good' : 'warn'));
@@ -1485,13 +1491,13 @@ ${newsMarkdown(news)}
         return false;
       }
       state.priceRefresh.running = true;
-      renderPriceRefreshStatus(source === 'auto-open' ? 'เปิดเว็บแล้วกำลัง refresh market data อัตโนมัติ...' : 'กำลัง refresh ราคาและ fundamentals จาก Vercel API...', 'warn');
+      renderPriceRefreshStatus(source === 'auto-open' ? 'เปิดเว็บแล้วกำลัง refresh ราคาและ technical อัตโนมัติ...' : 'กำลัง refresh ราคาและ technical จาก Vercel API...', 'warn');
       setHealth('loading', 'กำลัง refresh ราคาหุ้น...');
       try {
         const resp = await fetch(priceRefreshUrl(), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ source }),
+          body: JSON.stringify({ source, refresh_type:'prices' }),
           cache: 'no-store',
           redirect: 'follow'
         });
@@ -1507,18 +1513,109 @@ ${newsMarkdown(news)}
         const failCount = Array.isArray(r.symbols_failed) ? r.symbols_failed.length : 0;
         const savedInfo = r.apps_script && r.apps_script.data ? r.apps_script.data : {};
         const persistence = savedInfo.rows_after !== undefined ? ` · Rows ${savedInfo.rows_before}→${savedInfo.rows_after} · Preserved ${savedInfo.preserved_rows || 0}` : ' · Merge-safe';
-        renderPriceRefreshStatus(`Refresh Prices สำเร็จ: ${json.mode || 'weekly'} · OK ${okCount} · Failed ${failCount}${persistence} · ${formatDateTime(state.config.lastPriceRefreshAt)}`, failCount ? 'warn' : 'good');
+        renderPriceRefreshStatus(`Refresh Prices สำเร็จ: ${json.mode || 'weekly-prices'} · OK ${okCount} · Failed ${failCount}${persistence} · ${formatDateTime(state.config.lastPriceRefreshAt)}`, failCount ? 'warn' : 'good');
         await loadAll();
         return true;
       } catch (err) {
-        renderPriceRefreshStatus(`Refresh Prices ไม่สำเร็จ: ${escapeHTML(err.message)}`, 'bad');
-        setHealth('bad', `Price refresh error: ${err.message}`);
+        const message = friendlyRefreshError(err, 'Price Refresh');
+        renderPriceRefreshStatus(`Refresh Prices ไม่สำเร็จ: ${escapeHTML(message)}`, 'bad');
+        setHealth('bad', `Price refresh error: ${message}`);
         return false;
       } finally {
         state.priceRefresh.running = false;
         renderPriceRefreshStatus(state.priceRefresh.statusMessage, state.priceRefresh.statusKind);
         renderBrief();
       }
+    }
+    function renderFinancialRefreshStatus(message, kind) {
+      const box = $('#financial-refresh-status');
+      if (!box) return;
+      const running = state.financialRefresh && state.financialRefresh.running;
+      if (message) {
+        state.financialRefresh.statusMessage = message;
+        state.financialRefresh.statusKind = kind || '';
+      }
+      const last = state.config.lastFinancialRefreshAt ? formatDateTime(state.config.lastFinancialRefreshAt) : 'ยังไม่เคย refresh Financial จากหน้าเว็บนี้';
+      const fallback = running ? 'กำลัง refresh Financial...' : `Last Financial refresh: ${last}`;
+      const status = message || state.financialRefresh.statusMessage || fallback;
+      const statusKind = kind || state.financialRefresh.statusKind || (running ? 'warn' : '');
+      box.innerHTML = alertHtml(statusKind, status);
+    }
+    function financialRefreshSymbols() {
+      const seen = new Set();
+      return activeWatchlistItems().map(item => normalizeStockKey(item.symbol)).filter(symbol => {
+        if (!symbol || symbol === 'SET' || seen.has(symbol)) return false;
+        seen.add(symbol);
+        return true;
+      });
+    }
+    function chunkSymbols(items, size) {
+      const out = [];
+      for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
+      return out;
+    }
+    function friendlyRefreshError(err, stage) {
+      const message = String(err && err.message ? err.message : err || 'unknown error');
+      if (/this operation was aborted|aborterror|\baborted\b/i.test(message)) return `${stage || 'Request'} timeout — กรุณาลอง batch เล็กอีกครั้ง`;
+      return message;
+    }
+    async function refreshFinancial(options = {}) {
+      if (state.financialRefresh.running) {
+        renderFinancialRefreshStatus('กำลัง refresh Financial อยู่แล้ว', 'warn');
+        return false;
+      }
+      saveLocalSettings();
+      const symbols = financialRefreshSymbols();
+      if (!symbols.length) {
+        renderFinancialRefreshStatus('ไม่พบหุ้น Active ใน Watchlist สำหรับ Financial refresh', 'warn');
+        return false;
+      }
+      const batches = chunkSymbols(symbols, 3);
+      state.financialRefresh = { running:true, lastResult:null, statusMessage:'', statusKind:'', total:symbols.length, processed:0, refreshed:[], skipped:[], failed:[], warnings:[] };
+      renderFinancialRefreshStatus(`กำลัง refresh Financial 0/${symbols.length} · batch 3 · cache 7 วัน${options.force ? ' · FORCE' : ''}`, 'warn');
+      setHealth('loading', 'กำลัง refresh Financial...');
+      for (const batch of batches) {
+        try {
+          const resp = await fetch(priceRefreshUrl(), {
+            method:'POST',
+            headers:{ 'Content-Type':'application/json' },
+            body:JSON.stringify({
+              source: options.source || 'manual-financial',
+              refresh_type:'financial',
+              symbols:batch,
+              force:!!options.force,
+              max_age_days:7
+            }),
+            cache:'no-store',
+            redirect:'follow'
+          });
+          const text = await resp.text();
+          let json;
+          try { json = JSON.parse(text); } catch (err) { throw new Error(`non-JSON response (${resp.status}): ${text.slice(0,120)}`); }
+          if (!resp.ok || !json.ok) throw new Error(json.error || `HTTP ${resp.status}`);
+          const r = json.result || {};
+          state.financialRefresh.lastResult = json;
+          (r.symbols_refreshed || []).forEach(symbol => state.financialRefresh.refreshed.push(symbol));
+          (r.symbols_skipped_fresh || []).forEach(symbol => state.financialRefresh.skipped.push(symbol));
+          (r.symbols_failed || []).forEach(item => state.financialRefresh.failed.push(item));
+          (r.warnings || []).forEach(item => state.financialRefresh.warnings.push(item));
+        } catch (err) {
+          const message = friendlyRefreshError(err, 'Financial batch');
+          batch.forEach(symbol => state.financialRefresh.failed.push({ symbol, error:message }));
+        }
+        state.financialRefresh.processed += batch.length;
+        renderFinancialRefreshStatus(`กำลัง refresh Financial ${Math.min(state.financialRefresh.processed, symbols.length)}/${symbols.length} · Updated ${state.financialRefresh.refreshed.length} · Fresh ${state.financialRefresh.skipped.length} · Failed ${state.financialRefresh.failed.length}`, 'warn');
+      }
+      state.financialRefresh.running = false;
+      state.config.lastFinancialRefreshAt = new Date().toISOString();
+      saveConfigLocal();
+      const failed = state.financialRefresh.failed.length;
+      const warnings = state.financialRefresh.warnings.length;
+      const kind = failed ? 'warn' : 'good';
+      renderFinancialRefreshStatus(`Refresh Financial เสร็จแล้ว · Updated ${state.financialRefresh.refreshed.length} · Fresh ${state.financialRefresh.skipped.length} · Failed ${failed} · Warnings ${warnings} · ${formatDateTime(state.config.lastFinancialRefreshAt)}`, kind);
+      await loadAll();
+      setHealth(failed === symbols.length ? 'bad' : 'ok', failed === symbols.length ? 'Financial refresh failed' : 'Financial refresh completed');
+      return failed < symbols.length;
     }
     function readUniverseRefreshControls() {
       const universe = normalizeUniverseKey(($('#universe-refresh-universe') && $('#universe-refresh-universe').value) || state.scoreboardUniverse || 'watchlist');
@@ -1621,7 +1718,7 @@ ${newsMarkdown(news)}
         const resp = await fetch(priceRefreshUrl(), {
           method:'POST',
           headers:{ 'Content-Type':'application/json' },
-          body:JSON.stringify({ source:'universe-refresh', universe, symbols:batch, batch_size:batch.length }),
+          body:JSON.stringify({ source:'universe-refresh', refresh_type:'prices', universe, symbols:batch, batch_size:batch.length }),
           cache:'no-store',
           redirect:'follow'
         });
@@ -1753,7 +1850,7 @@ ${newsMarkdown(news)}
     }
     function collectWatchlistFromManager(onlyValid = true) { return $$('#watchlist-manager .wl-row').map(row => ({ symbol: row.querySelector('.wl-symbol').value.trim(), name_th: row.querySelector('.wl-name').value.trim(), sector: row.querySelector('.wl-sector').value.trim(), note: row.querySelector('.wl-note').value.trim(), active: row.querySelector('.wl-active').value || 'Y' })).filter(x => !onlyValid || x.symbol); }
     function syncWatchlistTextFromManager() { const items = collectWatchlistFromManager(false); $('#watchlist-editor').value = items.map(w => [w.symbol, w.name_th, w.sector, w.note, w.active].map(v => v || '').join(' | ')).join('\n'); }
-    function hydrateSettings() { $('#apps-script-url').value = state.config.appsScriptUrl; $('#health-url').value = state.config.healthUrl; if ($('#fetch-weekly-url')) $('#fetch-weekly-url').value = state.config.fetchWeeklyUrl || DEFAULT_FETCH_WEEKLY_URL; $('#local-pin').value = state.config.pin || ''; $('#theme-select').value = state.config.theme || 'day'; if ($('#auto-refresh-prices')) $('#auto-refresh-prices').value = state.config.autoRefreshPricesOnOpen ? 'Y' : 'N'; if ($('#price-refresh-cooldown')) $('#price-refresh-cooldown').value = String(state.config.priceRefreshCooldownMinutes ?? 15); hydrateTemplateEditors(); renderPriceRefreshStatus(); }
+    function hydrateSettings() { $('#apps-script-url').value = state.config.appsScriptUrl; $('#health-url').value = state.config.healthUrl; if ($('#fetch-weekly-url')) $('#fetch-weekly-url').value = state.config.fetchWeeklyUrl || DEFAULT_FETCH_WEEKLY_URL; $('#local-pin').value = state.config.pin || ''; $('#theme-select').value = state.config.theme || 'day'; if ($('#auto-refresh-prices')) $('#auto-refresh-prices').value = state.config.autoRefreshPricesOnOpen ? 'Y' : 'N'; if ($('#price-refresh-cooldown')) $('#price-refresh-cooldown').value = String(state.config.priceRefreshCooldownMinutes ?? 15); hydrateTemplateEditors(); renderPriceRefreshStatus(); renderFinancialRefreshStatus(); }
     function hydrateTemplateEditors() { const t = state.config.templates || defaultTemplates(); $('#template-weekly').value = t.weekly || ''; $('#template-cautious').value = t.cautious || ''; $('#template-short').value = t.short || ''; }
     function hydrateWatchlistEditor() { const wl = (state.dashboard && state.dashboard.watchlist) || []; $('#watchlist-editor').value = wl.map(w => [w.symbol, w.name_th, w.sector, w.note, w.active].map(v => v || '').join(' | ')).join('\n'); renderWatchlistManager(parseWatchlist($('#watchlist-editor').value)); }
     function syncTemplatesFromEditor(shouldSave = true) { state.config.templates = { weekly: $('#template-weekly').value, cautious: $('#template-cautious').value, short: $('#template-short').value }; if (shouldSave) saveConfigLocal(); renderPromptPreview(); }
@@ -1827,6 +1924,7 @@ ${newsMarkdown(news)}
       c.templates = Object.assign({}, defaultTemplates(), c.templates || {});
       if (typeof c.pin !== 'string') c.pin = '';
       if (typeof c.lastPriceRefreshAt !== 'string') c.lastPriceRefreshAt = '';
+      if (typeof c.lastFinancialRefreshAt !== 'string') c.lastFinancialRefreshAt = '';
       return c;
     }
     function cleanUrl(value, fallback) {
