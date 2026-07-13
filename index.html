@@ -164,8 +164,20 @@
     .watch-status { font-size:.68rem; padding:5px 7px; }
     .watch-metrics { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:5px 8px; font-size:.76rem; color:var(--muted); }
     .watch-metrics strong { color:var(--ink); }
+    .scoreboard-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin-top:12px; }
+    .score-card { border:1px solid var(--line); border-radius:18px; background:rgba(255,255,255,.34); padding:14px; display:grid; gap:10px; min-width:0; }
+    body.night .score-card { background:rgba(255,255,255,.04); }
+    .score-card.leader { background:linear-gradient(135deg, rgba(253,249,200,.55), rgba(255,255,255,.36)); }
+    body.night .score-card.leader { background:linear-gradient(135deg, rgba(55,43,42,.48), rgba(255,255,255,.05)); }
+    .score-top { display:flex; justify-content:space-between; gap:10px; align-items:flex-start; }
+    .score-rank { color:var(--muted); font-weight:800; font-size:.82rem; text-transform:uppercase; letter-spacing:.04em; }
+    .score-value { font-size:1.55rem; font-weight:800; letter-spacing:-.04em; line-height:1; }
+    .score-label { font-size:.78rem; color:var(--muted); font-weight:800; }
+    .score-meter { height:9px; border-radius:999px; background:rgba(160,139,153,.20); overflow:hidden; }
+    .score-fill { height:100%; width:var(--score,0%); border-radius:999px; background:linear-gradient(90deg, var(--rose), var(--mauve)); }
+    .score-reason { color:var(--muted); font-size:.82rem; line-height:1.45; }
     .control-system-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
-    @media (max-width: 940px) { .masthead-inner, .layout-main, .cols-2, .cols-3, .cols-4 { grid-template-columns:1fr; } .step-row { grid-template-columns:1fr 1fr; } .watchlist-compact-grid { grid-template-columns:repeat(3,minmax(0,1fr)); } }
+    @media (max-width: 940px) { .masthead-inner, .layout-main, .cols-2, .cols-3, .cols-4 { grid-template-columns:1fr; } .step-row { grid-template-columns:1fr 1fr; } .watchlist-compact-grid { grid-template-columns:repeat(3,minmax(0,1fr)); } .scoreboard-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 
     .manager-list { display:grid; gap:10px; }
     .manager-card { border:1px solid var(--line); border-radius:18px; background:rgba(255,255,255,.32); padding:14px; display:grid; gap:10px; }
@@ -180,14 +192,14 @@
     .hidden { display:none !important; }
     @media (max-width: 900px) { .wl-row { grid-template-columns:1fr 1fr; } }
 
-    @media (max-width: 680px) { .app { width:min(100% - 18px, 1200px); padding-top:12px; padding-bottom:48px; } .masthead { padding:14px; border-radius:22px; } .utility-bar { align-items:flex-start; flex-direction:column; } .nav-wrap { top:0; padding:8px 0; } .nav { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); border-radius:22px; gap:6px; } .nav button { padding:9px 6px; font-size:.78rem; min-width:0; } .nav button i { font-size:1rem; } .form-grid, .step-row { grid-template-columns:1fr; } .panel, .paper-card { padding:15px; border-radius:20px; } .brand { font-size:1.55rem; } .brand-mark { width:40px; height:40px; } .edition-card { min-width:0; } .watchlist-compact-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; } .control-system-grid { grid-template-columns:1fr; } }
+    @media (max-width: 680px) { .app { width:min(100% - 18px, 1200px); padding-top:12px; padding-bottom:48px; } .masthead { padding:14px; border-radius:22px; } .utility-bar { align-items:flex-start; flex-direction:column; } .nav-wrap { top:0; padding:8px 0; } .nav { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); border-radius:22px; gap:6px; } .nav button { padding:9px 6px; font-size:.78rem; min-width:0; } .nav button i { font-size:1rem; } .form-grid, .step-row { grid-template-columns:1fr; } .panel, .paper-card { padding:15px; border-radius:20px; } .brand { font-size:1.55rem; } .brand-mark { width:40px; height:40px; } .edition-card { min-width:0; } .watchlist-compact-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; } .scoreboard-grid { grid-template-columns:1fr; gap:8px; } .control-system-grid { grid-template-columns:1fr; } }
   </style>
 </head>
 <body class="day">
   <div class="app">
     <header class="utility-bar">
       <div class="health-inline"><span class="dot" id="health-dot"></span><span id="health-text">กำลังเตรียม AlphaWeek...</span></div>
-      <div class="meta"><span id="app-version">index-alphaweek-v18-status-theme</span><button class="btn ghost" id="refresh-btn" type="button"><i class="ti ti-refresh"></i> Refresh</button><button class="btn ghost" id="refresh-prices-btn" type="button"><i class="ti ti-currency-baht"></i> Refresh Prices</button><button class="btn ghost" id="theme-btn" type="button"><i class="ti ti-sun"></i> Day</button></div>
+      <div class="meta"><span id="app-version">index-alphaweek-v19-scoreboard</span><button class="btn ghost" id="refresh-btn" type="button"><i class="ti ti-refresh"></i> Refresh</button><button class="btn ghost" id="refresh-prices-btn" type="button"><i class="ti ti-currency-baht"></i> Refresh Prices</button><button class="btn ghost" id="theme-btn" type="button"><i class="ti ti-sun"></i> Day</button></div>
     </header>
     <div class="runtime-error" id="runtime-error"></div>
 
@@ -240,6 +252,14 @@
             <button type="button" class="btn" id="open-watchlist-manager-btn"><i class="ti ti-list-details"></i> Manage Watchlist</button>
           </div>
           <div id="watchlist-coverage"></div>
+        </section>
+
+        <section class="panel section" id="watchlist-scoreboard-section">
+          <div class="section-title">
+            <div><h2>Watchlist Scoreboard</h2><span>จัดอันดับหุ้น Active จาก momentum, volume และ SMA20 เพื่อช่วยเลือกตัวที่จะอ่านก่อน</span></div>
+            <button type="button" class="btn" id="copy-scoreboard-btn"><i class="ti ti-copy"></i> Copy Scoreboard</button>
+          </div>
+          <div id="watchlist-scoreboard"></div>
         </section>
 
         <section class="panel section" id="latest-article-section">
@@ -359,9 +379,9 @@
   <script>
   (function () {
     'use strict';
-    const APP_VERSION = 'index-alphaweek-v18-status-theme';
-    const STORAGE_KEY = 'alphaweek_config_v14';
-    const LEGACY_KEYS = ['alphaweek_config_v13', 'alphaweek_config_v12', 'alphaweek_config_v11', 'alphaweek_config_v10', 'alphaweek_config_v09', 'alphaweek_config_v08', 'alphaweek_config_v07', 'alphaweek_config_v06', 'alphaweek_config_v05', 'alphaweek_config_v04', 'alphaweek_config_v03', 'alphaweek_config_v02', 'alphaweek_config_v01'];
+    const APP_VERSION = 'index-alphaweek-v19-scoreboard';
+    const STORAGE_KEY = 'alphaweek_config_v15';
+    const LEGACY_KEYS = ['alphaweek_config_v14', 'alphaweek_config_v13', 'alphaweek_config_v12', 'alphaweek_config_v11', 'alphaweek_config_v10', 'alphaweek_config_v09', 'alphaweek_config_v08', 'alphaweek_config_v07', 'alphaweek_config_v06', 'alphaweek_config_v05', 'alphaweek_config_v04', 'alphaweek_config_v03', 'alphaweek_config_v02', 'alphaweek_config_v01'];
     const DEFAULT_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzh2PhvOrJu16P9ZLX192PEXUZqTHbp26P1y6TAXNUdO-3UCslhogZHBkoPnOcfx1SA/exec';
     const DEFAULT_HEALTH_URL = 'https://alphaweek.vercel.app/api/health';
     const DEFAULT_FETCH_WEEKLY_URL = 'https://alphaweek.vercel.app/api/fetch-weekly';
@@ -388,10 +408,10 @@
     window.addEventListener('error', event => reportRuntimeError(`Runtime error: ${event.message || event.error || 'unknown'}`));
     window.addEventListener('unhandledrejection', event => reportRuntimeError(`Async error: ${event.reason && event.reason.message ? event.reason.message : event.reason}`));
     function runFrontendSelfCheck() {
-      const requiredIds = ['brief-alert','watchlist-coverage','latest-article-home','signal-cards','news-list','market-table','article-list','article-manager-list','apps-script-url','health-url','save-settings-btn','restore-default-urls-btn','test-connection-btn','refresh-prices-btn','refresh-prices-control-btn','fetch-weekly-url','auto-refresh-prices','price-refresh-cooldown','price-refresh-status','watchlist-manager'];
+      const requiredIds = ['brief-alert','watchlist-coverage','watchlist-scoreboard','latest-article-home','signal-cards','news-list','market-table','article-list','article-manager-list','apps-script-url','health-url','save-settings-btn','restore-default-urls-btn','test-connection-btn','refresh-prices-btn','refresh-prices-control-btn','fetch-weekly-url','auto-refresh-prices','price-refresh-cooldown','price-refresh-status','watchlist-manager'];
       const missingIds = requiredIds.filter(id => !document.getElementById(id));
-      const requiredFns = ['loadAll','loadDashboard','loadArticles','loadArticleManager','renderWatchlistCoverage','renderLatestArticle','lookupWatchlistRow','saveWatchlist','saveLocalSettings','restoreDefaultUrls','testConnection','refreshPrices','maybeAutoRefreshPricesOnOpen','currentEffectiveTheme','bindSystemThemeListener'];
-      const available = { loadAll, loadDashboard, loadArticles, loadArticleManager, renderWatchlistCoverage, renderLatestArticle, lookupWatchlistRow, saveWatchlist, saveLocalSettings, restoreDefaultUrls, testConnection, refreshPrices, maybeAutoRefreshPricesOnOpen, currentEffectiveTheme, bindSystemThemeListener };
+      const requiredFns = ['loadAll','loadDashboard','loadArticles','loadArticleManager','renderWatchlistCoverage','renderWatchlistScoreboard','renderLatestArticle','lookupWatchlistRow','saveWatchlist','saveLocalSettings','restoreDefaultUrls','testConnection','refreshPrices','maybeAutoRefreshPricesOnOpen','currentEffectiveTheme','bindSystemThemeListener'];
+      const available = { loadAll, loadDashboard, loadArticles, loadArticleManager, renderWatchlistCoverage, renderWatchlistScoreboard, renderLatestArticle, lookupWatchlistRow, saveWatchlist, saveLocalSettings, restoreDefaultUrls, testConnection, refreshPrices, maybeAutoRefreshPricesOnOpen, currentEffectiveTheme, bindSystemThemeListener };
       const missingFns = requiredFns.filter(name => typeof available[name] !== 'function');
       const result = { ok: missingIds.length === 0 && missingFns.length === 0, missingIds, missingFns, version: APP_VERSION };
       if (!result.ok) reportRuntimeError(`Frontend self-check failed\nMissing IDs: ${missingIds.join(', ') || '-'}\nMissing functions: ${missingFns.join(', ') || '-'}`);
@@ -413,6 +433,7 @@
       safeBind('#open-watchlist-manager-btn', 'click', () => switchTab('control'));
       safeBind('#latest-article-home', 'click', handleArticleAction);
       safeBind('#copy-table-btn-write', 'click', copyMarketTable);
+      safeBind('#copy-scoreboard-btn', 'click', copyScoreboard);
       safeBind('#copy-prompt-btn', 'click', copyPrompt);
       safeBind('#template-select', 'change', renderPromptPreview);
       safeBind('#post-article-btn', 'click', postArticle);
@@ -507,7 +528,7 @@
         </article>`;
       }).join('');
     }
-    function renderAll() { renderEdition(); renderBrief(); renderWatchlistCoverage(); renderSignals(); renderNews(); renderMarketTable(); renderArticles(); renderLatestArticle(); renderPromptPreview(); }
+    function renderAll() { renderEdition(); renderBrief(); renderWatchlistCoverage(); renderWatchlistScoreboard(); renderSignals(); renderNews(); renderMarketTable(); renderArticles(); renderLatestArticle(); renderPromptPreview(); }
     function renderEdition() {
       const d = state.dashboard || {}; const h = state.health || {}; const week = d.week_ending || h.latest_week || '';
       $('#edition-week').textContent = week ? formatBE(week) : '—';
@@ -544,6 +565,87 @@
       const wl = (state.dashboard && state.dashboard.watchlist) || [];
       return wl.filter(w => String(w.active || 'Y').toUpperCase() !== 'N' && w.symbol);
     }
+    function scoreWatchlistItems(rows, watchlist) {
+      const names = mapWatchlist(watchlist || []);
+      const activeMap = {};
+      (watchlist || []).forEach(w => {
+        if (String(w.active || 'Y').toUpperCase() !== 'N') activeMap[normalizeStockKey(w.symbol)] = w;
+      });
+      return (rows || [])
+        .filter(r => activeMap[normalizeStockKey(r.symbol)])
+        .map(r => {
+          const key = normalizeStockKey(r.symbol);
+          const w = activeMap[key] || {};
+          const one = num(r.change_pct_1w);
+          const four = num(r.change_pct_4w);
+          const twelve = num(r.change_pct_12w);
+          const vol = num(r.volume_ratio);
+          const smaText = String(r.sma20_position || '').toLowerCase();
+          const sma = /above|over|เหนือ/.test(smaText) ? 8 : (/below|under|ใต้/.test(smaText) ? -8 : 0);
+          const volBoost = Math.max(-8, Math.min(14, (vol - 1) * 8));
+          const momentum = Math.max(-26, Math.min(26, one * 2.1 + four * 0.9 + twelve * 0.25));
+          const raw = 50 + momentum + volBoost + sma;
+          const score = Math.round(Math.max(0, Math.min(100, raw)));
+          const label = score >= 70 ? 'Strong read' : score >= 55 ? 'Watch' : score >= 40 ? 'Neutral' : 'Weak';
+          const reason = `${fmtPct(one)} 1W · ${fmtPct(four)} 4W · Vol x ${fmtNumber(vol)}${r.sma20_position ? ' · ' + r.sma20_position : ''}`;
+          return Object.assign({}, r, { key, name_th: w.name_th || names[key] || '', sector: w.sector || '', score, score_label: label, score_reason: reason });
+        })
+        .sort((a,b) => b.score - a.score);
+    }
+    function renderWatchlistScoreboard() {
+      const box = $('#watchlist-scoreboard');
+      if (!box) return;
+      const d = state.dashboard || {};
+      const rows = normalizeRows(d.rows || []);
+      const scored = scoreWatchlistItems(rows, d.watchlist || []);
+      if (!activeWatchlistItems().length) {
+        box.innerHTML = '<div class="alert">ยังไม่มีหุ้น Active ใน Watchlist สำหรับจัดอันดับ</div>';
+        return;
+      }
+      if (!scored.length) {
+        box.innerHTML = '<div class="alert warn">ยังไม่มี weekly data ของหุ้น Active สำหรับคำนวณ Scoreboard</div>';
+        return;
+      }
+      const cards = scored.slice(0, 9).map((r, idx) => {
+        const leader = idx === 0 ? ' leader' : '';
+        return `<article class="score-card${leader}">
+          <div class="score-top">
+            <div style="min-width:0">
+              <div class="score-rank">#${idx + 1} · ${escapeHTML(r.score_label)}</div>
+              <div class="watch-symbol">${escapeHTML(r.key)}</div>
+              <div class="watch-name" title="${escapeAttr(r.name_th || r.symbol || r.key)}">${escapeHTML(r.name_th || r.symbol || r.key)}</div>
+            </div>
+            <div style="text-align:right">
+              <div class="score-value">${r.score}</div>
+              <div class="score-label">score</div>
+            </div>
+          </div>
+          <div class="score-meter" aria-label="Score ${r.score}"><div class="score-fill" style="--score:${r.score}%"></div></div>
+          <div class="watch-metrics">
+            <span>1W <strong>${fmtPct(r.change_pct_1w)}</strong></span>
+            <span>4W <strong>${fmtPct(r.change_pct_4w)}</strong></span>
+            <span>Vol <strong>x ${fmtNumber(r.volume_ratio)}</strong></span>
+            <span>SMA <strong>${escapeHTML(r.sma20_position || '—')}</strong></span>
+          </div>
+          <div class="score-reason">${escapeHTML(r.score_reason)}</div>
+        </article>`;
+      }).join('');
+      box.innerHTML = `<div class="alert good">Scoreboard เป็นตัวช่วยอ่านเร็ว ไม่ใช่คำแนะนำซื้อขาย ใช้เพื่อเลือกหุ้นที่ควรเปิดดูต่อก่อน</div><div class="scoreboard-grid">${cards}</div>`;
+    }
+    function scoreboardMarkdown(rows, watchlist) {
+      const scored = scoreWatchlistItems(normalizeRows(rows || []), watchlist || []);
+      if (!scored.length) return '_ยังไม่มีข้อมูลสำหรับ Watchlist Scoreboard_';
+      const header = '| Rank | Symbol | Name | Score | Label | %1W | %4W | Volume x | SMA20 |\n|---:|---|---|---:|---|---:|---:|---:|---|';
+      return `${header}\n${scored.map((r, i) => `| ${i + 1} | ${r.key} | ${r.name_th || ''} | ${r.score} | ${r.score_label} | ${fmtPct(r.change_pct_1w)} | ${fmtPct(r.change_pct_4w)} | ${fmtNumber(r.volume_ratio)} | ${r.sma20_position || ''} |`).join('\n')}`;
+    }
+    async function copyScoreboard() {
+      const d = state.dashboard || {};
+      await copyText(scoreboardMarkdown(d.rows || [], d.watchlist || []));
+      const msg = alertHtml('good','Copy Watchlist Scoreboard แล้ว');
+      const box = $('#watchlist-scoreboard');
+      if (box) box.insertAdjacentHTML('afterbegin', msg);
+    }
+
     function renderWatchlistCoverage() {
       const box = $('#watchlist-coverage');
       if (!box) return;
@@ -639,7 +741,7 @@
     function renderPromptPreview() { const box = $('#prompt-preview'); if (box) box.textContent = buildPrompt($('#template-select') ? $('#template-select').value : 'weekly'); }
     function buildPrompt(templateId) {
       const d = state.dashboard || {}; const rows = normalizeRows(d.rows || []); const news = d.news || []; const week = d.week_ending || (state.health && state.health.latest_week) || 'N/A'; const templates = state.config.templates || defaultTemplates(); const intro = templates[templateId] || templates.weekly;
-      return `${intro}\n\nข้อมูลสัปดาห์: ${week} (${formatBE(week) || week})\nข้อกำกับ: ใช้ข้อมูลนี้เพื่อเขียนบทวิเคราะห์เชิงให้ความรู้ ไม่ใช่คำแนะนำการลงทุน และควรระบุความไม่แน่นอนของข้อมูล/แหล่งข้อมูลด้วย\n\n## ตารางหุ้นรายสัปดาห์\n${marketMarkdownTable(rows, d.watchlist || [])}\n\n## ข่าวต่างประเทศ/เศรษฐกิจที่เกี่ยวข้อง\n${newsMarkdown(news)}\n\n## สิ่งที่อยากให้วิเคราะห์\n1. ภาพรวมตลาดและ sentiment ของสัปดาห์\n2. หุ้นที่ขึ้น/ลงเด่น พร้อมเหตุผลที่อาจเป็นไปได้จากตัวเลข\n3. ประเด็นข่าวโลกที่อาจเชื่อมกับหุ้นไทย\n4. ความเสี่ยงและสิ่งที่ควรติดตามสัปดาห์หน้า\n5. สรุปเป็นภาษาไทย อ่านง่าย สไตล์หนังสือพิมพ์การเงิน แต่ไม่ชี้นำให้ซื้อ/ขาย`;
+      return `${intro}\n\nข้อมูลสัปดาห์: ${week} (${formatBE(week) || week})\nข้อกำกับ: ใช้ข้อมูลนี้เพื่อเขียนบทวิเคราะห์เชิงให้ความรู้ ไม่ใช่คำแนะนำการลงทุน และควรระบุความไม่แน่นอนของข้อมูล/แหล่งข้อมูลด้วย\n\n## Watchlist Scoreboard\n${scoreboardMarkdown(rows, d.watchlist || [])}\n\n## ตารางหุ้นรายสัปดาห์\n${marketMarkdownTable(rows, d.watchlist || [])}\n\n## ข่าวต่างประเทศ/เศรษฐกิจที่เกี่ยวข้อง\n${newsMarkdown(news)}\n\n## สิ่งที่อยากให้วิเคราะห์\n1. ภาพรวมตลาดและ sentiment ของสัปดาห์\n2. หุ้นที่ขึ้น/ลงเด่น พร้อมเหตุผลที่อาจเป็นไปได้จากตัวเลข\n3. ใช้ Watchlist Scoreboard เพื่อเลือกหุ้นที่ควรอ่านต่อก่อน โดยไม่ฟันธงซื้อ/ขาย\n4. ประเด็นข่าวโลกที่อาจเชื่อมกับหุ้นไทย\n5. ความเสี่ยงและสิ่งที่ควรติดตามสัปดาห์หน้า\n6. สรุปเป็นภาษาไทย อ่านง่าย สไตล์หนังสือพิมพ์การเงิน แต่ไม่ชี้นำให้ซื้อ/ขาย`;
     }
     function marketMarkdownTable(rows, watchlist) { const names = mapWatchlist(watchlist); const sorted = rows.slice().sort((a,b) => num(b.change_pct_1w) - num(a.change_pct_1w)); if (!sorted.length) return '_ยังไม่มีข้อมูลหุ้น_'; const header = '| Symbol | ชื่อ | Close | %1W | %4W | %12W | Volume x | SMA20 | Source |\n|---|---|---:|---:|---:|---:|---:|---|---|'; return `${header}\n${sorted.map(r => `| ${r.symbol} | ${names[normalizeStockKey(r.symbol)] || names[r.symbol] || ''} | ${fmtNumber(r.close)} | ${fmtPct(r.change_pct_1w)} | ${fmtPct(r.change_pct_4w)} | ${fmtPct(r.change_pct_12w)} | ${fmtNumber(r.volume_ratio)} | ${r.sma20_position || ''} | ${r.source || ''} |`).join('\n')}`; }
     function newsMarkdown(news) { return news.length ? news.map((n,i) => `${i+1}. ${n.headline || 'Untitled'} — ${n.source || 'RSS'}\n   ${n.summary || ''}\n   ${n.url || ''}`).join('\n') : '_ยังไม่มีข่าว_'; }
