@@ -1,14 +1,17 @@
 /**
  * AlphaWeek — api/fetch-weekly.js
- * Version: v06-deploy-safe (merge-safe persistence guard)
+ * Version: v07-fundamentals (V26 responsive market explorer + fundamentals)
  */
 'use strict';
 
-const API_VERSION = 'v06-deploy-safe';
+const API_VERSION = 'v07-fundamentals';
 const YAHOO_BASE = 'https://query1.finance.yahoo.com/v8/finance/chart/';
+const YAHOO_QUOTE_SUMMARY_BASE = 'https://query1.finance.yahoo.com/v10/finance/quoteSummary/';
+const YAHOO_QUOTE_BASE = 'https://query1.finance.yahoo.com/v7/finance/quote';
 const SET_INDEX = { symbol: 'SET', yahoo: '^SET.BK' };
 const FETCH_TIMEOUT_MS = 15000;
 const MAX_SYMBOLS_PER_REQUEST = 10;
+const FETCH_CONCURRENCY = 3;
 
 module.exports = async function handler(req, res) {
   setCors(res);
@@ -106,6 +109,8 @@ async function runWeekly() {
     rows.push(m);
   }
 
+  const fundamentalsResult = await fetchAllFundamentals(symbols.filter((s) => s.symbol !== 'SET'));
+  const fundamentalsRows = fundamentalsResult.rows;
   const existingNews = await getExistingNews(weekEnding);
   const saved = await postToAppsScript({
     action: 'saveWeeklyMerge',
@@ -116,6 +121,10 @@ async function runWeekly() {
     meta: { source: 'weekly-refresh', api_version: API_VERSION }
   });
   const saveOk = !!(saved && saved.ok);
+  const fundamentalsSave = await saveFundamentalsBestEffort(fundamentalsRows, {
+    source: 'weekly-refresh',
+    api_version: API_VERSION
+  });
 
   return {
     api_version: API_VERSION,
@@ -128,10 +137,16 @@ async function runWeekly() {
     news_preserved: existingNews.length,
     save_mode: 'merge',
     sources: countBy(rows, 'source'),
-    save_mode: 'merge',
     save_ok: saveOk,
     error: saveOk ? undefined : 'apps script saveWeeklyMerge failed: ' + String((saved && (saved.error || JSON.stringify(saved))) || 'empty response'),
-    apps_script: saved
+    apps_script: saved,
+    fundamentals_requested: fundamentalsResult.requested,
+    fundamentals_ok: fundamentalsRows.length,
+    fundamentals_failed: fundamentalsResult.errors,
+    fundamentals_sources: countBy(fundamentalsRows, 'source'),
+    fundamentals_save_ok: fundamentalsSave.ok,
+    fundamentals_save_error: fundamentalsSave.error,
+    fundamentals_apps_script: fundamentalsSave.response
   };
 }
 
@@ -154,6 +169,8 @@ async function runSymbolBatch(symbolInputs, meta) {
     rows.push(m);
   }
 
+  const fundamentalsResult = await fetchAllFundamentals(symbols.filter((s) => s.symbol !== 'SET'));
+  const fundamentalsRows = fundamentalsResult.rows;
   const saved = await postToAppsScript({
     action: 'saveWeeklyMerge',
     pin: process.env.ALPHAWEEK_PIN,
@@ -166,6 +183,11 @@ async function runSymbolBatch(symbolInputs, meta) {
     }
   });
   const saveOk = !!(saved && saved.ok);
+  const fundamentalsSave = await saveFundamentalsBestEffort(fundamentalsRows, {
+    universe: meta && meta.universe,
+    source: meta && meta.source,
+    api_version: API_VERSION
+  });
 
   return {
     api_version: API_VERSION,
@@ -176,9 +198,17 @@ async function runSymbolBatch(symbolInputs, meta) {
     symbols_ok_symbols: rows.map((r) => r.symbol),
     symbols_failed: errors,
     sources: countBy(rows, 'source'),
+    save_mode: 'merge',
     save_ok: saveOk,
     error: saveOk ? undefined : 'apps script saveWeeklyMerge failed: ' + String((saved && (saved.error || JSON.stringify(saved))) || 'empty response'),
-    apps_script: saved
+    apps_script: saved,
+    fundamentals_requested: fundamentalsResult.requested,
+    fundamentals_ok: fundamentalsRows.length,
+    fundamentals_failed: fundamentalsResult.errors,
+    fundamentals_sources: countBy(fundamentalsRows, 'source'),
+    fundamentals_save_ok: fundamentalsSave.ok,
+    fundamentals_save_error: fundamentalsSave.error,
+    fundamentals_apps_script: fundamentalsSave.response
   };
 }
 
@@ -239,15 +269,13 @@ function normalizeThaiSymbol(input) {
 }
 
 async function fetchAllQuotes(symbols, range) {
-  const out = [];
-  for (const s of symbols) {
+  return mapWithConcurrency(symbols, FETCH_CONCURRENCY, async (s) => {
     try {
-      out.push({ symbol: s.symbol, bars: await fetchYahooBars(s.yahoo, range), source: 'yahoo' });
+      return { symbol: s.symbol, bars: await fetchYahooBars(s.yahoo, range), source: 'yahoo_chart' };
     } catch (err) {
-      out.push({ symbol: s.symbol, error: String(err && err.message || err) });
+      return { symbol: s.symbol, error: String(err && err.message || err) };
     }
-  }
-  return out;
+  });
 }
 
 async function fetchYahooBars(yahooSymbol, range) {
@@ -286,9 +314,10 @@ function computeWeeklyMetrics(bars, weekEnding) {
   const weekHigh = Math.max(...weekBars.map((b) => b.high));
   const weekLow = Math.min(...weekBars.map((b) => b.low));
   const avgVol1w = avg(weekBars.map((b) => b.volume));
-  const last20 = upTo.slice(-20);
-  const avgVol4w = avg(last20.map((b) => b.volume));
-  const sma20 = last20.length === 20 ? avg(last20.map((b) => b.close)) : null;
+  const prior20 = upTo.filter((b) => b.date < weekStart).slice(-20);
+  const avgVolPrior20 = prior20.length === 20 ? avg(prior20.map((b) => b.volume)) : 0;
+  const last20Closes = upTo.slice(-20);
+  const sma20 = last20Closes.length === 20 ? avg(last20Closes.map((b) => b.close)) : null;
   return {
     close: round2(close),
     prev_close: prevClose === null ? '' : round2(prevClose),
@@ -298,10 +327,194 @@ function computeWeeklyMetrics(bars, weekEnding) {
     week_high: round2(weekHigh),
     week_low: round2(weekLow),
     avg_volume_1w: Math.round(avgVol1w),
-    avg_volume_4w: Math.round(avgVol4w),
-    volume_ratio: avgVol4w > 0 ? round2(avgVol1w / avgVol4w) : '',
+    avg_volume_4w: avgVolPrior20 > 0 ? Math.round(avgVolPrior20) : '',
+    volume_ratio: avgVolPrior20 > 0 ? round2(avgVol1w / avgVolPrior20) : '',
     sma20_position: sma20 === null ? '' : (close >= sma20 ? 'above' : 'below')
   };
+}
+
+
+async function fetchAllFundamentals(symbols) {
+  const normalized = normalizeSymbolList((symbols || []).map((s) => s.symbol || s)).filter((s) => s.symbol !== 'SET');
+  const results = await mapWithConcurrency(normalized, FETCH_CONCURRENCY, async (s) => {
+    try {
+      return { symbol: s.symbol, row: await fetchYahooFundamentals(s) };
+    } catch (err) {
+      return { symbol: s.symbol, error: String(err && err.message || err) };
+    }
+  });
+  return {
+    requested: normalized.map((s) => s.symbol),
+    rows: results.filter((r) => r.row).map((r) => r.row),
+    errors: results.filter((r) => r.error).map((r) => ({ symbol: r.symbol, error: r.error }))
+  };
+}
+
+async function fetchYahooFundamentals(symbol) {
+  const modules = 'price,summaryDetail,defaultKeyStatistics,financialData';
+  const summaryUrl = YAHOO_QUOTE_SUMMARY_BASE + encodeURIComponent(symbol.yahoo) +
+    '?modules=' + encodeURIComponent(modules);
+  let summaryError = '';
+
+  try {
+    const json = await fetchJSON(summaryUrl, { headers: yahooHeaders() });
+    const result = json && json.quoteSummary && json.quoteSummary.result && json.quoteSummary.result[0];
+    if (result) {
+      const row = normalizeQuoteSummaryFundamentals(symbol.symbol, result);
+      if (hasCoreFundamental(row)) return row;
+      summaryError = 'quoteSummary returned no core fundamentals';
+    } else {
+      summaryError = 'quoteSummary empty result';
+    }
+  } catch (err) {
+    summaryError = String(err && err.message || err);
+  }
+
+  try {
+    const quoteUrl = YAHOO_QUOTE_BASE + '?symbols=' + encodeURIComponent(symbol.yahoo);
+    const json = await fetchJSON(quoteUrl, { headers: yahooHeaders() });
+    const q = json && json.quoteResponse && json.quoteResponse.result && json.quoteResponse.result[0];
+    if (!q) throw new Error('quote endpoint empty result');
+    const row = normalizeQuoteFundamentals(symbol.symbol, q);
+    if (!hasCoreFundamental(row)) throw new Error('quote endpoint returned no core fundamentals');
+    return row;
+  } catch (err) {
+    throw new Error('yahoo fundamentals unavailable; summary=' + summaryError + '; quote=' + String(err && err.message || err));
+  }
+}
+
+function normalizeQuoteSummaryFundamentals(symbol, result) {
+  const price = result.price || {};
+  const summary = result.summaryDetail || {};
+  const stats = result.defaultKeyStatistics || {};
+  const financial = result.financialData || {};
+  const fetchedAt = new Date().toISOString();
+  const asOf = yahooDate(rawValue(stats.mostRecentQuarter)) || yahooDate(rawValue(price.regularMarketTime)) || fetchedAt.slice(0, 10);
+  return cleanFundamentalRow({
+    symbol,
+    as_of_date: asOf,
+    pe_ttm: firstNumber(rawValue(summary.trailingPE), rawValue(stats.trailingPE)),
+    pbv: rawValue(stats.priceToBook),
+    dividend_yield_pct: percentFromFraction(firstNumber(rawValue(summary.dividendYield), rawValue(summary.trailingAnnualDividendYield))),
+    market_cap: firstNumber(rawValue(price.marketCap), rawValue(summary.marketCap)),
+    eps_ttm: rawValue(stats.trailingEps),
+    roe_pct: percentFromFraction(rawValue(financial.returnOnEquity)),
+    debt_to_equity: rawValue(financial.debtToEquity),
+    revenue_growth_yoy_pct: percentFromFraction(rawValue(financial.revenueGrowth)),
+    net_profit_growth_yoy_pct: percentFromFraction(rawValue(financial.earningsGrowth)),
+    financial_period: yahooDate(rawValue(stats.mostRecentQuarter)),
+    source: 'yahoo_quoteSummary',
+    fetched_at: fetchedAt
+  });
+}
+
+function normalizeQuoteFundamentals(symbol, q) {
+  const fetchedAt = new Date().toISOString();
+  return cleanFundamentalRow({
+    symbol,
+    as_of_date: yahooDate(q.regularMarketTime) || fetchedAt.slice(0, 10),
+    pe_ttm: q.trailingPE,
+    pbv: q.priceToBook,
+    dividend_yield_pct: percentFromFraction(firstNumber(q.dividendYield, q.trailingAnnualDividendYield)),
+    market_cap: q.marketCap,
+    eps_ttm: firstNumber(q.epsTrailingTwelveMonths, q.trailingEps),
+    roe_pct: '',
+    debt_to_equity: '',
+    revenue_growth_yoy_pct: '',
+    net_profit_growth_yoy_pct: '',
+    financial_period: '',
+    source: 'yahoo_quote',
+    fetched_at: fetchedAt
+  });
+}
+
+function cleanFundamentalRow(row) {
+  const out = Object.assign({}, row);
+  ['pe_ttm', 'pbv', 'dividend_yield_pct', 'market_cap', 'eps_ttm', 'roe_pct',
+    'debt_to_equity', 'revenue_growth_yoy_pct', 'net_profit_growth_yoy_pct'].forEach((key) => {
+      const n = Number(out[key]);
+      out[key] = Number.isFinite(n) ? round4(n) : '';
+  });
+  if (Number(out.pe_ttm) <= 0) out.pe_ttm = '';
+  if (Number(out.pbv) <= 0) out.pbv = '';
+  if (Number(out.market_cap) <= 0) out.market_cap = '';
+  return out;
+}
+
+function hasCoreFundamental(row) {
+  return !!(row && [row.pe_ttm, row.pbv, row.dividend_yield_pct, row.market_cap, row.roe_pct]
+    .some((v) => v !== '' && v !== null && v !== undefined));
+}
+
+async function saveFundamentalsBestEffort(rows, meta) {
+  if (!rows || !rows.length) return { ok: false, error: 'no fundamental rows returned', response: null };
+  try {
+    const response = await postToAppsScript({
+      action: 'saveFundamentalsMerge',
+      pin: process.env.ALPHAWEEK_PIN,
+      rows,
+      meta: meta || {}
+    });
+    return {
+      ok: !!(response && response.ok),
+      error: response && response.ok ? undefined : String((response && (response.error || JSON.stringify(response))) || 'empty response'),
+      response
+    };
+  } catch (err) {
+    return { ok: false, error: String(err && err.message || err), response: null };
+  }
+}
+
+async function mapWithConcurrency(items, limit, worker) {
+  const input = Array.isArray(items) ? items : [];
+  const results = new Array(input.length);
+  let next = 0;
+  const runners = Array.from({ length: Math.min(Math.max(1, limit || 1), input.length || 1) }, async () => {
+    while (true) {
+      const index = next++;
+      if (index >= input.length) return;
+      results[index] = await worker(input[index], index);
+    }
+  });
+  await Promise.all(runners);
+  return results;
+}
+
+function yahooHeaders() {
+  return {
+    'User-Agent': 'Mozilla/5.0 (AlphaWeek V26)',
+    'Accept': 'application/json,text/plain,*/*'
+  };
+}
+
+function rawValue(value) {
+  if (value === null || value === undefined) return '';
+  if (typeof value === 'object' && Object.prototype.hasOwnProperty.call(value, 'raw')) return value.raw;
+  return value;
+}
+
+function firstNumber(...values) {
+  for (const value of values) {
+    const n = Number(value);
+    if (Number.isFinite(n)) return n;
+  }
+  return '';
+}
+
+function percentFromFraction(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return '';
+  return Math.abs(n) <= 1.5 ? n * 100 : n;
+}
+
+function yahooDate(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0) return '';
+  return new Date(n * 1000).toISOString().slice(0, 10);
+}
+
+function round4(n) {
+  return Math.round(Number(n) * 10000) / 10000;
 }
 
 async function postToAppsScript(payload) {
