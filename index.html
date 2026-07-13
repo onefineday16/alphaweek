@@ -194,6 +194,25 @@
     .market-pagination .btn[disabled] { opacity:.45; cursor:not-allowed; }
     .market-card-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin-top:12px; }
     .market-card-grid .score-card { min-height:100%; }
+    .editorial-desk-grid { display:grid; grid-template-columns:minmax(0,1.08fr) minmax(320px,.92fr); gap:14px; align-items:start; }
+    .editorial-box { border:1px solid var(--line); border-radius:20px; background:rgba(255,255,255,.32); padding:16px; min-width:0; }
+    body.night .editorial-box { background:rgba(255,255,255,.04); }
+    .editorial-box h3 { margin:0 0 6px; letter-spacing:-.02em; }
+    .editorial-kicker { color:var(--muted); font-size:.88rem; line-height:1.45; margin:0 0 12px; }
+    .latest-article-hero .article-item { background:linear-gradient(135deg, rgba(253,249,200,.48), rgba(255,255,255,.28)); }
+    body.night .latest-article-hero .article-item { background:linear-gradient(135deg, rgba(55,43,42,.42), rgba(255,255,255,.04)); }
+    .context-digest { display:grid; gap:10px; }
+    .context-card { border:1px solid var(--line); border-radius:16px; background:rgba(255,255,255,.30); padding:12px; display:grid; gap:6px; }
+    body.night .context-card { background:rgba(255,255,255,.04); }
+    .context-card h4 { margin:0; font-size:1rem; line-height:1.25; }
+    .context-card p { margin:0; line-height:1.55; }
+    .context-rank { width:28px; height:28px; border-radius:999px; display:inline-flex; align-items:center; justify-content:center; font-weight:800; color:#fff; background:linear-gradient(135deg, var(--rose), var(--mauve)); flex:0 0 auto; }
+    .context-head { display:flex; gap:10px; align-items:flex-start; }
+    .context-more { border:1px solid var(--line); border-radius:16px; padding:10px 12px; background:rgba(255,255,255,.22); }
+    body.night .context-more { background:rgba(255,255,255,.03); }
+    .context-more summary { cursor:pointer; font-weight:800; color:var(--muted); }
+    .compact-news-list { display:grid; gap:8px; margin-top:10px; }
+    .compact-news-link { display:grid; gap:3px; padding:8px 0; border-top:1px solid var(--line); }
     .universe-refresh-box { margin-top:12px; border:1px solid var(--line); border-radius:20px; padding:14px; background:rgba(255,255,255,.30); }
     body.night .universe-refresh-box { background:rgba(255,255,255,.04); }
     .refresh-progress { display:grid; gap:8px; margin-top:10px; }
@@ -206,7 +225,7 @@
     .score-fill { height:100%; width:var(--score,0%); border-radius:999px; background:linear-gradient(90deg, var(--rose), var(--mauve)); }
     .score-reason { color:var(--muted); font-size:.82rem; line-height:1.45; }
     .control-system-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
-    @media (max-width: 940px) { .masthead-inner, .layout-main, .cols-2, .cols-3, .cols-4 { grid-template-columns:1fr; } .step-row { grid-template-columns:1fr 1fr; } .watchlist-compact-grid { grid-template-columns:repeat(3,minmax(0,1fr)); } .scoreboard-grid, .market-card-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+    @media (max-width: 940px) { .masthead-inner, .layout-main, .cols-2, .cols-3, .cols-4, .editorial-desk-grid { grid-template-columns:1fr; } .step-row { grid-template-columns:1fr 1fr; } .watchlist-compact-grid { grid-template-columns:repeat(3,minmax(0,1fr)); } .scoreboard-grid, .market-card-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 
     .manager-list { display:grid; gap:10px; }
     .manager-card { border:1px solid var(--line); border-radius:18px; background:rgba(255,255,255,.32); padding:14px; display:grid; gap:10px; }
@@ -228,7 +247,7 @@
   <div class="app">
     <header class="utility-bar">
       <div class="health-inline"><span class="dot" id="health-dot"></span><span id="health-text">กำลังเตรียม AlphaWeek...</span></div>
-      <div class="meta"><span id="app-version">index-alphaweek-v21-universe-refresh</span><button class="btn ghost" id="refresh-btn" type="button"><i class="ti ti-refresh"></i> Refresh</button><button class="btn ghost" id="refresh-prices-btn" type="button"><i class="ti ti-currency-baht"></i> Refresh Prices</button><button class="btn ghost" id="theme-btn" type="button"><i class="ti ti-sun"></i> Day</button></div>
+      <div class="meta"><span id="app-version">index-alphaweek-v23-editorial-desk</span><button class="btn ghost" id="refresh-btn" type="button"><i class="ti ti-refresh"></i> Refresh</button><button class="btn ghost" id="refresh-prices-btn" type="button"><i class="ti ti-currency-baht"></i> Refresh Prices</button><button class="btn ghost" id="theme-btn" type="button"><i class="ti ti-sun"></i> Day</button></div>
     </header>
     <div class="runtime-error" id="runtime-error"></div>
 
@@ -280,7 +299,7 @@
           </div>
           <div class="market-explorer-controls" aria-label="Market Data Explorer controls">
             <div class="market-explorer-left">
-              <div class="segmented" id="market-universe-controls" aria-label="Market Data universe">
+              <div class="segmented" id="market-universe-controls" aria-label="Market Data universal">
                 <button type="button" class="btn primary active" data-market-universe="all">All</button>
                 <button type="button" class="btn" data-market-universe="watchlist">Watchlist</button>
                 <button type="button" class="btn" data-market-universe="SET50">SET50</button>
@@ -301,27 +320,27 @@
           <div id="market-pagination" class="market-pagination" aria-label="Market Data pages"></div>
         </section>
 
-        <section class="panel section" id="latest-article-section">
+        <section class="panel section" id="editorial-desk-section">
           <div class="section-title">
             <div>
-              <h2>Latest Published Article</h2>
-              <span>บทความล่าสุดที่บันทึกไว้ จะแสดงบนหน้าแรกทันทีหลังโพสต์สำเร็จ</span>
+              <h2>Editorial Desk</h2>
+              <span>รวมบทความล่าสุดและบริบทข่าวโลกให้อ่านแบบ newsletter</span>
             </div>
             <button type="button" class="btn" id="view-archive-btn"><i class="ti ti-books"></i> View Archive</button>
           </div>
-          <div id="latest-article-home"></div>
+          <div class="editorial-desk-grid">
+            <article class="editorial-box latest-article-hero">
+              <h3>Latest Published Article</h3>
+              <p class="editorial-kicker">บทความล่าสุดที่บันทึกไว้สำหรับอ่านต่อหรือใช้เป็นต้นทางของฉบับใหม่</p>
+              <div id="latest-article-home"></div>
+            </article>
+            <aside class="editorial-box global-context-digest">
+              <h3>Global Context Digest</h3>
+              <p class="editorial-kicker" id="news-count-label">— context items</p>
+              <div class="context-digest" id="news-list"></div>
+            </aside>
+          </div>
         </section>
-
-        <div class="grid cols-2 section">
-          <section class="panel">
-            <div class="section-title"><div><h2>Market Signals</h2><span>หุ้นที่ควรเปิดดูเป็นพิเศษ</span></div><button type="button" class="btn" id="copy-table-btn"><i class="ti ti-copy"></i> Copy Table</button></div>
-            <div class="grid cols-2" id="signal-cards"></div>
-          </section>
-          <section class="panel">
-            <div class="section-title"><div><h2>Global Context</h2><span id="news-count-label">— ข่าว</span></div></div>
-            <div class="news-list" id="news-list"></div>
-          </section>
-        </div>
 
       </section>
 
@@ -390,10 +409,10 @@
 
             <div class="universe-refresh-box" id="universe-refresh-box">
               <div class="section-title">
-                <div><h3>Universe Price Refresh</h3><span>V21: ดึงราคาแบบ batch สำหรับ Watchlist / SET50 / SET100</span></div>
+                <div><h3>Universal Price Refresh</h3><span>ดึงราคาแบบ batch สำหรับ Watchlist / SET50 / SET100</span></div>
               </div>
               <div class="form-grid">
-                <label>Refresh Universe
+                <label>Refresh Universal
                   <select id="universe-refresh-universe">
                     <option value="watchlist">Watchlist</option>
                     <option value="SET50">SET50</option>
@@ -404,7 +423,7 @@
                   <input id="universe-refresh-batch-size" type="number" min="1" max="10" step="1" value="5">
                 </label>
                 <div class="full meta">
-                  <button class="btn primary" id="universe-refresh-start-btn" type="button"><i class="ti ti-player-play"></i> Start Universe Refresh</button>
+                  <button class="btn primary" id="universe-refresh-start-btn" type="button"><i class="ti ti-player-play"></i> Start Universal Refresh</button>
                   <button class="btn danger" id="universe-refresh-stop-btn" type="button"><i class="ti ti-player-stop"></i> Stop After Batch</button>
                 </div>
               </div>
@@ -441,7 +460,7 @@
   <script>
   (function () {
     'use strict';
-    const APP_VERSION = 'index-alphaweek-v22-market-data-explorer';
+    const APP_VERSION = 'index-alphaweek-v23-editorial-desk';
     const STORAGE_KEY = 'alphaweek_config_v15';
     const LEGACY_KEYS = ['alphaweek_config_v14', 'alphaweek_config_v13', 'alphaweek_config_v12', 'alphaweek_config_v11', 'alphaweek_config_v10', 'alphaweek_config_v09', 'alphaweek_config_v08', 'alphaweek_config_v07', 'alphaweek_config_v06', 'alphaweek_config_v05', 'alphaweek_config_v04', 'alphaweek_config_v03', 'alphaweek_config_v02', 'alphaweek_config_v01'];
     const DEFAULT_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzh2PhvOrJu16P9ZLX192PEXUZqTHbp26P1y6TAXNUdO-3UCslhogZHBkoPnOcfx1SA/exec';
@@ -596,7 +615,7 @@
         </article>`;
       }).join('');
     }
-    function renderAll() { renderEdition(); renderBrief(); renderMarketDataExplorer(); renderSignals(); renderNews(); renderArticles(); renderLatestArticle(); renderPromptPreview(); renderUniverseRefreshProgress(); }
+    function renderAll() { renderEdition(); renderBrief(); renderMarketDataExplorer(); renderNews(); renderArticles(); renderLatestArticle(); renderPromptPreview(); renderUniverseRefreshProgress(); }
     function renderEdition() {
       const d = state.dashboard || {}; const h = state.health || {}; const week = d.week_ending || h.latest_week || '';
       $('#edition-week').textContent = week ? formatBE(week) : '—';
@@ -1035,20 +1054,42 @@
         </article>`;
       }).join('');
       const noteText = missing.length
-        ? `<div class="alert warn">มีหุ้น Active ${missing.length} ตัวที่ยังไม่มีข้อมูลราคาสัปดาห์ล่าสุด: ${escapeHTML(missing.map(w => normalizeStockKey(w.symbol)).join(', '))}. ต้องรอ cron/Manual Fetch รอบถัดไปก่อนจึงจะมีตัวเลขใน Market Signals</div>`
+        ? `<div class="alert warn">มีหุ้น Active ${missing.length} ตัวที่ยังไม่มีข้อมูลราคาสัปดาห์ล่าสุด: ${escapeHTML(missing.map(w => normalizeStockKey(w.symbol)).join(', '))}. ต้องรอ cron/Manual Fetch รอบถัดไปก่อนจึงจะมีตัวเลขใน Market Data Explorer</div>`
         : '<div class="alert good">หุ้น Active ทุกตัวมีข้อมูล weekly data แล้ว</div>';
       box.innerHTML = noteText + `<div class="watchlist-compact-grid">${cards}</div>`;
     }
     function renderSignals() {
+      const signalBox = $('#signal-cards');
+      if (!signalBox) return;
       const d = state.dashboard || {}; const rows = normalizeRows(d.rows || []); const names = mapWatchlist(d.watchlist || []);
-      if (!rows.length) { $('#signal-cards').innerHTML = '<div class="alert">ยังไม่มีข้อมูล Market Signals</div>'; return; }
+      if (!rows.length) { signalBox.innerHTML = '<div class="alert">ยังไม่มีข้อมูล Market Signals</div>'; return; }
       const ranked = rows.slice().sort((a,b) => Math.abs(num(b.change_pct_1w)) + Math.max(0, num(b.volume_ratio)-1)*2 - (Math.abs(num(a.change_pct_1w)) + Math.max(0, num(a.volume_ratio)-1)*2)).slice(0,6);
-      $('#signal-cards').innerHTML = ranked.map(r => `<article class="signal"><div class="signal-top"><div><div class="symbol">${escapeHTML(r.symbol)}</div><div class="muted">${escapeHTML(names[normalizeStockKey(r.symbol)] || names[r.symbol] || '')}</div></div><div>${pctHtml(r.change_pct_1w)}</div></div><div class="stat-strip"><span class="badge">Close ${fmtNumber(r.close)}</span><span class="badge">4W ${fmtPct(r.change_pct_4w)}</span><span class="badge">Vol x ${fmtNumber(r.volume_ratio)}</span><span class="badge">${escapeHTML(r.sma20_position || 'SMA —')}</span></div></article>`).join('');
+      signalBox.innerHTML = ranked.map(r => `<article class="signal"><div class="signal-top"><div><div class="symbol">${escapeHTML(r.symbol)}</div><div class="muted">${escapeHTML(names[normalizeStockKey(r.symbol)] || names[r.symbol] || '')}</div></div><div>${pctHtml(r.change_pct_1w)}</div></div><div class="stat-strip"><span class="badge">Close ${fmtNumber(r.close)}</span><span class="badge">4W ${fmtPct(r.change_pct_4w)}</span><span class="badge">Vol x ${fmtNumber(r.volume_ratio)}</span><span class="badge">${escapeHTML(r.sma20_position || 'SMA —')}</span></div></article>`).join('');
     }
     function renderNews() {
       const news = (state.dashboard && state.dashboard.news) || [];
-      $('#news-count-label').textContent = `${news.length || 0} ข่าว`;
-      $('#news-list').innerHTML = news.length ? news.map(n => `<article class="news-item"><h4><a href="${escapeAttr(n.url || '#')}" target="_blank" rel="noopener noreferrer">${escapeHTML(n.headline || 'Untitled')}</a></h4><p class="muted">${escapeHTML(n.summary || '')}</p><div class="meta"><span>${escapeHTML(n.source || 'RSS')}</span><span>${escapeHTML(n.published_at || '')}</span></div></article>`).join('') : '<div class="alert">ยังไม่มีข่าวประกอบ</div>';
+      const label = $('#news-count-label');
+      const box = $('#news-list');
+      if (!box) return;
+      const top = news.slice(0, 3);
+      const rest = news.slice(3);
+      if (label) label.textContent = news.length ? `${news.length} context items · showing top ${top.length}` : '0 context items';
+      if (!news.length) {
+        box.innerHTML = '<div class="alert">ยังไม่มี Global Context สำหรับสัปดาห์นี้</div>';
+        return;
+      }
+      const cards = top.map((n,i) => `<article class="context-card">
+        <div class="context-head">
+          <span class="context-rank">${i+1}</span>
+          <div style="min-width:0">
+            <h4><a href="${escapeAttr(n.url || '#')}" target="_blank" rel="noopener noreferrer">${escapeHTML(n.headline || 'Untitled')}</a></h4>
+            <p class="muted">${escapeHTML(n.summary || '')}</p>
+            <div class="meta"><span>${escapeHTML(n.source || 'RSS')}</span><span>${escapeHTML(n.published_at || '')}</span></div>
+          </div>
+        </div>
+      </article>`).join('');
+      const more = rest.length ? `<details class="context-more"><summary>View more context (${rest.length})</summary><div class="compact-news-list">${rest.map((n,i) => `<a class="compact-news-link" href="${escapeAttr(n.url || '#')}" target="_blank" rel="noopener noreferrer"><strong>${escapeHTML(n.headline || 'Untitled')}</strong><span class="muted">${escapeHTML(n.source || 'RSS')} · ${escapeHTML(n.published_at || '')}</span></a>`).join('')}</div></details>` : '';
+      box.innerHTML = cards + more;
     }
     function renderMarketTable() { renderMarketDataExplorer(); }
     function renderArticles() {
@@ -1081,7 +1122,7 @@
       const week = escapeHTML(formatBE(a.week_ending) || a.week_ending || '');
       const title = escapeHTML(a.title || 'Untitled');
       const tags = escapeHTML(a.tags || '');
-      box.innerHTML = `<article class="article-item latest-article">
+      box.innerHTML = `<article class="article-item latest-article newsletter-article">
         <div class="meta"><span>${escapeHTML(typeLabel(a.type))}</span><span>${week}</span><span>${tags}</span></div>
         <h3>${title}</h3>
         <div class="article-body">${renderMarkdown(a.body_md || '')}</div>
@@ -1102,7 +1143,7 @@
 ## Market Data Explorer — ${universeLabel}
 ${marketMarkdownTable()}
 
-## ข่าวต่างประเทศ/เศรษฐกิจที่เกี่ยวข้อง
+## Global Context Digest
 ${newsMarkdown(news)}
 
 ## สิ่งที่อยากให้วิเคราะห์
@@ -1332,7 +1373,7 @@ ${newsMarkdown(news)}
     }
     function stopUniverseRefresh() {
       if (!state.universeRefresh.running) {
-        renderUniverseRefreshProgress('ยังไม่มี Universe Refresh ที่กำลังทำงาน', 'warn');
+        renderUniverseRefreshProgress('ยังไม่มี Universal Refresh ที่กำลังทำงาน', 'warn');
         return;
       }
       state.universeRefresh.cancelRequested = true;
@@ -1372,8 +1413,8 @@ ${newsMarkdown(news)}
         renderUniverseRefreshProgress(`${built.label} มีข้อมูล week ปัจจุบันครบแล้ว · skipped ${built.skipped.length}`, 'good');
         return true;
       }
-      renderUniverseRefreshProgress(`เริ่ม Universe Refresh: ${built.label} · queue ${built.queue.length} · skipped ${built.skipped.length}`, 'warn');
-      setHealth('loading', `Universe Refresh ${built.label}...`);
+      renderUniverseRefreshProgress(`เริ่ม Universal Refresh: ${built.label} · queue ${built.queue.length} · skipped ${built.skipped.length}`, 'warn');
+      setHealth('loading', `Universal Refresh ${built.label}...`);
       try {
         while (state.universeRefresh.queue.length && !state.universeRefresh.cancelRequested) {
           const batch = state.universeRefresh.queue.splice(0, state.universeRefresh.batchSize);
@@ -1387,8 +1428,8 @@ ${newsMarkdown(news)}
         state.universeRefresh.running = false;
         const kind = state.universeRefresh.errors.length ? 'warn' : 'good';
         const msg = cancelled
-          ? `หยุด Universe Refresh แล้ว · saved ${state.universeRefresh.completed.length} · failed ${state.universeRefresh.errors.length} · remaining ${state.universeRefresh.queue.length}`
-          : `Universe Refresh เสร็จแล้ว · saved ${state.universeRefresh.completed.length} · skipped ${state.universeRefresh.skipped.length} · failed ${state.universeRefresh.errors.length}`;
+          ? `หยุด Universal Refresh แล้ว · saved ${state.universeRefresh.completed.length} · failed ${state.universeRefresh.errors.length} · remaining ${state.universeRefresh.queue.length}`
+          : `Universal Refresh เสร็จแล้ว · saved ${state.universeRefresh.completed.length} · skipped ${state.universeRefresh.skipped.length} · failed ${state.universeRefresh.errors.length}`;
         renderUniverseRefreshProgress(msg, kind);
         await loadAll();
         return !state.universeRefresh.errors.length;
@@ -1396,8 +1437,8 @@ ${newsMarkdown(news)}
         state.universeRefresh.running = false;
         state.universeRefresh.currentBatch = [];
         state.universeRefresh.finishedAt = new Date().toISOString();
-        renderUniverseRefreshProgress(`Universe Refresh ไม่สำเร็จ: ${escapeHTML(err.message)}`, 'bad');
-        setHealth('bad', `Universe Refresh error: ${err.message}`);
+        renderUniverseRefreshProgress(`Universal Refresh ไม่สำเร็จ: ${escapeHTML(err.message)}`, 'bad');
+        setHealth('bad', `Universal Refresh error: ${err.message}`);
         return false;
       }
     }
