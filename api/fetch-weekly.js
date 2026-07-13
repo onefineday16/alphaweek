@@ -1,17 +1,23 @@
 /**
  * AlphaWeek — api/fetch-weekly.js
- * Version: v07-fundamentals (V26 responsive market explorer + fundamentals)
+ * Version: v08-refresh-split (V26.1 split price/financial refresh)
  */
 'use strict';
 
-const API_VERSION = 'v07-fundamentals';
+const API_VERSION = 'v08-refresh-split';
 const YAHOO_BASE = 'https://query1.finance.yahoo.com/v8/finance/chart/';
 const YAHOO_QUOTE_SUMMARY_BASE = 'https://query1.finance.yahoo.com/v10/finance/quoteSummary/';
 const YAHOO_QUOTE_BASE = 'https://query1.finance.yahoo.com/v7/finance/quote';
 const SET_INDEX = { symbol: 'SET', yahoo: '^SET.BK' };
-const FETCH_TIMEOUT_MS = 15000;
-const MAX_SYMBOLS_PER_REQUEST = 10;
-const FETCH_CONCURRENCY = 3;
+const PRICE_FETCH_TIMEOUT_MS = 12000;
+const APPS_SCRIPT_TIMEOUT_MS = 12000;
+const FINANCIAL_CORE_TIMEOUT_MS = 4500;
+const FINANCIAL_ENRICH_TIMEOUT_MS = 3500;
+const FINANCIAL_REQUEST_BUDGET_MS = 8500;
+const PRICE_MAX_SYMBOLS_PER_REQUEST = 10;
+const FINANCIAL_MAX_SYMBOLS_PER_REQUEST = 5;
+const PRICE_FETCH_CONCURRENCY = 3;
+const FINANCIAL_FETCH_CONCURRENCY = 2;
 
 module.exports = async function handler(req, res) {
   setCors(res);
@@ -38,28 +44,52 @@ module.exports = async function handler(req, res) {
 
   try {
     if (seedMode) {
-      return res.status(400).json({ ok: false, api_version: API_VERSION, error: 'seed disabled in v05 route' });
+      return res.status(400).json({ ok: false, api_version: API_VERSION, error: 'seed disabled in v08 route' });
     }
     const body = parseBody(req);
-    const requestedSymbols = extractRequestedSymbols(req, body);
+    const refreshType = normalizeRefreshType((body && body.refresh_type) || (req.query && req.query.refresh_type));
+    const requestedSymbols = extractRequestedSymbols(req, body, refreshType);
     const universe = String((body && body.universe) || (req.query && req.query.universe) || 'watchlist');
-    const result = requestedSymbols.length
-      ? await runSymbolBatch(requestedSymbols, { universe, source: body && body.source })
-      : await runWeekly();
-    const status = result.save_ok ? 200 : 502;
-    return res.status(status).json({
-      ok: result.save_ok,
-      mode: requestedSymbols.length ? 'universe-batch' : 'weekly',
+
+    let result;
+    let mode;
+    if (refreshType === 'financial') {
+      if (!requestedSymbols.length) {
+        return res.status(400).json({ ok: false, api_version: API_VERSION, error: 'financial refresh requires 1-5 symbols' });
+      }
+      result = await runFinancialBatch(requestedSymbols, {
+        universe,
+        source: body && body.source,
+        force: parseBoolean(body && body.force),
+        maxAgeDays: clampNumber(body && body.max_age_days, 0, 30, 7)
+      });
+      mode = 'financial-batch';
+    } else {
+      result = requestedSymbols.length
+        ? await runPriceBatch(requestedSymbols, { universe, source: body && body.source })
+        : await runWeeklyPrices();
+      mode = requestedSymbols.length ? 'price-batch' : 'weekly-prices';
+    }
+
+    const routeOk = refreshType === 'financial' ? !!result.operation_ok : !!result.save_ok;
+    return res.status(routeOk ? 200 : 502).json({
+      ok: routeOk,
+      refresh_type: refreshType,
+      mode,
       auth_mode: isCron ? 'cron' : (isManualToken ? 'token' : 'public'),
       api_version: API_VERSION,
       refreshed_at: new Date().toISOString(),
-      error: result.save_ok ? undefined : result.error,
+      error: routeOk ? undefined : result.error,
       result
     });
   } catch (err) {
-    return res.status(500).json({ ok: false, api_version: API_VERSION, error: String(err && err.message || err) });
+    return res.status(500).json({ ok: false, api_version: API_VERSION, error: normalizeErrorMessage(err, 'refresh route') });
   }
 };
+
+function normalizeRefreshType(value) {
+  return String(value || 'prices').toLowerCase() === 'financial' ? 'financial' : 'prices';
+}
 
 function setCors(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -74,7 +104,7 @@ function parseBody(req) {
   catch (err) { return {}; }
 }
 
-function extractRequestedSymbols(req, body) {
+function extractRequestedSymbols(req, body, refreshType) {
   let raw = [];
   if (body && Array.isArray(body.symbols)) raw = body.symbols;
   else if (req.query && req.query.symbols) raw = String(req.query.symbols).split(',');
@@ -86,13 +116,12 @@ function extractRequestedSymbols(req, body) {
     seen.add(s.symbol);
     out.push(s.symbol);
   }
-  if (out.length > MAX_SYMBOLS_PER_REQUEST) {
-    throw new Error('too many symbols: max ' + MAX_SYMBOLS_PER_REQUEST + ' per request');
-  }
+  const max = refreshType === 'financial' ? FINANCIAL_MAX_SYMBOLS_PER_REQUEST : PRICE_MAX_SYMBOLS_PER_REQUEST;
+  if (out.length > max) throw new Error('too many symbols: max ' + max + ' for ' + refreshType);
   return out;
 }
 
-async function runWeekly() {
+async function runWeeklyPrices() {
   const watchlist = await getWatchlist();
   const symbols = activeSymbols(watchlist);
   const weekEnding = lastFridayISO(new Date());
@@ -109,8 +138,6 @@ async function runWeekly() {
     rows.push(m);
   }
 
-  const fundamentalsResult = await fetchAllFundamentals(symbols.filter((s) => s.symbol !== 'SET'));
-  const fundamentalsRows = fundamentalsResult.rows;
   const existingNews = await getExistingNews(weekEnding);
   const saved = await postToAppsScript({
     action: 'saveWeeklyMerge',
@@ -118,16 +145,13 @@ async function runWeekly() {
     week_ending: weekEnding,
     rows,
     news: existingNews,
-    meta: { source: 'weekly-refresh', api_version: API_VERSION }
-  });
+    meta: { source: 'weekly-price-refresh', api_version: API_VERSION }
+  }, 'Apps Script weekly price save');
   const saveOk = !!(saved && saved.ok);
-  const fundamentalsSave = await saveFundamentalsBestEffort(fundamentalsRows, {
-    source: 'weekly-refresh',
-    api_version: API_VERSION
-  });
 
   return {
     api_version: API_VERSION,
+    refresh_type: 'prices',
     week_ending: weekEnding,
     watchlist_count: watchlist.length,
     symbols_requested: symbols.map((s) => s.symbol),
@@ -138,22 +162,15 @@ async function runWeekly() {
     save_mode: 'merge',
     sources: countBy(rows, 'source'),
     save_ok: saveOk,
-    error: saveOk ? undefined : 'apps script saveWeeklyMerge failed: ' + String((saved && (saved.error || JSON.stringify(saved))) || 'empty response'),
-    apps_script: saved,
-    fundamentals_requested: fundamentalsResult.requested,
-    fundamentals_ok: fundamentalsRows.length,
-    fundamentals_failed: fundamentalsResult.errors,
-    fundamentals_sources: countBy(fundamentalsRows, 'source'),
-    fundamentals_save_ok: fundamentalsSave.ok,
-    fundamentals_save_error: fundamentalsSave.error,
-    fundamentals_apps_script: fundamentalsSave.response
+    error: saveOk ? undefined : 'Apps Script saveWeeklyMerge failed: ' + String((saved && (saved.error || JSON.stringify(saved))) || 'empty response'),
+    apps_script: saved
   };
 }
 
-async function runSymbolBatch(symbolInputs, meta) {
+async function runPriceBatch(symbolInputs, meta) {
   const symbols = normalizeSymbolList(symbolInputs);
-  if (!symbols.length) throw new Error('symbols required for universe batch');
-  if (symbols.length > MAX_SYMBOLS_PER_REQUEST) throw new Error('too many symbols: max ' + MAX_SYMBOLS_PER_REQUEST);
+  if (!symbols.length) throw new Error('symbols required for price batch');
+  if (symbols.length > PRICE_MAX_SYMBOLS_PER_REQUEST) throw new Error('too many symbols: max ' + PRICE_MAX_SYMBOLS_PER_REQUEST);
 
   const weekEnding = lastFridayISO(new Date());
   const quotes = await fetchAllQuotes(symbols, '4mo');
@@ -169,8 +186,6 @@ async function runSymbolBatch(symbolInputs, meta) {
     rows.push(m);
   }
 
-  const fundamentalsResult = await fetchAllFundamentals(symbols.filter((s) => s.symbol !== 'SET'));
-  const fundamentalsRows = fundamentalsResult.rows;
   const saved = await postToAppsScript({
     action: 'saveWeeklyMerge',
     pin: process.env.ALPHAWEEK_PIN,
@@ -181,16 +196,12 @@ async function runSymbolBatch(symbolInputs, meta) {
       source: meta && meta.source,
       api_version: API_VERSION
     }
-  });
+  }, 'Apps Script price batch save');
   const saveOk = !!(saved && saved.ok);
-  const fundamentalsSave = await saveFundamentalsBestEffort(fundamentalsRows, {
-    universe: meta && meta.universe,
-    source: meta && meta.source,
-    api_version: API_VERSION
-  });
 
   return {
     api_version: API_VERSION,
+    refresh_type: 'prices',
     week_ending: weekEnding,
     universe: meta && meta.universe,
     symbols_requested: symbols.map((s) => s.symbol),
@@ -200,15 +211,118 @@ async function runSymbolBatch(symbolInputs, meta) {
     sources: countBy(rows, 'source'),
     save_mode: 'merge',
     save_ok: saveOk,
-    error: saveOk ? undefined : 'apps script saveWeeklyMerge failed: ' + String((saved && (saved.error || JSON.stringify(saved))) || 'empty response'),
-    apps_script: saved,
-    fundamentals_requested: fundamentalsResult.requested,
-    fundamentals_ok: fundamentalsRows.length,
-    fundamentals_failed: fundamentalsResult.errors,
-    fundamentals_sources: countBy(fundamentalsRows, 'source'),
-    fundamentals_save_ok: fundamentalsSave.ok,
-    fundamentals_save_error: fundamentalsSave.error,
-    fundamentals_apps_script: fundamentalsSave.response
+    error: saveOk ? undefined : 'Apps Script saveWeeklyMerge failed: ' + String((saved && (saved.error || JSON.stringify(saved))) || 'empty response'),
+    apps_script: saved
+  };
+}
+
+async function runFinancialBatch(symbolInputs, meta) {
+  const symbols = normalizeSymbolList(symbolInputs).filter((s) => s.symbol !== 'SET');
+  if (!symbols.length) throw new Error('symbols required for financial batch');
+  if (symbols.length > FINANCIAL_MAX_SYMBOLS_PER_REQUEST) throw new Error('too many symbols: max ' + FINANCIAL_MAX_SYMBOLS_PER_REQUEST);
+
+  const deadline = Date.now() + FINANCIAL_REQUEST_BUDGET_MS;
+  const force = !!(meta && meta.force);
+  const maxAgeDays = clampNumber(meta && meta.maxAgeDays, 0, 30, 7);
+  let existingRows = [];
+  const warnings = [];
+
+  try {
+    existingRows = await getExistingFundamentals(deadline);
+  } catch (err) {
+    warnings.push({ stage: 'freshness-read', error: normalizeErrorMessage(err, 'Apps Script fundamentals read') });
+  }
+
+  const existingMap = {};
+  existingRows.forEach((row) => { existingMap[normalizeSymbolKey(row.symbol)] = row; });
+  const pending = [];
+  const skippedFresh = [];
+  symbols.forEach((symbol) => {
+    const existing = existingMap[symbol.symbol];
+    if (!force && isFreshFundamental(existing, maxAgeDays)) skippedFresh.push(symbol.symbol);
+    else pending.push(symbol);
+  });
+
+  if (!pending.length) {
+    return {
+      api_version: API_VERSION,
+      refresh_type: 'financial',
+      operation_ok: true,
+      save_ok: true,
+      symbols_requested: symbols.map((s) => s.symbol),
+      symbols_refreshed: [],
+      symbols_skipped_fresh: skippedFresh,
+      symbols_failed: [],
+      warnings,
+      max_age_days: maxAgeDays,
+      force,
+      saved_rows: 0,
+      message: 'all requested fundamentals are still fresh'
+    };
+  }
+
+  let coreRows = [];
+  try {
+    coreRows = await fetchYahooQuoteBatch(pending, deadline);
+  } catch (err) {
+    warnings.push({ stage: 'core', error: normalizeErrorMessage(err, 'Yahoo financial core') });
+  }
+  const coreMap = {};
+  coreRows.forEach((row) => { coreMap[normalizeSymbolKey(row.symbol)] = row; });
+
+  const enrichmentResults = await mapWithConcurrency(pending, FINANCIAL_FETCH_CONCURRENCY, async (symbol) => {
+    if (remainingBudget(deadline) < 700) {
+      return { symbol: symbol.symbol, error: 'optional enrichment skipped: route budget nearly exhausted' };
+    }
+    try {
+      const row = await fetchYahooSummaryFundamentals(symbol, deadline);
+      return { symbol: symbol.symbol, row };
+    } catch (err) {
+      return { symbol: symbol.symbol, error: normalizeErrorMessage(err, 'Yahoo quoteSummary ' + symbol.symbol) };
+    }
+  });
+  const enrichmentMap = {};
+  enrichmentResults.forEach((item) => { if (item.row) enrichmentMap[item.symbol] = item.row; });
+
+  const rows = [];
+  const errors = [];
+  pending.forEach((symbol) => {
+    const core = coreMap[symbol.symbol] || null;
+    const enrichment = enrichmentMap[symbol.symbol] || null;
+    const merged = mergeFundamentalRows(core, enrichment, symbol.symbol);
+    const enrichmentResult = enrichmentResults.find((item) => item.symbol === symbol.symbol);
+    if (enrichmentResult && enrichmentResult.error) {
+      warnings.push({ symbol: symbol.symbol, stage: 'enrichment', error: enrichmentResult.error });
+    }
+    if (hasCoreFundamental(merged)) rows.push(merged);
+    else errors.push({ symbol: symbol.symbol, error: 'no usable financial fields returned' });
+  });
+
+  const saved = await saveFundamentalsBestEffort(rows, {
+    universe: meta && meta.universe,
+    source: meta && meta.source,
+    api_version: API_VERSION,
+    max_age_days: maxAgeDays,
+    force
+  });
+  const operationOk = skippedFresh.length > 0 || (rows.length > 0 && saved.ok);
+
+  return {
+    api_version: API_VERSION,
+    refresh_type: 'financial',
+    operation_ok: operationOk,
+    save_ok: saved.ok,
+    error: operationOk ? undefined : (saved.error || 'no financial rows saved'),
+    symbols_requested: symbols.map((s) => s.symbol),
+    symbols_refreshed: rows.map((r) => r.symbol),
+    symbols_skipped_fresh: skippedFresh,
+    symbols_failed: errors,
+    warnings,
+    max_age_days: maxAgeDays,
+    force,
+    sources: countBy(rows, 'source'),
+    saved_rows: rows.length,
+    apps_script: saved.response
   };
 }
 
@@ -225,14 +339,14 @@ function normalizeSymbolList(items) {
 }
 
 async function getWatchlist() {
-  const json = await fetchJSON(process.env.APPS_SCRIPT_URL + '?action=watchlist');
+  const json = await fetchJSON(process.env.APPS_SCRIPT_URL + '?action=watchlist', {}, { stage: 'Apps Script watchlist read', timeoutMs: APPS_SCRIPT_TIMEOUT_MS });
   if (!json || !json.ok) throw new Error('watchlist fetch failed: ' + JSON.stringify(json));
   return json.data || [];
 }
 
 async function getExistingNews(weekEnding) {
   try {
-    const json = await fetchJSON(process.env.APPS_SCRIPT_URL + '?action=dashboard&week=' + encodeURIComponent(weekEnding));
+    const json = await fetchJSON(process.env.APPS_SCRIPT_URL + '?action=dashboard&week=' + encodeURIComponent(weekEnding), {}, { stage: 'Apps Script news read', timeoutMs: APPS_SCRIPT_TIMEOUT_MS });
     const news = json && json.ok && json.data && Array.isArray(json.data.news) ? json.data.news : [];
     return news.map((n) => ({
       headline: n.headline || '',
@@ -269,7 +383,7 @@ function normalizeThaiSymbol(input) {
 }
 
 async function fetchAllQuotes(symbols, range) {
-  return mapWithConcurrency(symbols, FETCH_CONCURRENCY, async (s) => {
+  return mapWithConcurrency(symbols, PRICE_FETCH_CONCURRENCY, async (s) => {
     try {
       return { symbol: s.symbol, bars: await fetchYahooBars(s.yahoo, range), source: 'yahoo_chart' };
     } catch (err) {
@@ -280,7 +394,7 @@ async function fetchAllQuotes(symbols, range) {
 
 async function fetchYahooBars(yahooSymbol, range) {
   const url = YAHOO_BASE + encodeURIComponent(yahooSymbol) + '?range=' + encodeURIComponent(range) + '&interval=1d';
-  const json = await fetchJSON(url, { headers: { 'User-Agent': 'Mozilla/5.0 (AlphaWeek hotfix)' } });
+  const json = await fetchJSON(url, { headers: { 'User-Agent': 'Mozilla/5.0 (AlphaWeek V26.1)' } }, { stage: 'Yahoo chart ' + yahooSymbol, timeoutMs: PRICE_FETCH_TIMEOUT_MS });
   const r = json && json.chart && json.chart.result && json.chart.result[0];
   if (!r || !r.timestamp) throw new Error('yahoo: empty result for ' + yahooSymbol);
   const q = r.indicators && r.indicators.quote && r.indicators.quote[0];
@@ -334,53 +448,78 @@ function computeWeeklyMetrics(bars, weekEnding) {
 }
 
 
-async function fetchAllFundamentals(symbols) {
-  const normalized = normalizeSymbolList((symbols || []).map((s) => s.symbol || s)).filter((s) => s.symbol !== 'SET');
-  const results = await mapWithConcurrency(normalized, FETCH_CONCURRENCY, async (s) => {
-    try {
-      return { symbol: s.symbol, row: await fetchYahooFundamentals(s) };
-    } catch (err) {
-      return { symbol: s.symbol, error: String(err && err.message || err) };
-    }
+async function getExistingFundamentals(deadline) {
+  const url = process.env.APPS_SCRIPT_URL + '?action=fundamentals';
+  const json = await fetchJSON(url, {}, {
+    stage: 'Apps Script fundamentals read',
+    timeoutMs: Math.min(APPS_SCRIPT_TIMEOUT_MS, Math.max(500, remainingBudget(deadline))),
+    deadline
   });
-  return {
-    requested: normalized.map((s) => s.symbol),
-    rows: results.filter((r) => r.row).map((r) => r.row),
-    errors: results.filter((r) => r.error).map((r) => ({ symbol: r.symbol, error: r.error }))
-  };
+  if (!json || !json.ok) throw new Error('fundamentals read failed: ' + JSON.stringify(json));
+  return Array.isArray(json.data) ? json.data : [];
 }
 
-async function fetchYahooFundamentals(symbol) {
+async function fetchYahooQuoteBatch(symbols, deadline) {
+  if (!symbols.length) return [];
+  const url = YAHOO_QUOTE_BASE + '?symbols=' + encodeURIComponent(symbols.map((s) => s.yahoo).join(','));
+  const json = await fetchJSONWithRetry(url, { headers: yahooHeaders() }, {
+    stage: 'Yahoo financial core batch',
+    timeoutMs: FINANCIAL_CORE_TIMEOUT_MS,
+    deadline,
+    retry: true
+  });
+  const results = json && json.quoteResponse && Array.isArray(json.quoteResponse.result) ? json.quoteResponse.result : [];
+  return results.map((q) => {
+    const symbol = normalizeSymbolKey(q.symbol);
+    return normalizeQuoteFundamentals(symbol, q);
+  }).filter(hasCoreFundamental);
+}
+
+async function fetchYahooSummaryFundamentals(symbol, deadline) {
   const modules = 'price,summaryDetail,defaultKeyStatistics,financialData';
   const summaryUrl = YAHOO_QUOTE_SUMMARY_BASE + encodeURIComponent(symbol.yahoo) +
     '?modules=' + encodeURIComponent(modules);
-  let summaryError = '';
+  const json = await fetchJSONWithRetry(summaryUrl, { headers: yahooHeaders() }, {
+    stage: 'Yahoo quoteSummary ' + symbol.symbol,
+    timeoutMs: FINANCIAL_ENRICH_TIMEOUT_MS,
+    deadline,
+    retry: true
+  });
+  const result = json && json.quoteSummary && json.quoteSummary.result && json.quoteSummary.result[0];
+  if (!result) throw new Error('quoteSummary empty result');
+  const row = normalizeQuoteSummaryFundamentals(symbol.symbol, result);
+  if (!hasCoreFundamental(row)) throw new Error('quoteSummary returned no usable fundamentals');
+  return row;
+}
 
-  try {
-    const json = await fetchJSON(summaryUrl, { headers: yahooHeaders() });
-    const result = json && json.quoteSummary && json.quoteSummary.result && json.quoteSummary.result[0];
-    if (result) {
-      const row = normalizeQuoteSummaryFundamentals(symbol.symbol, result);
-      if (hasCoreFundamental(row)) return row;
-      summaryError = 'quoteSummary returned no core fundamentals';
-    } else {
-      summaryError = 'quoteSummary empty result';
-    }
-  } catch (err) {
-    summaryError = String(err && err.message || err);
-  }
+function mergeFundamentalRows(core, enrichment, symbol) {
+  const fetchedAt = new Date().toISOString();
+  const base = cleanFundamentalRow(Object.assign({
+    symbol,
+    as_of_date: fetchedAt.slice(0, 10),
+    pe_ttm: '', pbv: '', dividend_yield_pct: '', market_cap: '', eps_ttm: '',
+    roe_pct: '', debt_to_equity: '', revenue_growth_yoy_pct: '', net_profit_growth_yoy_pct: '',
+    financial_period: '', source: '', fetched_at: fetchedAt
+  }, core || {}));
+  const extra = enrichment || {};
+  Object.keys(extra).forEach((key) => {
+    if (extra[key] !== '' && extra[key] !== null && extra[key] !== undefined) base[key] = extra[key];
+  });
+  base.symbol = symbol;
+  base.fetched_at = fetchedAt;
+  if (core && enrichment) base.source = 'yahoo_quote+yahoo_quoteSummary';
+  else if (enrichment) base.source = enrichment.source || 'yahoo_quoteSummary';
+  else if (core) base.source = core.source || 'yahoo_quote';
+  return cleanFundamentalRow(base);
+}
 
-  try {
-    const quoteUrl = YAHOO_QUOTE_BASE + '?symbols=' + encodeURIComponent(symbol.yahoo);
-    const json = await fetchJSON(quoteUrl, { headers: yahooHeaders() });
-    const q = json && json.quoteResponse && json.quoteResponse.result && json.quoteResponse.result[0];
-    if (!q) throw new Error('quote endpoint empty result');
-    const row = normalizeQuoteFundamentals(symbol.symbol, q);
-    if (!hasCoreFundamental(row)) throw new Error('quote endpoint returned no core fundamentals');
-    return row;
-  } catch (err) {
-    throw new Error('yahoo fundamentals unavailable; summary=' + summaryError + '; quote=' + String(err && err.message || err));
-  }
+function isFreshFundamental(row, maxAgeDays) {
+  if (!row || maxAgeDays <= 0) return false;
+  const raw = row.fetched_at || row.as_of_date;
+  const time = Date.parse(raw);
+  if (!Number.isFinite(time)) return false;
+  const age = Date.now() - time;
+  return age >= 0 && age <= maxAgeDays * 86400000;
 }
 
 function normalizeQuoteSummaryFundamentals(symbol, result) {
@@ -454,7 +593,7 @@ async function saveFundamentalsBestEffort(rows, meta) {
       pin: process.env.ALPHAWEEK_PIN,
       rows,
       meta: meta || {}
-    });
+    }, 'Apps Script fundamentals save');
     return {
       ok: !!(response && response.ok),
       error: response && response.ok ? undefined : String((response && (response.error || JSON.stringify(response))) || 'empty response'),
@@ -482,7 +621,7 @@ async function mapWithConcurrency(items, limit, worker) {
 
 function yahooHeaders() {
   return {
-    'User-Agent': 'Mozilla/5.0 (AlphaWeek V26)',
+    'User-Agent': 'Mozilla/5.0 (AlphaWeek V26.1)',
     'Accept': 'application/json,text/plain,*/*'
   };
 }
@@ -517,30 +656,108 @@ function round4(n) {
   return Math.round(Number(n) * 10000) / 10000;
 }
 
-async function postToAppsScript(payload) {
+async function postToAppsScript(payload, stage) {
   const resp = await fetchWithTimeout(process.env.APPS_SCRIPT_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
     redirect: 'follow'
-  });
+  }, { stage: stage || 'Apps Script write', timeoutMs: APPS_SCRIPT_TIMEOUT_MS });
   const text = await resp.text();
-  if (!resp.ok) throw new Error('apps script HTTP ' + resp.status + ': ' + text.slice(0, 200));
-  try { return JSON.parse(text); } catch (err) { throw new Error('apps script non-JSON response: ' + text.slice(0, 200)); }
+  if (!resp.ok) throw httpError(resp.status, (stage || 'Apps Script write') + ': ' + text.slice(0, 200));
+  try { return JSON.parse(text); } catch (err) { throw new Error((stage || 'Apps Script write') + ' returned non-JSON: ' + text.slice(0, 200)); }
 }
 
-async function fetchJSON(url, opts) {
-  const resp = await fetchWithTimeout(url, Object.assign({ redirect: 'follow' }, opts || {}));
-  if (!resp.ok) throw new Error('HTTP ' + resp.status + ' for ' + url);
+async function fetchJSON(url, opts, meta) {
+  const resp = await fetchWithTimeout(url, Object.assign({ redirect: 'follow' }, opts || {}), meta || {});
+  if (!resp.ok) throw httpError(resp.status, (meta && meta.stage ? meta.stage + ': ' : '') + 'HTTP ' + resp.status);
   return resp.json();
 }
 
-async function fetchWithTimeout(url, opts) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-  try { return await fetch(url, Object.assign({}, opts || {}, { signal: controller.signal })); }
-  finally { clearTimeout(timer); }
+async function fetchJSONWithRetry(url, opts, meta) {
+  const settings = Object.assign({ retry: false }, meta || {});
+  const attempts = settings.retry ? 2 : 1;
+  let lastError;
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    try {
+      return await fetchJSON(url, opts, settings);
+    } catch (err) {
+      lastError = err;
+      const canRetry = attempt < attempts && isRetryableError(err) && remainingBudget(settings.deadline) > 900;
+      if (!canRetry) throw err;
+      await sleep(180);
+    }
+  }
+  throw lastError;
 }
+
+async function fetchWithTimeout(url, opts, meta) {
+  const settings = meta || {};
+  const stage = settings.stage || 'external request';
+  const remaining = remainingBudget(settings.deadline);
+  let timeoutMs = Number(settings.timeoutMs || PRICE_FETCH_TIMEOUT_MS);
+  if (Number.isFinite(remaining)) timeoutMs = Math.min(timeoutMs, Math.max(250, remaining - 100));
+  if (timeoutMs <= 250 && Number.isFinite(remaining) && remaining <= 250) {
+    throw new Error(stage + ' skipped: route budget exhausted');
+  }
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, Object.assign({}, opts || {}, { signal: controller.signal }));
+  } catch (err) {
+    if (err && (err.name === 'AbortError' || /aborted/i.test(String(err.message || err)))) {
+      const timeoutError = new Error(stage + ' timed out after ' + timeoutMs + 'ms');
+      timeoutError.code = 'ETIMEDOUT';
+      throw timeoutError;
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function httpError(status, message) {
+  const err = new Error(message || ('HTTP ' + status));
+  err.status = Number(status);
+  return err;
+}
+
+function isRetryableError(err) {
+  const status = Number(err && err.status);
+  return !!(err && err.code === 'ETIMEDOUT') || status === 429 || status >= 500;
+}
+
+function normalizeErrorMessage(err, fallbackStage) {
+  if (!err) return (fallbackStage || 'operation') + ' failed';
+  const message = String(err.message || err);
+  if (/this operation was aborted|aborterror|\baborted\b/i.test(message)) {
+    return (fallbackStage || 'external request') + ' timed out or was cancelled';
+  }
+  return message;
+}
+
+function remainingBudget(deadline) {
+  if (!deadline) return Infinity;
+  return Math.max(0, Number(deadline) - Date.now());
+}
+
+function clampNumber(value, min, max, fallback) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.max(min, Math.min(max, n));
+}
+
+function parseBoolean(value) {
+  return value === true || String(value || '').toLowerCase() === 'true' || String(value) === '1';
+}
+
+function normalizeSymbolKey(input) {
+  let raw = String(input || '').trim().toUpperCase().replace(/\s+/g, '');
+  raw = raw.replace(/^SET:/, '').replace(/\.BK$/, '');
+  return raw === '^SET' ? 'SET' : raw;
+}
+
+function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 
 function lastFridayISO(now) {
   const bkkISO = isoDateInTZ(now, 'Asia/Bangkok');
