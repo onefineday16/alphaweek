@@ -1,13 +1,14 @@
 /**
  * AlphaWeek — api/fetch-weekly.js
- * Version: v04-hotfix (public refresh + explicit save diagnostics)
+ * Version: v05-universe-refresh (bounded symbol batches)
  */
 'use strict';
 
-const API_VERSION = 'v04-hotfix';
+const API_VERSION = 'v05-universe-refresh';
 const YAHOO_BASE = 'https://query1.finance.yahoo.com/v8/finance/chart/';
 const SET_INDEX = { symbol: 'SET', yahoo: '^SET.BK' };
 const FETCH_TIMEOUT_MS = 15000;
+const MAX_SYMBOLS_PER_REQUEST = 10;
 
 module.exports = async function handler(req, res) {
   setCors(res);
@@ -34,13 +35,18 @@ module.exports = async function handler(req, res) {
 
   try {
     if (seedMode) {
-      return res.status(400).json({ ok: false, api_version: API_VERSION, error: 'seed disabled in hotfix route; restore full v04 after production API is confirmed' });
+      return res.status(400).json({ ok: false, api_version: API_VERSION, error: 'seed disabled in v05 route' });
     }
-    const result = await runWeekly();
+    const body = parseBody(req);
+    const requestedSymbols = extractRequestedSymbols(req, body);
+    const universe = String((body && body.universe) || (req.query && req.query.universe) || 'watchlist');
+    const result = requestedSymbols.length
+      ? await runSymbolBatch(requestedSymbols, { universe, source: body && body.source })
+      : await runWeekly();
     const status = result.save_ok ? 200 : 502;
     return res.status(status).json({
       ok: result.save_ok,
-      mode: 'weekly',
+      mode: requestedSymbols.length ? 'universe-batch' : 'weekly',
       auth_mode: isCron ? 'cron' : (isManualToken ? 'token' : 'public'),
       api_version: API_VERSION,
       refreshed_at: new Date().toISOString(),
@@ -56,6 +62,31 @@ function setCors(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+}
+
+function parseBody(req) {
+  if (!req || !req.body) return {};
+  if (typeof req.body === 'object') return req.body;
+  try { return JSON.parse(String(req.body || '{}')); }
+  catch (err) { return {}; }
+}
+
+function extractRequestedSymbols(req, body) {
+  let raw = [];
+  if (body && Array.isArray(body.symbols)) raw = body.symbols;
+  else if (req.query && req.query.symbols) raw = String(req.query.symbols).split(',');
+  const seen = new Set();
+  const out = [];
+  for (const item of raw) {
+    const s = normalizeThaiSymbol(item);
+    if (!s.symbol || seen.has(s.symbol)) continue;
+    seen.add(s.symbol);
+    out.push(s.symbol);
+  }
+  if (out.length > MAX_SYMBOLS_PER_REQUEST) {
+    throw new Error('too many symbols: max ' + MAX_SYMBOLS_PER_REQUEST + ' per request');
+  }
+  return out;
 }
 
 async function runWeekly() {
@@ -99,6 +130,65 @@ async function runWeekly() {
     error: saveOk ? undefined : 'apps script saveWeekly failed: ' + String((saved && (saved.error || JSON.stringify(saved))) || 'empty response'),
     apps_script: saved
   };
+}
+
+async function runSymbolBatch(symbolInputs, meta) {
+  const symbols = normalizeSymbolList(symbolInputs);
+  if (!symbols.length) throw new Error('symbols required for universe batch');
+  if (symbols.length > MAX_SYMBOLS_PER_REQUEST) throw new Error('too many symbols: max ' + MAX_SYMBOLS_PER_REQUEST);
+
+  const weekEnding = lastFridayISO(new Date());
+  const quotes = await fetchAllQuotes(symbols, '4mo');
+  const rows = [];
+  const errors = [];
+
+  for (const q of quotes) {
+    if (q.error) { errors.push({ symbol: q.symbol, error: q.error }); continue; }
+    const m = computeWeeklyMetrics(q.bars, weekEnding);
+    if (!m) { errors.push({ symbol: q.symbol, error: 'no bars in week' }); continue; }
+    m.symbol = q.symbol;
+    m.source = q.source;
+    rows.push(m);
+  }
+
+  const saved = await postToAppsScript({
+    action: 'saveWeeklyMerge',
+    pin: process.env.ALPHAWEEK_PIN,
+    week_ending: weekEnding,
+    rows,
+    meta: {
+      universe: meta && meta.universe,
+      source: meta && meta.source,
+      api_version: API_VERSION
+    }
+  });
+  const saveOk = !!(saved && saved.ok);
+
+  return {
+    api_version: API_VERSION,
+    week_ending: weekEnding,
+    universe: meta && meta.universe,
+    symbols_requested: symbols.map((s) => s.symbol),
+    symbols_ok: rows.length,
+    symbols_ok_symbols: rows.map((r) => r.symbol),
+    symbols_failed: errors,
+    sources: countBy(rows, 'source'),
+    save_ok: saveOk,
+    error: saveOk ? undefined : 'apps script saveWeeklyMerge failed: ' + String((saved && (saved.error || JSON.stringify(saved))) || 'empty response'),
+    apps_script: saved
+  };
+}
+
+function normalizeSymbolList(items) {
+  const seen = new Set();
+  const out = [];
+  for (const item of items || []) {
+    const s = normalizeThaiSymbol(item);
+    if (!s.symbol || seen.has(s.symbol)) continue;
+    seen.add(s.symbol);
+    out.push(s);
+  }
+  return out;
 }
 
 async function getWatchlist() {
