@@ -178,6 +178,14 @@
     .segmented .btn { padding:8px 11px; }
     .segmented .btn.active { background:linear-gradient(135deg, var(--rose), var(--mauve)); color:#fff; box-shadow:0 8px 18px rgba(219,95,142,.22); }
     .scoreboard-note { margin-top:8px; }
+    .universe-refresh-box { margin-top:12px; border:1px solid var(--line); border-radius:20px; padding:14px; background:rgba(255,255,255,.30); }
+    body.night .universe-refresh-box { background:rgba(255,255,255,.04); }
+    .refresh-progress { display:grid; gap:8px; margin-top:10px; }
+    .refresh-progress-bar { height:10px; border:1px solid var(--line); border-radius:999px; overflow:hidden; background:rgba(255,255,255,.42); }
+    body.night .refresh-progress-bar { background:rgba(255,255,255,.05); }
+    .refresh-progress-fill { height:100%; width:0%; background:linear-gradient(135deg, var(--rose), var(--mauve)); transition:width .2s ease; }
+    .refresh-mini-log { max-height:180px; overflow:auto; font-family:var(--mono); font-size:.78rem; white-space:pre-wrap; border:1px solid var(--line); border-radius:14px; padding:10px; background:rgba(255,255,255,.28); }
+    body.night .refresh-mini-log { background:rgba(0,0,0,.14); }
     .score-meter { height:9px; border-radius:999px; background:rgba(160,139,153,.20); overflow:hidden; }
     .score-fill { height:100%; width:var(--score,0%); border-radius:999px; background:linear-gradient(90deg, var(--rose), var(--mauve)); }
     .score-reason { color:var(--muted); font-size:.82rem; line-height:1.45; }
@@ -204,7 +212,7 @@
   <div class="app">
     <header class="utility-bar">
       <div class="health-inline"><span class="dot" id="health-dot"></span><span id="health-text">กำลังเตรียม AlphaWeek...</span></div>
-      <div class="meta"><span id="app-version">index-alphaweek-v20-market-scoreboard</span><button class="btn ghost" id="refresh-btn" type="button"><i class="ti ti-refresh"></i> Refresh</button><button class="btn ghost" id="refresh-prices-btn" type="button"><i class="ti ti-currency-baht"></i> Refresh Prices</button><button class="btn ghost" id="theme-btn" type="button"><i class="ti ti-sun"></i> Day</button></div>
+      <div class="meta"><span id="app-version">index-alphaweek-v21-universe-refresh</span><button class="btn ghost" id="refresh-btn" type="button"><i class="ti ti-refresh"></i> Refresh</button><button class="btn ghost" id="refresh-prices-btn" type="button"><i class="ti ti-currency-baht"></i> Refresh Prices</button><button class="btn ghost" id="theme-btn" type="button"><i class="ti ti-sun"></i> Day</button></div>
     </header>
     <div class="runtime-error" id="runtime-error"></div>
 
@@ -361,6 +369,29 @@
             <div class="meta"><button class="btn primary" id="save-settings-btn" type="button"><i class="ti ti-device-floppy"></i> Save Local Settings</button><button class="btn" id="restore-default-urls-btn" type="button"><i class="ti ti-rotate-clockwise"></i> Restore Default URLs</button><button class="btn" id="test-connection-btn" type="button"><i class="ti ti-plug-connected"></i> Test Connection</button><button class="btn primary" id="refresh-prices-control-btn" type="button"><i class="ti ti-currency-baht"></i> Refresh Prices Now</button></div>
             <div class="alert good">Default URLs are embedded in this file. Refresh Prices is public and does not require PIN. PIN is still used for write actions such as articles/watchlist.</div><div id="settings-status"></div>
             <div id="price-refresh-status"></div>
+
+            <div class="universe-refresh-box" id="universe-refresh-box">
+              <div class="section-title">
+                <div><h3>Universe Price Refresh</h3><span>V21: ดึงราคาแบบ batch สำหรับ Watchlist / SET50 / SET100</span></div>
+              </div>
+              <div class="form-grid">
+                <label>Refresh Universe
+                  <select id="universe-refresh-universe">
+                    <option value="watchlist">Watchlist</option>
+                    <option value="SET50">SET50</option>
+                    <option value="SET100">SET100</option>
+                  </select>
+                </label>
+                <label>Batch Size
+                  <input id="universe-refresh-batch-size" type="number" min="1" max="10" step="1" value="5">
+                </label>
+                <div class="full meta">
+                  <button class="btn primary" id="universe-refresh-start-btn" type="button"><i class="ti ti-player-play"></i> Start Universe Refresh</button>
+                  <button class="btn danger" id="universe-refresh-stop-btn" type="button"><i class="ti ti-player-stop"></i> Stop After Batch</button>
+                </div>
+              </div>
+              <div id="universe-refresh-progress" class="refresh-progress"></div>
+            </div>
             <div class="connection-result" id="connection-result"></div>
             <div class="section-title" style="margin-top:8px"><div><h3>Quiet System Notes</h3><span>Health, data readiness และสถานะ refresh</span></div></div>
             <div class="control-system-grid" id="system-notes"></div>
@@ -392,7 +423,7 @@
   <script>
   (function () {
     'use strict';
-    const APP_VERSION = 'index-alphaweek-v20-market-scoreboard';
+    const APP_VERSION = 'index-alphaweek-v21-universe-refresh';
     const STORAGE_KEY = 'alphaweek_config_v15';
     const LEGACY_KEYS = ['alphaweek_config_v14', 'alphaweek_config_v13', 'alphaweek_config_v12', 'alphaweek_config_v11', 'alphaweek_config_v10', 'alphaweek_config_v09', 'alphaweek_config_v08', 'alphaweek_config_v07', 'alphaweek_config_v06', 'alphaweek_config_v05', 'alphaweek_config_v04', 'alphaweek_config_v03', 'alphaweek_config_v02', 'alphaweek_config_v01'];
     const DEFAULT_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzh2PhvOrJu16P9ZLX192PEXUZqTHbp26P1y6TAXNUdO-3UCslhogZHBkoPnOcfx1SA/exec';
@@ -409,7 +440,7 @@
       lastPriceRefreshAt: '',
       templates: defaultTemplates()
     };
-    const state = { config: loadConfig(), health: null, dashboard: null, articles: [], allArticles: [], editingArticleId: null, activeTab: 'brief', scoreboardUniverse: 'watchlist', priceRefresh: { running:false, lastResult:null, statusMessage:'', statusKind:'' } };
+    const state = { config: loadConfig(), health: null, dashboard: null, articles: [], allArticles: [], editingArticleId: null, activeTab: 'brief', scoreboardUniverse: 'watchlist', priceRefresh: { running:false, lastResult:null, statusMessage:'', statusKind:'' }, universeRefresh: { running:false, cancelRequested:false, universe:'watchlist', batchSize:5, total:0, queue:[], originalQueue:[], currentBatch:[], completed:[], skipped:[], errors:[], startedAt:null, finishedAt:null } };
     const $ = (sel) => document.querySelector(sel);
     const $$ = (sel) => Array.from(document.querySelectorAll(sel));
     function reportRuntimeError(message) {
@@ -421,10 +452,10 @@
     window.addEventListener('error', event => reportRuntimeError(`Runtime error: ${event.message || event.error || 'unknown'}`));
     window.addEventListener('unhandledrejection', event => reportRuntimeError(`Async error: ${event.reason && event.reason.message ? event.reason.message : event.reason}`));
     function runFrontendSelfCheck() {
-      const requiredIds = ['brief-alert','watchlist-coverage','watchlist-scoreboard','scoreboard-universe-controls','latest-article-home','signal-cards','news-list','market-table','article-list','article-manager-list','apps-script-url','health-url','save-settings-btn','restore-default-urls-btn','test-connection-btn','refresh-prices-btn','refresh-prices-control-btn','fetch-weekly-url','auto-refresh-prices','price-refresh-cooldown','price-refresh-status','watchlist-manager'];
+      const requiredIds = ['brief-alert','watchlist-coverage','watchlist-scoreboard','scoreboard-universe-controls','latest-article-home','signal-cards','news-list','market-table','article-list','article-manager-list','apps-script-url','health-url','save-settings-btn','restore-default-urls-btn','test-connection-btn','refresh-prices-btn','refresh-prices-control-btn','fetch-weekly-url','auto-refresh-prices','price-refresh-cooldown','price-refresh-status','universe-refresh-universe','universe-refresh-batch-size','universe-refresh-start-btn','universe-refresh-stop-btn','universe-refresh-progress','watchlist-manager'];
       const missingIds = requiredIds.filter(id => !document.getElementById(id));
-      const requiredFns = ['loadAll','loadDashboard','loadArticles','loadArticleManager','renderWatchlistCoverage','renderWatchlistScoreboard','renderLatestArticle','lookupWatchlistRow','saveWatchlist','saveLocalSettings','restoreDefaultUrls','testConnection','refreshPrices','maybeAutoRefreshPricesOnOpen','currentEffectiveTheme','bindSystemThemeListener'];
-      const available = { loadAll, loadDashboard, loadArticles, loadArticleManager, renderWatchlistCoverage, renderWatchlistScoreboard, renderLatestArticle, lookupWatchlistRow, saveWatchlist, saveLocalSettings, restoreDefaultUrls, testConnection, refreshPrices, maybeAutoRefreshPricesOnOpen, currentEffectiveTheme, bindSystemThemeListener };
+      const requiredFns = ['loadAll','loadDashboard','loadArticles','loadArticleManager','renderWatchlistCoverage','renderWatchlistScoreboard','renderLatestArticle','lookupWatchlistRow','saveWatchlist','saveLocalSettings','restoreDefaultUrls','testConnection','refreshPrices','startUniverseRefresh','stopUniverseRefresh','buildUniverseRefreshQueue','renderUniverseRefreshProgress','maybeAutoRefreshPricesOnOpen','currentEffectiveTheme','bindSystemThemeListener'];
+      const available = { loadAll, loadDashboard, loadArticles, loadArticleManager, renderWatchlistCoverage, renderWatchlistScoreboard, renderLatestArticle, lookupWatchlistRow, saveWatchlist, saveLocalSettings, restoreDefaultUrls, testConnection, refreshPrices, startUniverseRefresh, stopUniverseRefresh, buildUniverseRefreshQueue, renderUniverseRefreshProgress, maybeAutoRefreshPricesOnOpen, currentEffectiveTheme, bindSystemThemeListener };
       const missingFns = requiredFns.filter(name => typeof available[name] !== 'function');
       const result = { ok: missingIds.length === 0 && missingFns.length === 0, missingIds, missingFns, version: APP_VERSION };
       if (!result.ok) reportRuntimeError(`Frontend self-check failed\nMissing IDs: ${missingIds.join(', ') || '-'}\nMissing functions: ${missingFns.join(', ') || '-'}`);
@@ -464,6 +495,8 @@
       safeBind('#restore-default-urls-btn', 'click', restoreDefaultUrls);
       safeBind('#test-connection-btn', 'click', testConnection);
       safeBind('#refresh-prices-control-btn', 'click', () => refreshPrices({ source:'manual-control', force:true }));
+      safeBind('#universe-refresh-start-btn', 'click', startUniverseRefresh);
+      safeBind('#universe-refresh-stop-btn', 'click', stopUniverseRefresh);
       safeBind('#reset-template-btn', 'click', resetTemplates);
       safeBind('#save-config-btn', 'click', saveTemplatesToSheets);
       safeBind('#save-watchlist-btn', 'click', saveWatchlist);
@@ -542,7 +575,7 @@
         </article>`;
       }).join('');
     }
-    function renderAll() { renderEdition(); renderBrief(); renderWatchlistCoverage(); renderWatchlistScoreboard(); renderSignals(); renderNews(); renderMarketTable(); renderArticles(); renderLatestArticle(); renderPromptPreview(); }
+    function renderAll() { renderEdition(); renderBrief(); renderWatchlistCoverage(); renderWatchlistScoreboard(); renderSignals(); renderNews(); renderMarketTable(); renderArticles(); renderLatestArticle(); renderPromptPreview(); renderUniverseRefreshProgress(); }
     function renderEdition() {
       const d = state.dashboard || {}; const h = state.health || {}; const week = d.week_ending || h.latest_week || '';
       $('#edition-week').textContent = week ? formatBE(week) : '—';
@@ -1008,6 +1041,155 @@
         renderBrief();
       }
     }
+    function readUniverseRefreshControls() {
+      const universe = normalizeUniverseKey(($('#universe-refresh-universe') && $('#universe-refresh-universe').value) || state.scoreboardUniverse || 'watchlist');
+      const batchSize = Math.max(1, Math.min(10, Number(($('#universe-refresh-batch-size') && $('#universe-refresh-batch-size').value) || 5)));
+      return { universe, batchSize };
+    }
+    function buildUniverseRefreshQueue(universe) {
+      const key = normalizeUniverseKey(universe || 'watchlist');
+      const members = selectedScoreboardMembers(key);
+      const existing = new Set(normalizeRows(((state.dashboard && state.dashboard.rows) || [])).map(r => normalizeStockKey(r.symbol)).filter(Boolean));
+      const seen = new Set();
+      const symbols = [];
+      members.forEach(m => {
+        const symbol = normalizeStockKey(m.symbol || m);
+        if (!symbol || seen.has(symbol)) return;
+        seen.add(symbol);
+        symbols.push(symbol);
+      });
+      const queue = [];
+      const skipped = [];
+      symbols.forEach(symbol => {
+        if (existing.has(symbol)) skipped.push({ symbol, reason:'current-week data exists' });
+        else queue.push(symbol);
+      });
+      return { universe:key, label:scoreboardUniverseLabel(key), symbols, queue, skipped };
+    }
+    function stopUniverseRefresh() {
+      if (!state.universeRefresh.running) {
+        renderUniverseRefreshProgress('ยังไม่มี Universe Refresh ที่กำลังทำงาน', 'warn');
+        return;
+      }
+      state.universeRefresh.cancelRequested = true;
+      renderUniverseRefreshProgress('รับคำสั่งหยุดแล้ว ระบบจะหยุดหลัง batch ปัจจุบันเสร็จ', 'warn');
+    }
+    async function startUniverseRefresh() {
+      if (state.universeRefresh.running || state.priceRefresh.running) {
+        renderUniverseRefreshProgress('กำลัง refresh อยู่แล้ว กรุณารอให้รอบปัจจุบันจบก่อน', 'warn');
+        return false;
+      }
+      saveLocalSettings();
+      const controls = readUniverseRefreshControls();
+      const built = buildUniverseRefreshQueue(controls.universe);
+      state.universeRefresh = {
+        running:true,
+        cancelRequested:false,
+        universe:built.universe,
+        batchSize:controls.batchSize,
+        total:built.symbols.length,
+        queue:built.queue.slice(),
+        originalQueue:built.queue.slice(),
+        currentBatch:[],
+        completed:[],
+        skipped:built.skipped.slice(),
+        errors:[],
+        startedAt:new Date().toISOString(),
+        finishedAt:null
+      };
+      if (!built.symbols.length) {
+        state.universeRefresh.running = false;
+        renderUniverseRefreshProgress(`${built.label} ไม่มี symbol สำหรับ refresh`, 'warn');
+        return false;
+      }
+      if (!built.queue.length) {
+        state.universeRefresh.running = false;
+        state.universeRefresh.finishedAt = new Date().toISOString();
+        renderUniverseRefreshProgress(`${built.label} มีข้อมูล week ปัจจุบันครบแล้ว · skipped ${built.skipped.length}`, 'good');
+        return true;
+      }
+      renderUniverseRefreshProgress(`เริ่ม Universe Refresh: ${built.label} · queue ${built.queue.length} · skipped ${built.skipped.length}`, 'warn');
+      setHealth('loading', `Universe Refresh ${built.label}...`);
+      try {
+        while (state.universeRefresh.queue.length && !state.universeRefresh.cancelRequested) {
+          const batch = state.universeRefresh.queue.splice(0, state.universeRefresh.batchSize);
+          state.universeRefresh.currentBatch = batch.slice();
+          renderUniverseRefreshProgress(`Fetching ${built.label}: ${batch.join(', ')}`, 'warn');
+          await runUniverseRefreshBatch(batch, built.universe);
+        }
+        state.universeRefresh.currentBatch = [];
+        state.universeRefresh.finishedAt = new Date().toISOString();
+        const cancelled = state.universeRefresh.cancelRequested;
+        state.universeRefresh.running = false;
+        const kind = state.universeRefresh.errors.length ? 'warn' : 'good';
+        const msg = cancelled
+          ? `หยุด Universe Refresh แล้ว · saved ${state.universeRefresh.completed.length} · failed ${state.universeRefresh.errors.length} · remaining ${state.universeRefresh.queue.length}`
+          : `Universe Refresh เสร็จแล้ว · saved ${state.universeRefresh.completed.length} · skipped ${state.universeRefresh.skipped.length} · failed ${state.universeRefresh.errors.length}`;
+        renderUniverseRefreshProgress(msg, kind);
+        await loadAll();
+        return !state.universeRefresh.errors.length;
+      } catch (err) {
+        state.universeRefresh.running = false;
+        state.universeRefresh.currentBatch = [];
+        state.universeRefresh.finishedAt = new Date().toISOString();
+        renderUniverseRefreshProgress(`Universe Refresh ไม่สำเร็จ: ${escapeHTML(err.message)}`, 'bad');
+        setHealth('bad', `Universe Refresh error: ${err.message}`);
+        return false;
+      }
+    }
+    async function runUniverseRefreshBatch(batch, universe) {
+      try {
+        const resp = await fetch(priceRefreshUrl(), {
+          method:'POST',
+          headers:{ 'Content-Type':'application/json' },
+          body:JSON.stringify({ source:'universe-refresh', universe, symbols:batch, batch_size:batch.length }),
+          cache:'no-store',
+          redirect:'follow'
+        });
+        const text = await resp.text();
+        let json;
+        try { json = JSON.parse(text); } catch (err) { throw new Error(`non-JSON response (${resp.status}): ${text.slice(0,120)}`); }
+        if (!resp.ok || !json.ok) throw new Error(json.error || `HTTP ${resp.status}`);
+        const result = json.result || {};
+        const okSymbols = Array.isArray(result.symbols_ok_symbols) ? result.symbols_ok_symbols : [];
+        const failed = Array.isArray(result.symbols_failed) ? result.symbols_failed : [];
+        okSymbols.forEach(symbol => state.universeRefresh.completed.push({ symbol, batch:state.universeRefresh.completed.length + 1 }));
+        failed.forEach(f => state.universeRefresh.errors.push({ symbol:f.symbol || '', error:f.error || 'failed' }));
+        const okSet = new Set(okSymbols.map(normalizeStockKey));
+        const failedSet = new Set(failed.map(f => normalizeStockKey(f.symbol)));
+        batch.forEach(symbol => {
+          const key = normalizeStockKey(symbol);
+          if (!okSet.has(key) && !failedSet.has(key)) state.universeRefresh.errors.push({ symbol, error:'not returned by API' });
+        });
+        state.priceRefresh.lastResult = json;
+        state.config.lastPriceRefreshAt = json.refreshed_at || new Date().toISOString();
+        saveConfigLocal();
+      } catch (err) {
+        batch.forEach(symbol => state.universeRefresh.errors.push({ symbol, error:err.message }));
+      }
+      renderUniverseRefreshProgress();
+    }
+    function renderUniverseRefreshProgress(message, kind) {
+      const box = $('#universe-refresh-progress');
+      if (!box) return;
+      const r = state.universeRefresh || {};
+      const completed = (r.completed || []).length;
+      const skipped = (r.skipped || []).length;
+      const failed = (r.errors || []).length;
+      const processed = Math.min((r.total || 0), completed + skipped + failed);
+      const total = r.total || 0;
+      const pct = total ? Math.round((processed / total) * 100) : 0;
+      const current = (r.currentBatch || []).length ? `<div class="muted">Current batch: ${escapeHTML((r.currentBatch || []).join(', '))}</div>` : '';
+      const logLines = [];
+      (r.completed || []).slice(-8).forEach(x => logLines.push(`OK ${x.symbol}`));
+      (r.skipped || []).slice(-6).forEach(x => logLines.push(`SKIP ${x.symbol} — ${x.reason}`));
+      (r.errors || []).slice(-8).forEach(x => logLines.push(`FAIL ${x.symbol} — ${x.error}`));
+      const label = scoreboardUniverseLabel(r.universe || 'watchlist');
+      const status = message || (r.running ? `กำลัง refresh ${label}...` : `Ready · เลือก universe แล้วกด Start`);
+      const statusKind = kind || (failed ? 'warn' : (r.running ? 'warn' : ''));
+      box.innerHTML = `${alertHtml(statusKind, status)}<div class="refresh-progress-bar"><div class="refresh-progress-fill" style="width:${pct}%"></div></div><div class="meta"><span>${escapeHTML(label)}</span><span>${processed}/${total || '—'} processed</span><span>saved ${completed}</span><span>skipped ${skipped}</span><span>failed ${failed}</span><span>batch ${r.batchSize || 5}</span></div>${current}${logLines.length ? `<div class="refresh-mini-log">${escapeHTML(logLines.join('\n'))}</div>` : ''}`;
+    }
+
     async function testConnection(event) {
       if (event && event.preventDefault) event.preventDefault();
       saveLocalSettings(); if ($('#settings-status')) $('#settings-status').innerHTML = alertHtml('', 'กำลังทดสอบ connection...'); if ($('#connection-result')) $('#connection-result').innerHTML = '';
