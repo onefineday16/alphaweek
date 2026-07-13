@@ -225,6 +225,10 @@
     .score-fill { height:100%; width:var(--score,0%); border-radius:999px; background:linear-gradient(90deg, var(--rose), var(--mauve)); }
     .score-reason { color:var(--muted); font-size:.82rem; line-height:1.45; }
     .control-system-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+    .persistence-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; }
+    .persistence-card { border:1px solid var(--line); border-radius:16px; padding:12px; background:rgba(255,255,255,.30); }
+    body.night .persistence-card { background:rgba(255,255,255,.04); }
+    .persistence-value { font-size:1.45rem; font-weight:800; }
     @media (max-width: 940px) { .masthead-inner, .layout-main, .cols-2, .cols-3, .cols-4, .editorial-desk-grid { grid-template-columns:1fr; } .step-row { grid-template-columns:1fr 1fr; } .watchlist-compact-grid { grid-template-columns:repeat(3,minmax(0,1fr)); } .scoreboard-grid, .market-card-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 
     .manager-list { display:grid; gap:10px; }
@@ -240,14 +244,14 @@
     .hidden { display:none !important; }
     @media (max-width: 900px) { .wl-row { grid-template-columns:1fr 1fr; } }
 
-    @media (max-width: 680px) { .app { width:min(100% - 18px, 1200px); padding-top:12px; padding-bottom:48px; } .masthead { padding:14px; border-radius:22px; } .utility-bar { align-items:flex-start; flex-direction:column; } .nav-wrap { top:0; padding:8px 0; } .nav { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); border-radius:22px; gap:6px; } .nav button { padding:9px 6px; font-size:.78rem; min-width:0; } .nav button i { font-size:1rem; } .form-grid, .step-row { grid-template-columns:1fr; } .panel, .paper-card { padding:15px; border-radius:20px; } .brand { font-size:1.55rem; } .brand-mark { width:40px; height:40px; } .edition-card { min-width:0; } .watchlist-compact-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; } .scoreboard-grid, .market-card-grid { grid-template-columns:1fr; gap:8px; } .market-explorer-controls { align-items:stretch; } .market-explorer-left, .market-explorer-right, .market-explorer-search { width:100%; max-width:none; } .control-system-grid { grid-template-columns:1fr; } }
+    @media (max-width: 680px) { .app { width:min(100% - 18px, 1200px); padding-top:12px; padding-bottom:48px; } .masthead { padding:14px; border-radius:22px; } .utility-bar { align-items:flex-start; flex-direction:column; } .nav-wrap { top:0; padding:8px 0; } .nav { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); border-radius:22px; gap:6px; } .nav button { padding:9px 6px; font-size:.78rem; min-width:0; } .nav button i { font-size:1rem; } .form-grid, .step-row { grid-template-columns:1fr; } .panel, .paper-card { padding:15px; border-radius:20px; } .brand { font-size:1.55rem; } .brand-mark { width:40px; height:40px; } .edition-card { min-width:0; } .watchlist-compact-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; } .scoreboard-grid, .market-card-grid { grid-template-columns:1fr; gap:8px; } .market-explorer-controls { align-items:stretch; } .market-explorer-left, .market-explorer-right, .market-explorer-search { width:100%; max-width:none; } .control-system-grid, .persistence-grid { grid-template-columns:1fr; } }
   </style>
 </head>
 <body class="day">
   <div class="app">
     <header class="utility-bar">
       <div class="health-inline"><span class="dot" id="health-dot"></span><span id="health-text">กำลังเตรียม AlphaWeek...</span></div>
-      <div class="meta"><span id="app-version">index-alphaweek-v23-editorial-desk</span><button class="btn ghost" id="refresh-btn" type="button"><i class="ti ti-refresh"></i> Refresh</button><button class="btn ghost" id="refresh-prices-btn" type="button"><i class="ti ti-currency-baht"></i> Refresh Prices</button><button class="btn ghost" id="theme-btn" type="button"><i class="ti ti-sun"></i> Day</button></div>
+      <div class="meta"><span id="app-version">index-alphaweek-v24-data-persistence</span><button class="btn ghost" id="refresh-btn" type="button"><i class="ti ti-refresh"></i> Refresh</button><button class="btn ghost" id="refresh-prices-btn" type="button"><i class="ti ti-currency-baht"></i> Refresh Prices</button><button class="btn ghost" id="theme-btn" type="button"><i class="ti ti-sun"></i> Day</button></div>
     </header>
     <div class="runtime-error" id="runtime-error"></div>
 
@@ -400,11 +404,11 @@
               <label>Fetch Weekly URL<input id="fetch-weekly-url" value="https://alphaweek.vercel.app/api/fetch-weekly" spellcheck="false"></label>
               <label>PIN สำหรับเขียนบทความ/Watchlist<input id="local-pin" type="password" autocomplete="off" placeholder="เก็บเฉพาะในเครื่องนี้"></label>
               <label>Theme<select id="theme-select"><option value="day">Day / Light</option><option value="auto">Auto</option><option value="night">Night</option></select></label>
-              <label>Auto Refresh Prices on Open<select id="auto-refresh-prices"><option value="Y">Y — auto เมื่อเปิดเว็บ</option><option value="N">N — กดเองเท่านั้น</option></select></label>
+              <label>Auto Refresh Prices on Open<select id="auto-refresh-prices"><option value="Y">Y — auto เมื่อเปิดเว็บ</option><option value="N">N — กดเองเท่านั้น (แนะนำ)</option></select></label>
               <label>Auto Refresh Cooldown (minutes)<input id="price-refresh-cooldown" type="number" min="0" max="1440" step="1" value="15"></label>
             </div>
             <div class="meta"><button class="btn primary" id="save-settings-btn" type="button"><i class="ti ti-device-floppy"></i> Save Local Settings</button><button class="btn" id="restore-default-urls-btn" type="button"><i class="ti ti-rotate-clockwise"></i> Restore Default URLs</button><button class="btn" id="test-connection-btn" type="button"><i class="ti ti-plug-connected"></i> Test Connection</button><button class="btn primary" id="refresh-prices-control-btn" type="button"><i class="ti ti-currency-baht"></i> Refresh Prices Now</button></div>
-            <div class="alert good">Default URLs are embedded in this file. Refresh Prices is public and does not require PIN. PIN is still used for write actions such as articles/watchlist.</div><div id="settings-status"></div>
+            <div class="alert good">Default URLs are embedded. Refresh Prices uses merge-safe save and preserves symbols not included in the current batch. Auto Refresh is off by default in V24.</div><div id="settings-status"></div>
             <div id="price-refresh-status"></div>
 
             <div class="universe-refresh-box" id="universe-refresh-box">
@@ -430,6 +434,10 @@
               <div id="universe-refresh-progress" class="refresh-progress"></div>
             </div>
             <div class="connection-result" id="connection-result"></div>
+            <div class="section-title" style="margin-top:8px"><div><h3>Data Persistence Check</h3><span>ตรวจว่า Deploy และ Refresh ไม่ทำให้ข้อมูล Google Sheets ลดลง</span></div></div>
+            <div id="persistence-alert"></div>
+            <div class="persistence-grid" id="persistence-check"></div>
+            <div class="alert good" style="margin-top:10px">Source of truth: Google Sheets · Save mode: Merge / Upsert · Frontend is app shell only.</div>
             <div class="section-title" style="margin-top:8px"><div><h3>Quiet System Notes</h3><span>Health, data readiness และสถานะ refresh</span></div></div>
             <div class="control-system-grid" id="system-notes"></div>
           </section>
@@ -460,9 +468,9 @@
   <script>
   (function () {
     'use strict';
-    const APP_VERSION = 'index-alphaweek-v23-editorial-desk';
-    const STORAGE_KEY = 'alphaweek_config_v15';
-    const LEGACY_KEYS = ['alphaweek_config_v14', 'alphaweek_config_v13', 'alphaweek_config_v12', 'alphaweek_config_v11', 'alphaweek_config_v10', 'alphaweek_config_v09', 'alphaweek_config_v08', 'alphaweek_config_v07', 'alphaweek_config_v06', 'alphaweek_config_v05', 'alphaweek_config_v04', 'alphaweek_config_v03', 'alphaweek_config_v02', 'alphaweek_config_v01'];
+    const APP_VERSION = 'index-alphaweek-v24-data-persistence';
+    const STORAGE_KEY = 'alphaweek_config_v24';
+    const LEGACY_KEYS = ['alphaweek_config_v15', 'alphaweek_config_v14', 'alphaweek_config_v13', 'alphaweek_config_v12', 'alphaweek_config_v11', 'alphaweek_config_v10', 'alphaweek_config_v09', 'alphaweek_config_v08', 'alphaweek_config_v07', 'alphaweek_config_v06', 'alphaweek_config_v05', 'alphaweek_config_v04', 'alphaweek_config_v03', 'alphaweek_config_v02', 'alphaweek_config_v01'];
     const DEFAULT_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzh2PhvOrJu16P9ZLX192PEXUZqTHbp26P1y6TAXNUdO-3UCslhogZHBkoPnOcfx1SA/exec';
     const DEFAULT_HEALTH_URL = 'https://alphaweek.vercel.app/api/health';
     const DEFAULT_FETCH_WEEKLY_URL = 'https://alphaweek.vercel.app/api/fetch-weekly';
@@ -472,12 +480,12 @@
       fetchWeeklyUrl: DEFAULT_FETCH_WEEKLY_URL,
       pin: '',
       theme: 'day',
-      autoRefreshPricesOnOpen: true,
+      autoRefreshPricesOnOpen: false,
       priceRefreshCooldownMinutes: 15,
       lastPriceRefreshAt: '',
       templates: defaultTemplates()
     };
-    const state = { config: loadConfig(), health: null, dashboard: null, articles: [], allArticles: [], editingArticleId: null, activeTab: 'brief', scoreboardUniverse: 'watchlist', marketExplorer: { universe:'all', view:'table', query:'', sortKey:'score', sortDir:'desc', page:1, pageSize:20 }, priceRefresh: { running:false, lastResult:null, statusMessage:'', statusKind:'' }, universeRefresh: { running:false, cancelRequested:false, universe:'watchlist', batchSize:5, total:0, queue:[], originalQueue:[], currentBatch:[], completed:[], skipped:[], errors:[], startedAt:null, finishedAt:null } };
+    const state = { config: loadConfig(), health: null, dashboard: null, dashboardLoad: { ok:false, error:'', lastSuccessAt:'' }, articles: [], allArticles: [], editingArticleId: null, activeTab: 'brief', scoreboardUniverse: 'watchlist', marketExplorer: { universe:'all', view:'table', query:'', sortKey:'score', sortDir:'desc', page:1, pageSize:20 }, priceRefresh: { running:false, lastResult:null, statusMessage:'', statusKind:'' }, universeRefresh: { running:false, cancelRequested:false, universe:'watchlist', batchSize:5, total:0, queue:[], originalQueue:[], currentBatch:[], completed:[], skipped:[], errors:[], startedAt:null, finishedAt:null } };
     const $ = (sel) => document.querySelector(sel);
     const $$ = (sel) => Array.from(document.querySelectorAll(sel));
     function reportRuntimeError(message) {
@@ -489,10 +497,10 @@
     window.addEventListener('error', event => reportRuntimeError(`Runtime error: ${event.message || event.error || 'unknown'}`));
     window.addEventListener('unhandledrejection', event => reportRuntimeError(`Async error: ${event.reason && event.reason.message ? event.reason.message : event.reason}`));
     function runFrontendSelfCheck() {
-      const requiredIds = ['brief-alert','latest-article-home','signal-cards','news-list','market-table','market-cards','market-pagination','market-explorer-summary','market-universe-controls','market-view-controls','market-search','article-list','article-manager-list','apps-script-url','health-url','save-settings-btn','restore-default-urls-btn','test-connection-btn','refresh-prices-btn','refresh-prices-control-btn','fetch-weekly-url','auto-refresh-prices','price-refresh-cooldown','price-refresh-status','universe-refresh-universe','universe-refresh-batch-size','universe-refresh-start-btn','universe-refresh-stop-btn','universe-refresh-progress','watchlist-manager'];
+      const requiredIds = ['brief-alert','latest-article-home','signal-cards','news-list','market-table','market-cards','market-pagination','market-explorer-summary','market-universe-controls','market-view-controls','market-search','article-list','article-manager-list','apps-script-url','health-url','save-settings-btn','restore-default-urls-btn','test-connection-btn','refresh-prices-btn','refresh-prices-control-btn','fetch-weekly-url','auto-refresh-prices','price-refresh-cooldown','price-refresh-status','universe-refresh-universe','universe-refresh-batch-size','universe-refresh-start-btn','universe-refresh-stop-btn','universe-refresh-progress','watchlist-manager','persistence-check','persistence-alert'];
       const missingIds = requiredIds.filter(id => !document.getElementById(id));
-      const requiredFns = ['loadAll','loadDashboard','loadArticles','loadArticleManager','renderMarketDataExplorer','renderLatestArticle','lookupWatchlistRow','saveWatchlist','saveLocalSettings','restoreDefaultUrls','testConnection','refreshPrices','startUniverseRefresh','stopUniverseRefresh','buildUniverseRefreshQueue','renderUniverseRefreshProgress','maybeAutoRefreshPricesOnOpen','currentEffectiveTheme','bindSystemThemeListener'];
-      const available = { loadAll, loadDashboard, loadArticles, loadArticleManager, renderMarketDataExplorer, renderLatestArticle, lookupWatchlistRow, saveWatchlist, saveLocalSettings, restoreDefaultUrls, testConnection, refreshPrices, startUniverseRefresh, stopUniverseRefresh, buildUniverseRefreshQueue, renderUniverseRefreshProgress, maybeAutoRefreshPricesOnOpen, currentEffectiveTheme, bindSystemThemeListener };
+      const requiredFns = ['loadAll','loadDashboard','loadArticles','loadArticleManager','renderMarketDataExplorer','renderLatestArticle','lookupWatchlistRow','saveWatchlist','saveLocalSettings','restoreDefaultUrls','testConnection','refreshPrices','startUniverseRefresh','stopUniverseRefresh','buildUniverseRefreshQueue','renderUniverseRefreshProgress','maybeAutoRefreshPricesOnOpen','currentEffectiveTheme','bindSystemThemeListener','renderPersistenceCheck'];
+      const available = { loadAll, loadDashboard, loadArticles, loadArticleManager, renderMarketDataExplorer, renderLatestArticle, lookupWatchlistRow, saveWatchlist, saveLocalSettings, restoreDefaultUrls, testConnection, refreshPrices, startUniverseRefresh, stopUniverseRefresh, buildUniverseRefreshQueue, renderUniverseRefreshProgress, maybeAutoRefreshPricesOnOpen, currentEffectiveTheme, bindSystemThemeListener, renderPersistenceCheck };
       const missingFns = requiredFns.filter(name => typeof available[name] !== 'function');
       const result = { ok: missingIds.length === 0 && missingFns.length === 0, missingIds, missingFns, version: APP_VERSION };
       if (!result.ok) reportRuntimeError(`Frontend self-check failed\nMissing IDs: ${missingIds.join(', ') || '-'}\nMissing functions: ${missingFns.join(', ') || '-'}`);
@@ -553,8 +561,18 @@
       catch (err) { setHealth('bad', `Health error: ${err.message}`); renderAll(); }
     }
     async function loadDashboard(week) {
-      try { const json = await fetchJSON(appsScriptUrl('dashboard', week ? { week } : {})); if (!json.ok) throw new Error(json.error || 'dashboard response not ok'); state.dashboard = json.data || {}; renderAll(); hydrateWatchlistEditor(); }
-      catch (err) { $('#brief-alert').innerHTML = alertHtml('bad', `โหลด Dashboard ไม่สำเร็จ: ${escapeHTML(err.message)}`); renderAll(); }
+      try {
+        const json = await fetchJSON(appsScriptUrl('dashboard', week ? { week } : {}));
+        if (!json.ok) throw new Error(json.error || 'dashboard response not ok');
+        state.dashboard = json.data || {};
+        state.dashboardLoad = { ok:true, error:'', lastSuccessAt:new Date().toISOString() };
+        renderAll(); hydrateWatchlistEditor();
+      }
+      catch (err) {
+        state.dashboardLoad = { ok:false, error:String(err.message || err), lastSuccessAt:(state.dashboardLoad && state.dashboardLoad.lastSuccessAt) || '' };
+        $('#brief-alert').innerHTML = alertHtml('bad', `โหลด Dashboard ไม่สำเร็จ: ${escapeHTML(err.message)} · หน้าว่างไม่ได้หมายความว่าข้อมูลใน Google Sheets ถูกลบ`);
+        renderAll();
+      }
     }
     async function loadArticles() {
       try {
@@ -615,7 +633,7 @@
         </article>`;
       }).join('');
     }
-    function renderAll() { renderEdition(); renderBrief(); renderMarketDataExplorer(); renderNews(); renderArticles(); renderLatestArticle(); renderPromptPreview(); renderUniverseRefreshProgress(); }
+    function renderAll() { renderEdition(); renderBrief(); renderPersistenceCheck(); renderMarketDataExplorer(); renderNews(); renderArticles(); renderLatestArticle(); renderPromptPreview(); renderUniverseRefreshProgress(); }
     function renderEdition() {
       const d = state.dashboard || {}; const h = state.health || {}; const week = d.week_ending || h.latest_week || '';
       $('#edition-week').textContent = week ? formatBE(week) : '—';
@@ -645,6 +663,34 @@
       notes.push(note('Price Refresh', lastRefresh, state.priceRefresh.running ? 'warn' : 'good'));
       $('#system-notes').innerHTML = notes.join('');
     }
+    function renderPersistenceCheck() {
+      const box = $('#persistence-check');
+      const alertBox = $('#persistence-alert');
+      if (!box || !alertBox) return;
+      const d = state.dashboard || {};
+      const watchlist = (d.watchlist || []).filter(x => String(x.active || 'Y').toUpperCase() !== 'N' && x.symbol);
+      const members = d.index_members || [];
+      const set50 = members.filter(x => normalizeUniverseKey(x.index_name) === 'SET50' && String(x.active || 'Y').toUpperCase() !== 'N' && x.symbol);
+      const set100 = members.filter(x => normalizeUniverseKey(x.index_name) === 'SET100' && String(x.active || 'Y').toUpperCase() !== 'N' && x.symbol);
+      const weekly = normalizeRows(d.rows || []);
+      const loaded = !!(state.dashboardLoad && state.dashboardLoad.ok);
+      const checks = [
+        ['Watchlist', watchlist.length, loaded && watchlist.length > 0],
+        ['SET50', set50.length, loaded && set50.length >= 45],
+        ['SET100', set100.length, loaded && set100.length >= 90],
+        ['Weekly data', weekly.length, loaded && weekly.length > 0]
+      ];
+      box.innerHTML = checks.map(([label,value,ok]) => `<div class="persistence-card"><div class="muted">${escapeHTML(label)}</div><div class="persistence-value">${escapeHTML(value)}</div><span class="badge ${ok ? 'good' : 'warn'}">${ok ? 'OK' : 'Check'}</span></div>`).join('');
+      if (!loaded) {
+        alertBox.innerHTML = alertHtml('bad', `Dashboard load failed${state.dashboardLoad && state.dashboardLoad.error ? ': ' + escapeHTML(state.dashboardLoad.error) : ''}. Do not treat zero counts as deleted data.`);
+      } else if (!set50.length || !set100.length) {
+        alertBox.innerHTML = alertHtml('warn', 'index_members โหลดสำเร็จ แต่ SET50/SET100 เป็นศูนย์หรือน้อยผิดปกติ กรุณาตรวจ Google Sheet ก่อน Refresh/Deploy ต่อ');
+      } else {
+        const last = state.dashboardLoad.lastSuccessAt ? formatDateTime(state.dashboardLoad.lastSuccessAt) : '—';
+        alertBox.innerHTML = alertHtml('good', `Google Sheets loaded · Week ${escapeHTML(d.week_ending || '—')} · Last success ${escapeHTML(last)} · Save mode Merge/Upsert`);
+      }
+    }
+
     function normalizeStockKey(symbol) {
       return String(symbol || '').trim().toUpperCase().replace(/\.BK$/, '');
     }
@@ -1333,7 +1379,9 @@ ${newsMarkdown(news)}
         const r = json.result || {};
         const okCount = r.symbols_ok ?? '—';
         const failCount = Array.isArray(r.symbols_failed) ? r.symbols_failed.length : 0;
-        renderPriceRefreshStatus(`Refresh Prices สำเร็จ: ${json.mode || 'weekly'} · OK ${okCount} · Failed ${failCount} · ${formatDateTime(state.config.lastPriceRefreshAt)}`, failCount ? 'warn' : 'good');
+        const savedInfo = r.apps_script && r.apps_script.data ? r.apps_script.data : {};
+        const persistence = savedInfo.rows_after !== undefined ? ` · Rows ${savedInfo.rows_before}→${savedInfo.rows_after} · Preserved ${savedInfo.preserved_rows || 0}` : ' · Merge-safe';
+        renderPriceRefreshStatus(`Refresh Prices สำเร็จ: ${json.mode || 'weekly'} · OK ${okCount} · Failed ${failCount}${persistence} · ${formatDateTime(state.config.lastPriceRefreshAt)}`, failCount ? 'warn' : 'good');
         await loadAll();
         return true;
       } catch (err) {
@@ -1625,7 +1673,7 @@ ${newsMarkdown(news)}
         if (!raw) for (const k of LEGACY_KEYS) { raw = localStorage.getItem(k); if (raw) break; }
         const saved = JSON.parse(raw || '{}');
         const merged = normalizeConfig(mergeConfig(DEFAULT_CONFIG, saved));
-        if (!currentRaw && merged.theme === 'auto') merged.theme = 'day';
+        if (!currentRaw) { if (merged.theme === 'auto') merged.theme = 'day'; merged.autoRefreshPricesOnOpen = false; }
         localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
         return merged;
       } catch (err) {
