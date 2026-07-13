@@ -1,10 +1,10 @@
 /**
  * AlphaWeek — api/fetch-weekly.js
- * Version: v05-universe-refresh (bounded symbol batches)
+ * Version: v06-deploy-safe (merge-safe persistence guard)
  */
 'use strict';
 
-const API_VERSION = 'v05-universe-refresh';
+const API_VERSION = 'v06-deploy-safe';
 const YAHOO_BASE = 'https://query1.finance.yahoo.com/v8/finance/chart/';
 const SET_INDEX = { symbol: 'SET', yahoo: '^SET.BK' };
 const FETCH_TIMEOUT_MS = 15000;
@@ -108,11 +108,12 @@ async function runWeekly() {
 
   const existingNews = await getExistingNews(weekEnding);
   const saved = await postToAppsScript({
-    action: 'saveWeekly',
+    action: 'saveWeeklyMerge',
     pin: process.env.ALPHAWEEK_PIN,
     week_ending: weekEnding,
     rows,
-    news: existingNews
+    news: existingNews,
+    meta: { source: 'weekly-refresh', api_version: API_VERSION }
   });
   const saveOk = !!(saved && saved.ok);
 
@@ -125,9 +126,11 @@ async function runWeekly() {
     symbols_ok_symbols: rows.map((r) => r.symbol),
     symbols_failed: errors,
     news_preserved: existingNews.length,
+    save_mode: 'merge',
     sources: countBy(rows, 'source'),
+    save_mode: 'merge',
     save_ok: saveOk,
-    error: saveOk ? undefined : 'apps script saveWeekly failed: ' + String((saved && (saved.error || JSON.stringify(saved))) || 'empty response'),
+    error: saveOk ? undefined : 'apps script saveWeeklyMerge failed: ' + String((saved && (saved.error || JSON.stringify(saved))) || 'empty response'),
     apps_script: saved
   };
 }
