@@ -187,7 +187,7 @@
   <div class="app">
     <header class="utility-bar">
       <div class="health-inline"><span class="dot" id="health-dot"></span><span id="health-text">กำลังเตรียม AlphaWeek...</span></div>
-      <div class="meta"><span id="app-version">index-alphaweek-v17-clean</span><button class="btn ghost" id="refresh-btn" type="button"><i class="ti ti-refresh"></i> Refresh</button><button class="btn ghost" id="refresh-prices-btn" type="button"><i class="ti ti-currency-baht"></i> Refresh Prices</button><button class="btn ghost" id="theme-btn" type="button"><i class="ti ti-sun"></i> Day</button></div>
+      <div class="meta"><span id="app-version">index-alphaweek-v18-status-theme</span><button class="btn ghost" id="refresh-btn" type="button"><i class="ti ti-refresh"></i> Refresh</button><button class="btn ghost" id="refresh-prices-btn" type="button"><i class="ti ti-currency-baht"></i> Refresh Prices</button><button class="btn ghost" id="theme-btn" type="button"><i class="ti ti-sun"></i> Day</button></div>
     </header>
     <div class="runtime-error" id="runtime-error"></div>
 
@@ -359,9 +359,9 @@
   <script>
   (function () {
     'use strict';
-    const APP_VERSION = 'index-alphaweek-v17-clean';
-    const STORAGE_KEY = 'alphaweek_config_v13';
-    const LEGACY_KEYS = ['alphaweek_config_v12', 'alphaweek_config_v11', 'alphaweek_config_v10', 'alphaweek_config_v09', 'alphaweek_config_v08', 'alphaweek_config_v07', 'alphaweek_config_v06', 'alphaweek_config_v05', 'alphaweek_config_v04', 'alphaweek_config_v03', 'alphaweek_config_v02', 'alphaweek_config_v01'];
+    const APP_VERSION = 'index-alphaweek-v18-status-theme';
+    const STORAGE_KEY = 'alphaweek_config_v14';
+    const LEGACY_KEYS = ['alphaweek_config_v13', 'alphaweek_config_v12', 'alphaweek_config_v11', 'alphaweek_config_v10', 'alphaweek_config_v09', 'alphaweek_config_v08', 'alphaweek_config_v07', 'alphaweek_config_v06', 'alphaweek_config_v05', 'alphaweek_config_v04', 'alphaweek_config_v03', 'alphaweek_config_v02', 'alphaweek_config_v01'];
     const DEFAULT_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzh2PhvOrJu16P9ZLX192PEXUZqTHbp26P1y6TAXNUdO-3UCslhogZHBkoPnOcfx1SA/exec';
     const DEFAULT_HEALTH_URL = 'https://alphaweek.vercel.app/api/health';
     const DEFAULT_FETCH_WEEKLY_URL = 'https://alphaweek.vercel.app/api/fetch-weekly';
@@ -376,7 +376,7 @@
       lastPriceRefreshAt: '',
       templates: defaultTemplates()
     };
-    const state = { config: loadConfig(), health: null, dashboard: null, articles: [], allArticles: [], editingArticleId: null, activeTab: 'brief', priceRefresh: { running:false, lastResult:null } };
+    const state = { config: loadConfig(), health: null, dashboard: null, articles: [], allArticles: [], editingArticleId: null, activeTab: 'brief', priceRefresh: { running:false, lastResult:null, statusMessage:'', statusKind:'' } };
     const $ = (sel) => document.querySelector(sel);
     const $$ = (sel) => Array.from(document.querySelectorAll(sel));
     function reportRuntimeError(message) {
@@ -390,8 +390,8 @@
     function runFrontendSelfCheck() {
       const requiredIds = ['brief-alert','watchlist-coverage','latest-article-home','signal-cards','news-list','market-table','article-list','article-manager-list','apps-script-url','health-url','save-settings-btn','restore-default-urls-btn','test-connection-btn','refresh-prices-btn','refresh-prices-control-btn','fetch-weekly-url','auto-refresh-prices','price-refresh-cooldown','price-refresh-status','watchlist-manager'];
       const missingIds = requiredIds.filter(id => !document.getElementById(id));
-      const requiredFns = ['loadAll','loadDashboard','loadArticles','loadArticleManager','renderWatchlistCoverage','renderLatestArticle','lookupWatchlistRow','saveWatchlist','saveLocalSettings','restoreDefaultUrls','testConnection','refreshPrices','maybeAutoRefreshPricesOnOpen'];
-      const available = { loadAll, loadDashboard, loadArticles, loadArticleManager, renderWatchlistCoverage, renderLatestArticle, lookupWatchlistRow, saveWatchlist, saveLocalSettings, restoreDefaultUrls, testConnection, refreshPrices, maybeAutoRefreshPricesOnOpen };
+      const requiredFns = ['loadAll','loadDashboard','loadArticles','loadArticleManager','renderWatchlistCoverage','renderLatestArticle','lookupWatchlistRow','saveWatchlist','saveLocalSettings','restoreDefaultUrls','testConnection','refreshPrices','maybeAutoRefreshPricesOnOpen','currentEffectiveTheme','bindSystemThemeListener'];
+      const available = { loadAll, loadDashboard, loadArticles, loadArticleManager, renderWatchlistCoverage, renderLatestArticle, lookupWatchlistRow, saveWatchlist, saveLocalSettings, restoreDefaultUrls, testConnection, refreshPrices, maybeAutoRefreshPricesOnOpen, currentEffectiveTheme, bindSystemThemeListener };
       const missingFns = requiredFns.filter(name => typeof available[name] !== 'function');
       const result = { ok: missingIds.length === 0 && missingFns.length === 0, missingIds, missingFns, version: APP_VERSION };
       if (!result.ok) reportRuntimeError(`Frontend self-check failed\nMissing IDs: ${missingIds.join(', ') || '-'}\nMissing functions: ${missingFns.join(', ') || '-'}`);
@@ -400,7 +400,7 @@
     window.AlphaWeekSelfCheck = runFrontendSelfCheck;
     document.addEventListener('DOMContentLoaded', init);
 
-    function init() { if ($('#app-version')) $('#app-version').textContent = APP_VERSION; applyTheme(); bindEvents(); hydrateSettings(); const check = runFrontendSelfCheck(); if (check.ok) { const box = $('#runtime-error'); if (box) { box.classList.remove('show'); box.textContent = ''; } } loadAll().then(() => maybeAutoRefreshPricesOnOpen()); }
+    function init() { if ($('#app-version')) $('#app-version').textContent = APP_VERSION; applyTheme(); bindSystemThemeListener(); bindEvents(); hydrateSettings(); const check = runFrontendSelfCheck(); if (check.ok) { const box = $('#runtime-error'); if (box) { box.classList.remove('show'); box.textContent = ''; } } loadAll().then(() => maybeAutoRefreshPricesOnOpen()); }
     function safeBind(selector, event, handler) { const el = $(selector); if (el) el.addEventListener(event, handler); }
     function bindEvents() {
       $$('[data-tab]').forEach(btn => btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
@@ -532,6 +532,7 @@
       notes.push(note('Apps Script Dashboard', rows.length ? 'มีข้อมูลล่าสุด' : 'ยังไม่พบ rows', rows.length ? 'good' : 'warn'));
       if (missingSet) notes.push(note('SET Index', 'Yahoo ไม่มี bar ในสัปดาห์ล่าสุด — ไม่ block งานเขียน', 'warn'));
       notes.push(note('Security', 'Refresh Prices เป็น public endpoint; PIN ไม่ฝังในไฟล์และใช้เฉพาะ write actions', 'good'));
+      notes.push(note('Theme', state.config.theme === 'auto' ? `Auto · ${currentEffectiveTheme() === 'night' ? 'Night' : 'Day'} ตามโหมดเครื่อง` : `${state.config.theme === 'night' ? 'Night' : 'Day'} manual`, 'good'));
       const lastRefresh = state.config.lastPriceRefreshAt ? formatDateTime(state.config.lastPriceRefreshAt) : 'ยังไม่เคย refresh price จากหน้าเว็บนี้';
       notes.push(note('Price Refresh', lastRefresh, state.priceRefresh.running ? 'warn' : 'good'));
       $('#system-notes').innerHTML = notes.join('');
@@ -770,10 +771,16 @@
     function renderPriceRefreshStatus(message, kind) {
       const box = $('#price-refresh-status');
       if (!box) return;
-      const last = state.config.lastPriceRefreshAt ? formatDateTime(state.config.lastPriceRefreshAt) : 'ยังไม่เคย refresh price จากหน้าเว็บนี้';
       const running = state.priceRefresh && state.priceRefresh.running;
-      const status = message || (running ? 'กำลัง refresh ราคาหุ้น...' : `Last price refresh: ${last}`);
-      box.innerHTML = alertHtml(kind || (running ? 'warn' : ''), status);
+      if (message) {
+        state.priceRefresh.statusMessage = message;
+        state.priceRefresh.statusKind = kind || '';
+      }
+      const last = state.config.lastPriceRefreshAt ? formatDateTime(state.config.lastPriceRefreshAt) : 'ยังไม่เคย refresh price จากหน้าเว็บนี้';
+      const fallback = running ? 'กำลัง refresh ราคาหุ้น...' : `Last price refresh: ${last}`;
+      const status = message || state.priceRefresh.statusMessage || fallback;
+      const statusKind = kind || state.priceRefresh.statusKind || (running ? 'warn' : '');
+      box.innerHTML = alertHtml(statusKind, status);
     }
     async function refreshPrices(options = {}) {
       const source = options.source || 'manual';
@@ -816,7 +823,7 @@
         return false;
       } finally {
         state.priceRefresh.running = false;
-        renderPriceRefreshStatus();
+        renderPriceRefreshStatus(state.priceRefresh.statusMessage, state.priceRefresh.statusKind);
         renderBrief();
       }
     }
@@ -911,7 +918,34 @@
     function resetTemplates() { state.config.templates = defaultTemplates(); hydrateTemplateEditors(); saveConfigLocal(); renderPromptPreview(); $('#config-status').innerHTML = alertHtml('good','Reset templates แล้ว'); }
     function switchTab(tab) { state.activeTab = tab; $$('.tab').forEach(el => el.classList.toggle('active', el.id === `tab-${tab}`)); $$('[data-tab]').forEach(btn => btn.classList.toggle('active', btn.dataset.tab === tab)); if (tab === 'write') renderPromptPreview(); }
     function cycleTheme() { const order = ['day','auto','night']; const current = order.includes(state.config.theme) ? state.config.theme : 'day'; state.config.theme = order[(order.indexOf(current)+1)%order.length]; saveConfigLocal(); applyTheme(); hydrateSettings(); }
-    function applyTheme() { document.body.classList.remove('auto-theme','day','night'); if (state.config.theme === 'night') document.body.classList.add('night'); else if (state.config.theme === 'auto') document.body.classList.add('auto-theme'); else document.body.classList.add('day'); const label = state.config.theme === 'night' ? 'Night' : state.config.theme === 'auto' ? 'Auto' : 'Day'; const icon = state.config.theme === 'night' ? 'ti-moon' : state.config.theme === 'auto' ? 'ti-device-desktop' : 'ti-sun'; if ($('#theme-btn')) $('#theme-btn').innerHTML = `<i class="ti ${icon}"></i> ${label}`; if ($('#theme-select')) $('#theme-select').value = state.config.theme || 'day'; }
+    function currentEffectiveTheme() {
+      if (state.config.theme === 'auto') {
+        return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'night' : 'day';
+      }
+      return state.config.theme === 'night' ? 'night' : 'day';
+    }
+    function bindSystemThemeListener() {
+      if (!window.matchMedia) return;
+      const mq = window.matchMedia('(prefers-color-scheme: dark)');
+      const handler = () => {
+        if (state.config.theme === 'auto') {
+          applyTheme();
+          renderBrief();
+        }
+      };
+      if (mq.addEventListener) mq.addEventListener('change', handler);
+      else if (mq.addListener) mq.addListener(handler);
+    }
+    function applyTheme() {
+      const effective = currentEffectiveTheme();
+      document.body.classList.remove('auto-theme','day','night');
+      document.body.classList.add(effective);
+      if (state.config.theme === 'auto') document.body.classList.add('auto-theme');
+      const label = state.config.theme === 'auto' ? `Auto · ${effective === 'night' ? 'Night' : 'Day'}` : (effective === 'night' ? 'Night' : 'Day');
+      const icon = state.config.theme === 'auto' ? 'ti-device-desktop' : (effective === 'night' ? 'ti-moon' : 'ti-sun');
+      if ($('#theme-btn')) $('#theme-btn').innerHTML = `<i class="ti ${icon}"></i> ${label}`;
+      if ($('#theme-select')) $('#theme-select').value = state.config.theme || 'day';
+    }
     function setHealth(kind, text) { const dot = $('#health-dot'); dot.classList.remove('ok','bad'); if (kind === 'ok') dot.classList.add('ok'); if (kind === 'bad') dot.classList.add('bad'); $('#health-text').textContent = text; }
     function appsScriptUrl(action, params = {}) { const base = cleanUrl(state.config.appsScriptUrl, DEFAULT_APPS_SCRIPT_URL).replace(/\?+$/, ''); const url = new URL(base); url.searchParams.set('action', action); Object.keys(params).forEach(k => { if (params[k] !== undefined && params[k] !== null && params[k] !== '') url.searchParams.set(k, params[k]); }); return url.toString(); }
     async function postJSON(action, payload) { return fetchJSON(cleanUrl(state.config.appsScriptUrl, DEFAULT_APPS_SCRIPT_URL), { method:'POST', headers:{ 'Content-Type':'text/plain;charset=utf-8' }, body: JSON.stringify(Object.assign({}, payload, { action, pin: state.config.pin })), redirect:'follow' }); }
