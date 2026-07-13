@@ -164,26 +164,8 @@
     .watch-status { font-size:.68rem; padding:5px 7px; }
     .watch-metrics { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:5px 8px; font-size:.76rem; color:var(--muted); }
     .watch-metrics strong { color:var(--ink); }
-    .watch-jitta { border-top:1px solid var(--line); padding-top:8px; display:grid; gap:6px; font-size:.76rem; color:var(--muted); }
-    .watch-jitta-main { display:flex; flex-wrap:wrap; align-items:center; gap:5px; }
-    .watch-jitta-main strong { color:var(--ink); }
-    .watch-jitta-main .jitta-chip { display:inline-flex; align-items:center; gap:4px; border:1px solid var(--line); border-radius:999px; padding:4px 7px; background:rgba(255,255,255,.34); font-weight:800; color:var(--muted); }
-    body.night .watch-jitta-main .jitta-chip { background:rgba(255,255,255,.04); }
-    .watch-jitta-meta { display:flex; flex-wrap:wrap; align-items:center; gap:6px; font-size:.72rem; }
-    .watch-jitta a { font-weight:800; }
-    .watch-jitta-missing { color:var(--soft); }
-    .jitta-workflow-panel { background:linear-gradient(135deg, rgba(219,95,142,.10), rgba(184,127,182,.08)); }
-    body.night .jitta-workflow-panel { background:linear-gradient(135deg, rgba(219,95,142,.10), rgba(255,255,255,.03)); }
-    .jitta-workflow-grid { display:grid; grid-template-columns:1.1fr .9fr; gap:12px; align-items:start; }
-    .jitta-step-list { display:grid; gap:8px; margin:0; padding:0; list-style:none; }
-    .jitta-step-list li { border:1px solid var(--line); border-radius:16px; background:rgba(255,255,255,.32); padding:10px 12px; display:grid; gap:2px; }
-    body.night .jitta-step-list li { background:rgba(255,255,255,.04); }
-    .jitta-step-list strong { color:var(--ink); }
-    .jitta-template-box { min-height:160px; font-family:var(--mono); font-size:.78rem; line-height:1.55; white-space:pre; overflow:auto; }
-    .jitta-missing-list { display:flex; flex-wrap:wrap; gap:6px; }
-    .jitta-missing-list .badge { font-size:.78rem; }
     .control-system-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
-    @media (max-width: 940px) { .masthead-inner, .layout-main, .cols-2, .cols-3, .cols-4, .jitta-workflow-grid { grid-template-columns:1fr; } .step-row { grid-template-columns:1fr 1fr; } .watchlist-compact-grid { grid-template-columns:repeat(3,minmax(0,1fr)); } }
+    @media (max-width: 940px) { .masthead-inner, .layout-main, .cols-2, .cols-3, .cols-4 { grid-template-columns:1fr; } .step-row { grid-template-columns:1fr 1fr; } .watchlist-compact-grid { grid-template-columns:repeat(3,minmax(0,1fr)); } }
 
     .manager-list { display:grid; gap:10px; }
     .manager-card { border:1px solid var(--line); border-radius:18px; background:rgba(255,255,255,.32); padding:14px; display:grid; gap:10px; }
@@ -205,7 +187,7 @@
   <div class="app">
     <header class="utility-bar">
       <div class="health-inline"><span class="dot" id="health-dot"></span><span id="health-text">กำลังเตรียม AlphaWeek...</span></div>
-      <div class="meta"><span id="app-version">index-alphaweek-v15-jitta-display</span><button class="btn ghost" id="refresh-btn" type="button"><i class="ti ti-refresh"></i> Refresh</button><button class="btn ghost" id="refresh-prices-btn" type="button"><i class="ti ti-currency-baht"></i> Refresh Prices</button><button class="btn ghost" id="theme-btn" type="button"><i class="ti ti-sun"></i> Day</button></div>
+      <div class="meta"><span id="app-version">index-alphaweek-v17-clean</span><button class="btn ghost" id="refresh-btn" type="button"><i class="ti ti-refresh"></i> Refresh</button><button class="btn ghost" id="refresh-prices-btn" type="button"><i class="ti ti-currency-baht"></i> Refresh Prices</button><button class="btn ghost" id="theme-btn" type="button"><i class="ti ti-sun"></i> Day</button></div>
     </header>
     <div class="runtime-error" id="runtime-error"></div>
 
@@ -254,7 +236,7 @@
 
         <section class="panel section" id="watchlist-coverage-section">
           <div class="section-title">
-            <div><h2>Watchlist Coverage</h2><span>Compact view สำหรับดูหุ้นหลายตัวพร้อม Jitta manual context</span></div>
+            <div><h2>Watchlist Coverage</h2><span>Compact view สำหรับดูหุ้นหลายตัวพร้อมกัน</span></div>
             <button type="button" class="btn" id="open-watchlist-manager-btn"><i class="ti ti-list-details"></i> Manage Watchlist</button>
           </div>
           <div id="watchlist-coverage"></div>
@@ -350,31 +332,6 @@
             <div class="section-title" style="margin-top:8px"><div><h3>Quiet System Notes</h3><span>Health, data readiness และสถานะ refresh</span></div></div>
             <div class="control-system-grid" id="system-notes"></div>
           </section>
-          <section class="panel control-section jitta-workflow-panel">
-            <div class="section-title">
-              <div><h2>Jitta Manual Update</h2><span>Workflow สำหรับกรอกเลข Jitta เองใน Google Sheet tab <code>jitta_data</code></span></div>
-              <a class="btn" href="https://docs.google.com/spreadsheets/d/1YTGvuzj_Z5VLeXUdL22_wJQVDdqPJV4FYsk9nVAZsWU/edit#gid=1804121201" target="_blank" rel="noopener noreferrer"><i class="ti ti-table"></i> Open jitta_data</a>
-            </div>
-            <div id="jitta-workflow-status"></div>
-            <div class="jitta-workflow-grid">
-              <div>
-                <ul class="jitta-step-list">
-                  <li><strong>1. เปิด Google Sheet tab jitta_data</strong><span class="muted">ใส่ ticker แบบ base symbol เช่น AOT, PTT, KBANK — ไม่ต้องใส่ .BK</span></li>
-                  <li><strong>2. กรอกเลขแบบ manual</strong><span class="muted">Rank, Score, Line, Gap และวันที่อัปเดตจากบัญชี/หน้า Jitta ของคุณเอง</span></li>
-                  <li><strong>3. Refresh หน้าเว็บ</strong><span class="muted">ตัวเลขจะแสดงใน Brief > Watchlist Coverage ถ้า symbol ตรงกับ watchlist</span></li>
-                </ul>
-                <div class="meta" style="margin-top:12px">
-                  <button class="btn" id="copy-jitta-header-btn" type="button"><i class="ti ti-copy"></i> Copy Header</button>
-                  <button class="btn" id="copy-jitta-active-template-btn" type="button"><i class="ti ti-list"></i> Copy Active Template</button>
-                  <button class="btn primary" id="copy-jitta-missing-template-btn" type="button"><i class="ti ti-database-plus"></i> Copy Missing Template</button>
-                </div>
-              </div>
-              <div>
-                <label>Paste-ready rows<textarea id="jitta-template-preview" class="jitta-template-box" readonly></textarea></label>
-                <div class="muted" style="font-size:.84rem;margin-top:8px">คัดลอกแล้วนำไป paste ใน Google Sheet ได้โดยตรง ระบบไม่ scrape หรือดึงข้อมูล Jitta อัตโนมัติ</div>
-              </div>
-            </div>
-          </section>
           <section class="panel control-section">
             <div class="section-title"><div><h2>Writing Templates</h2><span>Prompt templates เก็บในเครื่องและบันทึกลง Sheets ได้</span></div></div>
             <label>Weekly<textarea id="template-weekly"></textarea></label>
@@ -402,9 +359,9 @@
   <script>
   (function () {
     'use strict';
-    const APP_VERSION = 'index-alphaweek-v16-jitta-workflow';
-    const STORAGE_KEY = 'alphaweek_config_v16';
-    const LEGACY_KEYS = ['alphaweek_config_v15', 'alphaweek_config_v14', 'alphaweek_config_v13', 'alphaweek_config_v12', 'alphaweek_config_v11', 'alphaweek_config_v10', 'alphaweek_config_v09', 'alphaweek_config_v08', 'alphaweek_config_v07', 'alphaweek_config_v06', 'alphaweek_config_v05', 'alphaweek_config_v04', 'alphaweek_config_v03', 'alphaweek_config_v02', 'alphaweek_config_v01'];
+    const APP_VERSION = 'index-alphaweek-v17-clean';
+    const STORAGE_KEY = 'alphaweek_config_v13';
+    const LEGACY_KEYS = ['alphaweek_config_v12', 'alphaweek_config_v11', 'alphaweek_config_v10', 'alphaweek_config_v09', 'alphaweek_config_v08', 'alphaweek_config_v07', 'alphaweek_config_v06', 'alphaweek_config_v05', 'alphaweek_config_v04', 'alphaweek_config_v03', 'alphaweek_config_v02', 'alphaweek_config_v01'];
     const DEFAULT_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzh2PhvOrJu16P9ZLX192PEXUZqTHbp26P1y6TAXNUdO-3UCslhogZHBkoPnOcfx1SA/exec';
     const DEFAULT_HEALTH_URL = 'https://alphaweek.vercel.app/api/health';
     const DEFAULT_FETCH_WEEKLY_URL = 'https://alphaweek.vercel.app/api/fetch-weekly';
@@ -431,10 +388,10 @@
     window.addEventListener('error', event => reportRuntimeError(`Runtime error: ${event.message || event.error || 'unknown'}`));
     window.addEventListener('unhandledrejection', event => reportRuntimeError(`Async error: ${event.reason && event.reason.message ? event.reason.message : event.reason}`));
     function runFrontendSelfCheck() {
-      const requiredIds = ['brief-alert','watchlist-coverage','latest-article-home','signal-cards','news-list','market-table','article-list','article-manager-list','apps-script-url','health-url','save-settings-btn','restore-default-urls-btn','test-connection-btn','refresh-prices-btn','refresh-prices-control-btn','fetch-weekly-url','auto-refresh-prices','price-refresh-cooldown','price-refresh-status','watchlist-manager','jitta-workflow-status','jitta-template-preview','copy-jitta-header-btn','copy-jitta-active-template-btn','copy-jitta-missing-template-btn'];
+      const requiredIds = ['brief-alert','watchlist-coverage','latest-article-home','signal-cards','news-list','market-table','article-list','article-manager-list','apps-script-url','health-url','save-settings-btn','restore-default-urls-btn','test-connection-btn','refresh-prices-btn','refresh-prices-control-btn','fetch-weekly-url','auto-refresh-prices','price-refresh-cooldown','price-refresh-status','watchlist-manager'];
       const missingIds = requiredIds.filter(id => !document.getElementById(id));
-      const requiredFns = ['loadAll','loadDashboard','loadArticles','loadArticleManager','renderWatchlistCoverage','renderLatestArticle','lookupWatchlistRow','saveWatchlist','saveLocalSettings','restoreDefaultUrls','testConnection','refreshPrices','maybeAutoRefreshPricesOnOpen','renderJittaWorkflow','copyJittaTemplate'];
-      const available = { loadAll, loadDashboard, loadArticles, loadArticleManager, renderWatchlistCoverage, renderLatestArticle, lookupWatchlistRow, saveWatchlist, saveLocalSettings, restoreDefaultUrls, testConnection, refreshPrices, maybeAutoRefreshPricesOnOpen, renderJittaWorkflow, copyJittaTemplate };
+      const requiredFns = ['loadAll','loadDashboard','loadArticles','loadArticleManager','renderWatchlistCoverage','renderLatestArticle','lookupWatchlistRow','saveWatchlist','saveLocalSettings','restoreDefaultUrls','testConnection','refreshPrices','maybeAutoRefreshPricesOnOpen'];
+      const available = { loadAll, loadDashboard, loadArticles, loadArticleManager, renderWatchlistCoverage, renderLatestArticle, lookupWatchlistRow, saveWatchlist, saveLocalSettings, restoreDefaultUrls, testConnection, refreshPrices, maybeAutoRefreshPricesOnOpen };
       const missingFns = requiredFns.filter(name => typeof available[name] !== 'function');
       const result = { ok: missingIds.length === 0 && missingFns.length === 0, missingIds, missingFns, version: APP_VERSION };
       if (!result.ok) reportRuntimeError(`Frontend self-check failed\nMissing IDs: ${missingIds.join(', ') || '-'}\nMissing functions: ${missingFns.join(', ') || '-'}`);
@@ -477,9 +434,6 @@
       safeBind('#save-watchlist-btn', 'click', saveWatchlist);
       safeBind('#add-stock-row-btn', 'click', () => addWatchlistRow({ active:'Y' }));
       safeBind('#lookup-all-stocks-btn', 'click', lookupAllWatchlistRows);
-      safeBind('#copy-jitta-header-btn', 'click', () => copyJittaTemplate('header'));
-      safeBind('#copy-jitta-active-template-btn', 'click', () => copyJittaTemplate('active'));
-      safeBind('#copy-jitta-missing-template-btn', 'click', () => copyJittaTemplate('missing'));
       safeBind('#watchlist-manager', 'click', handleWatchlistAction);
       safeBind('#watchlist-manager', 'change', handleWatchlistChange);
       safeBind('#watchlist-manager', 'input', syncWatchlistTextFromManager);
@@ -553,7 +507,7 @@
         </article>`;
       }).join('');
     }
-    function renderAll() { renderEdition(); renderBrief(); renderWatchlistCoverage(); renderJittaWorkflow(); renderSignals(); renderNews(); renderMarketTable(); renderArticles(); renderLatestArticle(); renderPromptPreview(); }
+    function renderAll() { renderEdition(); renderBrief(); renderWatchlistCoverage(); renderSignals(); renderNews(); renderMarketTable(); renderArticles(); renderLatestArticle(); renderPromptPreview(); }
     function renderEdition() {
       const d = state.dashboard || {}; const h = state.health || {}; const week = d.week_ending || h.latest_week || '';
       $('#edition-week').textContent = week ? formatBE(week) : '—';
@@ -567,12 +521,10 @@
       const missingSet = h.symbols === 7 || rows.every(r => r.symbol !== 'SET');
       $('#lead-title').textContent = rows.length ? `สัปดาห์นี้พร้อมเขียนบทวิเคราะห์แล้ว` : 'ยังรอข้อมูลสำหรับสัปดาห์ล่าสุด';
       $('#lead-copy').textContent = rows.length ? `ข้อมูลสัปดาห์สิ้นสุด ${formatBE(week) || week} พร้อมใช้เป็น brief สำหรับเขียนบทวิเคราะห์: มีข้อมูลหุ้น ${rows.length} ตัว ข่าวประกอบ ${news.length || h.news_count || 0} ข่าว และระบบบันทึกลง Sheets แล้ว` : 'เมื่อ backend มีข้อมูลล่าสุด หน้านี้จะสรุปตลาด หุ้นที่เคลื่อนไหวเด่น ข่าวประกอบ และเตรียม prompt สำหรับนำไปเขียนกับ AI';
-      const jittaCount = countJittaSymbols(d);
       $('#brief-badges').innerHTML = [
         badge(`${formatBE(week) || 'ยังไม่มีสัปดาห์'}`, 'ti-calendar'),
         badge(`${rows.length || h.symbols || 0} symbols`, 'ti-chart-bar'),
         badge(`${news.length || h.news_count || 0} news`, 'ti-news'),
-        badge(`${jittaCount} Jitta`, 'ti-database', jittaCount ? 'good' : 'warn'),
         badge(missingSet ? 'SET index note' : 'SET included', missingSet ? 'ti-alert-triangle' : 'ti-check', missingSet ? 'warn' : 'good')
       ].join('');
       const notes = [];
@@ -582,7 +534,6 @@
       notes.push(note('Security', 'Refresh Prices เป็น public endpoint; PIN ไม่ฝังในไฟล์และใช้เฉพาะ write actions', 'good'));
       const lastRefresh = state.config.lastPriceRefreshAt ? formatDateTime(state.config.lastPriceRefreshAt) : 'ยังไม่เคย refresh price จากหน้าเว็บนี้';
       notes.push(note('Price Refresh', lastRefresh, state.priceRefresh.running ? 'warn' : 'good'));
-      notes.push(note('Jitta Manual Data', `${countJittaSymbols(d)} symbols available`, countJittaSymbols(d) ? 'good' : 'warn'));
       $('#system-notes').innerHTML = notes.join('');
     }
     function normalizeStockKey(symbol) {
@@ -592,48 +543,6 @@
       const wl = (state.dashboard && state.dashboard.watchlist) || [];
       return wl.filter(w => String(w.active || 'Y').toUpperCase() !== 'N' && w.symbol);
     }
-    function buildJittaMap(d) {
-      const out = {};
-      const bySymbol = d && d.jitta_by_symbol;
-      if (bySymbol && typeof bySymbol === 'object' && !Array.isArray(bySymbol)) {
-        Object.keys(bySymbol).forEach(symbol => {
-          const key = normalizeStockKey(symbol);
-          if (key) out[key] = bySymbol[symbol] || {};
-        });
-      }
-      const rows = Array.isArray(d && d.jitta_data) ? d.jitta_data : [];
-      rows.forEach(row => {
-        const key = normalizeStockKey(row && row.symbol);
-        if (key) out[key] = row || {};
-      });
-      return out;
-    }
-    function countJittaSymbols(d) {
-      const map = buildJittaMap(d || {});
-      return Object.keys(map).filter(key => hasJittaData(map[key])).length;
-    }
-    function hasJittaData(row) {
-      if (!row) return false;
-      return ['jitta_rank','jitta_score','jitta_line','jitta_gap_pct','jitta_updated_at','jitta_url'].some(k => String(row[k] ?? '').trim() !== '');
-    }
-    function jittaHtml(row) {
-      if (!hasJittaData(row)) return '<div class="watch-jitta watch-jitta-missing"><div class="watch-jitta-main"><strong>Jitta</strong><span>—</span></div></div>';
-      const chips = [];
-      if (notBlank(row.jitta_rank)) chips.push(`<span class="jitta-chip">Rank #${escapeHTML(cleanJittaValue(row.jitta_rank))}</span>`);
-      if (notBlank(row.jitta_score)) chips.push(`<span class="jitta-chip">Score ${escapeHTML(cleanJittaValue(row.jitta_score))}</span>`);
-      if (notBlank(row.jitta_line)) chips.push(`<span class="jitta-chip">Line ${fmtNumber(row.jitta_line)}</span>`);
-      if (notBlank(row.jitta_gap_pct)) chips.push(`<span class="jitta-chip">Gap ${fmtPct(row.jitta_gap_pct)}</span>`);
-      const meta = [];
-      if (notBlank(row.jitta_updated_at)) meta.push(`Updated: ${escapeHTML(formatBE(row.jitta_updated_at) || row.jitta_updated_at)}`);
-      if (isSafeHttpUrl(row.jitta_url)) meta.push(`<a href="${escapeAttr(row.jitta_url)}" target="_blank" rel="noopener noreferrer">Open in Jitta</a>`);
-      return `<div class="watch-jitta">
-        <div class="watch-jitta-main"><strong>Jitta</strong>${chips.join('') || '<span>—</span>'}</div>
-        ${meta.length ? `<div class="watch-jitta-meta">${meta.join('<span>·</span>')}</div>` : ''}
-      </div>`;
-    }
-    function notBlank(v) { return String(v ?? '').trim() !== ''; }
-    function cleanJittaValue(v) { return String(v ?? '').trim(); }
-    function isSafeHttpUrl(v) { return /^https?:\/\//i.test(String(v || '').trim()); }
     function renderWatchlistCoverage() {
       const box = $('#watchlist-coverage');
       if (!box) return;
@@ -641,18 +550,15 @@
       const rows = normalizeRows(d.rows || []);
       const rowMap = {};
       rows.forEach(r => rowMap[normalizeStockKey(r.symbol)] = r);
-      const jittaMap = buildJittaMap(d);
       const active = activeWatchlistItems();
       if (!active.length) {
         box.innerHTML = '<div class="alert">ยังไม่มีหุ้น Active ใน Watchlist เพิ่มหุ้นจาก Control Room แล้วหุ้นจะขึ้นตรงนี้ทันที</div>';
         return;
       }
       const missing = active.filter(w => !rowMap[normalizeStockKey(w.symbol)]);
-      const jittaAvailable = active.filter(w => hasJittaData(jittaMap[normalizeStockKey(w.symbol)])).length;
       const cards = active.map(w => {
         const key = normalizeStockKey(w.symbol);
         const r = rowMap[key];
-        const jitta = jittaMap[key];
         const hasData = !!r;
         const sector = escapeHTML(w.sector || '—');
         const name = escapeHTML(w.name_th || w.symbol || key);
@@ -665,78 +571,12 @@
             <span>Sector <strong>${sector}</strong></span>
             ${hasData ? `<span>Close <strong>${fmtNumber(r.close)}</strong></span><span>1W <strong>${fmtPct(r.change_pct_1w)}</strong></span><span>Vol <strong>x ${fmtNumber(r.volume_ratio)}</strong></span>` : `<span>Status <strong>Active ${escapeHTML(w.active || 'Y')}</strong></span><span>Weekly <strong>—</strong></span><span>Volume <strong>—</strong></span>`}
           </div>
-          ${jittaHtml(jitta)}
         </article>`;
       }).join('');
-      const notes = [];
-      notes.push(missing.length
+      const noteText = missing.length
         ? `<div class="alert warn">มีหุ้น Active ${missing.length} ตัวที่ยังไม่มีข้อมูลราคาสัปดาห์ล่าสุด: ${escapeHTML(missing.map(w => normalizeStockKey(w.symbol)).join(', '))}. ต้องรอ cron/Manual Fetch รอบถัดไปก่อนจึงจะมีตัวเลขใน Market Signals</div>`
-        : '<div class="alert good">หุ้น Active ทุกตัวมีข้อมูล weekly data แล้ว</div>');
-      notes.push(jittaAvailable
-        ? `<div class="alert good">Jitta manual context พร้อมแสดง ${jittaAvailable} / ${active.length} ตัวใน Watchlist Coverage</div>`
-        : '<div class="alert">ยังไม่มี Jitta manual context ใน watchlist นี้ กรอกข้อมูลที่ Google Sheet tab jitta_data แล้ว refresh หน้าเว็บได้เลย</div>');
-      box.innerHTML = notes.join('') + `<div class="watchlist-compact-grid">${cards}</div>`;
-    }
-    function jittaTemplateHeader() {
-      return ['symbol','jitta_rank','jitta_score','jitta_line','jitta_gap_pct','jitta_updated_at','jitta_url','source_note'].join('\t');
-    }
-    function jittaTemplateRows(mode = 'missing') {
-      const d = state.dashboard || {};
-      const map = buildJittaMap(d);
-      const active = activeWatchlistItems();
-      const source = mode === 'active' ? active : active.filter(w => !hasJittaData(map[normalizeStockKey(w.symbol)]));
-      return source.map(w => {
-        const key = normalizeStockKey(w.symbol);
-        const current = map[key] || {};
-        return [
-          key,
-          cleanJittaValue(current.jitta_rank),
-          cleanJittaValue(current.jitta_score),
-          cleanJittaValue(current.jitta_line),
-          cleanJittaValue(current.jitta_gap_pct),
-          cleanJittaValue(current.jitta_updated_at),
-          cleanJittaValue(current.jitta_url),
-          cleanJittaValue(current.source_note) || 'manual personal reference'
-        ].join('\t');
-      });
-    }
-    function buildJittaTemplateText(mode = 'missing') {
-      const rows = jittaTemplateRows(mode);
-      return [jittaTemplateHeader()].concat(rows).join('\n');
-    }
-    function renderJittaWorkflow() {
-      const status = $('#jitta-workflow-status');
-      const preview = $('#jitta-template-preview');
-      if (!status && !preview) return;
-      const d = state.dashboard || {};
-      const map = buildJittaMap(d);
-      const active = activeWatchlistItems();
-      const withData = active.filter(w => hasJittaData(map[normalizeStockKey(w.symbol)]));
-      const missing = active.filter(w => !hasJittaData(map[normalizeStockKey(w.symbol)]));
-      if (preview) preview.value = buildJittaTemplateText('missing');
-      if (!status) return;
-      if (!active.length) {
-        status.innerHTML = alertHtml('warn', 'ยังไม่มีหุ้น Active ใน Watchlist — เพิ่มหุ้นก่อน แล้วระบบจะสร้าง template สำหรับ jitta_data ให้');
-        return;
-      }
-      const missingBadges = missing.length
-        ? `<div class="jitta-missing-list">${missing.map(w => `<span class="badge warn">${escapeHTML(normalizeStockKey(w.symbol))}</span>`).join('')}</div>`
-        : '<span class="badge good">ทุกหุ้น Active มี Jitta data แล้ว</span>';
-      status.innerHTML = `<div class="alert ${missing.length ? 'warn' : 'good'}">
-        Jitta coverage: ${withData.length} / ${active.length} symbols · Missing ${missing.length}
-        <div style="margin-top:8px">${missingBadges}</div>
-      </div>`;
-    }
-    async function copyJittaTemplate(mode = 'missing') {
-      const status = $('#jitta-workflow-status');
-      const text = mode === 'header' ? jittaTemplateHeader() : buildJittaTemplateText(mode);
-      try {
-        await copyText(text);
-        const label = mode === 'header' ? 'header' : mode === 'active' ? 'active watchlist template' : 'missing symbols template';
-        if (status) status.innerHTML = alertHtml('good', `Copy Jitta ${label} แล้ว นำไป paste ใน Google Sheet tab jitta_data ได้เลย`);
-      } catch (err) {
-        if (status) status.innerHTML = alertHtml('bad', `Copy ไม่สำเร็จ: ${escapeHTML(err.message || err)}`);
-      }
+        : '<div class="alert good">หุ้น Active ทุกตัวมีข้อมูล weekly data แล้ว</div>';
+      box.innerHTML = noteText + `<div class="watchlist-compact-grid">${cards}</div>`;
     }
     function renderSignals() {
       const d = state.dashboard || {}; const rows = normalizeRows(d.rows || []); const names = mapWatchlist(d.watchlist || []);
