@@ -1,11 +1,11 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="th">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>AlphaWeek — Weekly Thai Equity Brief</title>
   <meta name="description" content="AlphaWeek weekly Thai equity brief and AI writing desk." />
-  <meta name="alphaweek-build" content="V26.2-financial-diagnostics-2026-07-14" />
+  <meta name="alphaweek-build" content="V26.2.1-manual-retry-fallback-2026-07-14" />
   <link rel="icon" href="assets/favicon.ico" sizes="any">
   <link rel="icon" type="image/svg+xml" href="assets/alphaweek-a1-favicon.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -461,7 +461,7 @@
               <label>Auto Refresh Cooldown (minutes)<input id="price-refresh-cooldown" type="number" min="0" max="1440" step="1" value="15"></label>
             </div>
             <div class="meta"><button class="btn primary" id="save-settings-btn" type="button"><i class="ti ti-device-floppy"></i> Save Local Settings</button><button class="btn" id="restore-default-urls-btn" type="button"><i class="ti ti-rotate-clockwise"></i> Restore Default URLs</button><button class="btn" id="test-connection-btn" type="button"><i class="ti ti-plug-connected"></i> Test Connection</button><button class="btn primary" id="refresh-prices-control-btn" type="button"><i class="ti ti-currency-baht"></i> Refresh Prices Now</button><button class="btn primary" id="refresh-financial-control-btn" type="button"><i class="ti ti-report-money"></i> Refresh Financial</button><button class="btn" id="refresh-financial-force-btn" type="button"><i class="ti ti-refresh-alert"></i> Force Financial</button></div>
-            <div class="alert good">V26.2 keeps Price Refresh independent and adds per-symbol Financial diagnostics with targeted Retry Failed / Retry Missing controls.</div><div id="settings-status"></div>
+            <div class="alert good">V26.2.1 keeps Price Refresh independent, enables manual Retry Failed for every failed symbol, and adds Yahoo query1/query2 fallback.</div><div id="settings-status"></div>
             <div id="price-refresh-status"></div>
             <div id="financial-refresh-status"></div>
             <div class="financial-diagnostics-box" id="financial-diagnostics">
@@ -1602,7 +1602,7 @@ ${newsMarkdown(news)}
     }
     function financialRetrySymbols(mode) {
       const results = Array.isArray(state.financialDiagnostics && state.financialDiagnostics.results) ? state.financialDiagnostics.results : [];
-      if (mode === 'failed') return results.filter(r => r.status === 'failed' && r.retryable !== false).map(r => normalizeStockKey(r.symbol)).filter(Boolean);
+      if (mode === 'failed') return results.filter(r => r.status === 'failed' && r.manual_retry_allowed !== false).map(r => normalizeStockKey(r.symbol)).filter(Boolean);
       if (mode === 'missing') return results.filter(r => r.status !== 'failed' && Array.isArray(r.missing_fields) && r.missing_fields.length > 0).map(r => normalizeStockKey(r.symbol)).filter(Boolean);
       return [];
     }
@@ -1632,6 +1632,11 @@ ${newsMarkdown(news)}
       r.error_code = String(r.error_code || '');
       r.message = String(r.message || '');
       r.retryable = r.retryable !== false;
+      if (r.manual_retry_allowed === undefined || r.manual_retry_allowed === null) {
+        r.manual_retry_allowed = r.status === 'failed';
+      } else {
+        r.manual_retry_allowed = r.manual_retry_allowed !== false;
+      }
       return r;
     }
     function legacyFinancialResults(result, batch) {
@@ -1642,9 +1647,9 @@ ${newsMarkdown(news)}
       (r.symbols_failed || []).forEach(item => { const symbol = normalizeStockKey(item.symbol || item); failedMap[symbol] = item; });
       return (batch || []).map(symbolRaw => {
         const symbol = normalizeStockKey(symbolRaw);
-        if (failedMap[symbol]) return normalizeFinancialResult({ symbol, status:'failed', stage:failedMap[symbol].stage || 'provider', error_code:failedMap[symbol].code || '', message:failedMap[symbol].error || 'Financial refresh failed', retryable:failedMap[symbol].retryable !== false });
+        if (failedMap[symbol]) return normalizeFinancialResult({ symbol, status:'failed', stage:failedMap[symbol].stage || 'provider', error_code:failedMap[symbol].code || '', message:failedMap[symbol].error || 'Financial refresh failed', retryable:failedMap[symbol].retryable !== false, manual_retry_allowed:failedMap[symbol].manual_retry_allowed !== false });
         if (fresh.has(symbol)) return normalizeFinancialResult({ symbol, status:'fresh', stage:'cache', message:'Fresh cached data', retryable:false });
-        if (partial.has(symbol)) return normalizeFinancialResult({ symbol, status:'partial', stage:'coverage', message:'Financial data saved with missing fields', retryable:true });
+        if (partial.has(symbol)) return normalizeFinancialResult({ symbol, status:'partial', stage:'coverage', message:'Financial data saved with missing fields', retryable:true, manual_retry_allowed:true });
         return normalizeFinancialResult({ symbol, status:'updated', stage:'saved', message:'Financial data updated', retryable:false });
       });
     }
@@ -1687,10 +1692,23 @@ ${newsMarkdown(news)}
       const data = state.financialDiagnostics || { results:[] };
       const results = Array.isArray(data.results) ? data.results.map(normalizeFinancialResult) : [];
       const coverage = calculateFinancialCoverage(results);
-      const failedCount = results.filter(r => r.status === 'failed' && r.retryable !== false).length;
+      const failedTotal = results.filter(r => r.status === 'failed').length;
+      const failedCount = results.filter(r => r.status === 'failed' && r.manual_retry_allowed !== false).length;
       const missingCount = results.filter(r => r.status !== 'failed' && r.missing_fields.length > 0).length;
-      if (retryFailed) { retryFailed.disabled = state.financialRefresh.running || failedCount === 0; retryFailed.innerHTML = `<i class="ti ti-reload"></i> Retry Failed (${failedCount})`; }
-      if (retryMissing) { retryMissing.disabled = state.financialRefresh.running || missingCount === 0; retryMissing.innerHTML = `<i class="ti ti-list-search"></i> Retry Missing (${missingCount})`; }
+      if (retryFailed) {
+        retryFailed.disabled = state.financialRefresh.running || failedCount === 0;
+        retryFailed.innerHTML = `<i class="ti ti-reload"></i> Retry Failed (${failedCount})`;
+        retryFailed.title = failedCount
+          ? 'Manual retry เฉพาะหุ้นที่ Failed แม้ API จะไม่แนะนำ Auto-retry'
+          : 'ไม่มี Failed symbol';
+      }
+      if (retryMissing) {
+        retryMissing.disabled = state.financialRefresh.running || missingCount === 0;
+        retryMissing.innerHTML = `<i class="ti ti-list-search"></i> Retry Missing (${missingCount})`;
+        retryMissing.title = missingCount
+          ? 'Retry เฉพาะหุ้นที่ไม่ Failed แต่ยังขาดบาง field'
+          : (failedTotal ? 'ตอนนี้ผลทั้งหมดเป็น Failed ให้ใช้ Retry Failed; Retry Missing ใช้กับ Partial/Fresh เท่านั้น' : 'ไม่มี Missing fields');
+      }
       summary.innerHTML = [
         ['Core coverage', `${coverage.core_covered}/${coverage.requested || 0}`, coverage.core_covered > 0],
         ['Full coverage', `${coverage.full_covered}/${coverage.requested || 0}`, coverage.full_covered > 0],
@@ -1704,7 +1722,10 @@ ${newsMarkdown(news)}
         list.innerHTML = '';
         return;
       }
-      empty.innerHTML = data.lastAttemptAt ? `<div class="muted" style="margin-top:10px">Last attempt: ${escapeHTML(formatDateTime(data.lastAttemptAt))} · Mode ${escapeHTML(data.lastMode || 'all')}</div>` : '';
+      const retryExplanation = failedTotal
+        ? ` · Failed ${failedTotal}: ใช้ Retry Failed ได้แม้ Auto-retry จะไม่แนะนำ · Retry Missing ใช้เฉพาะ Partial/Fresh`
+        : (missingCount ? ` · Missing ${missingCount}: ใช้ Retry Missing เพื่อดึงเฉพาะ field ที่ขาด` : '');
+      empty.innerHTML = data.lastAttemptAt ? `<div class="muted" style="margin-top:10px">Last attempt: ${escapeHTML(formatDateTime(data.lastAttemptAt))} · Mode ${escapeHTML(data.lastMode || 'all')}${escapeHTML(retryExplanation)}</div>` : '';
       const order = { failed:0, partial:1, updated:2, fresh:3, skipped:4 };
       list.innerHTML = results.slice().sort((a,b) => (order[a.status] ?? 9) - (order[b.status] ?? 9) || a.symbol.localeCompare(b.symbol)).map(r => {
         const missing = r.missing_fields.length ? r.missing_fields.map(financialFieldLabel).join(', ') : 'None';
@@ -1713,7 +1734,7 @@ ${newsMarkdown(news)}
         return `<div class="diagnostic-card">
           <div class="diagnostic-top"><div><div class="diagnostic-symbol">${escapeHTML(r.symbol)}</div><div class="muted">${escapeHTML(r.source || 'source unavailable')} · ${escapeHTML(fetched)}</div></div><span class="badge ${financialStatusKind(r.status)}">${escapeHTML(financialStatusLabel(r.status))}</span></div>
           <div class="diagnostic-fields"><span class="badge">Core ${r.core_available.length}/5 · ${escapeHTML(r.core_status)}</span><span class="badge">Enrichment ${r.enrichment_available.length}/5 · ${escapeHTML(r.enrichment_status)}</span>${r.error_code ? `<span class="badge warn">${escapeHTML(r.error_code)}</span>` : ''}</div>
-          <div class="diagnostic-message"><strong>Available:</strong> ${escapeHTML(available)}<br><strong>Missing:</strong> ${escapeHTML(missing)}${r.stage ? `<br><strong>Stage:</strong> ${escapeHTML(r.stage)}` : ''}${r.message ? `<br>${escapeHTML(r.message)}` : ''}</div>
+          <div class="diagnostic-message"><strong>Available:</strong> ${escapeHTML(available)}<br><strong>Missing:</strong> ${escapeHTML(missing)}${r.stage ? `<br><strong>Stage:</strong> ${escapeHTML(r.stage)}` : ''}<br><strong>Auto retry:</strong> ${r.retryable ? 'recommended' : 'not recommended'} · <strong>Manual retry:</strong> ${r.manual_retry_allowed !== false ? 'allowed' : 'not needed'}${r.message ? `<br>${escapeHTML(r.message)}` : ''}</div>
         </div>`;
       }).join('');
     }
@@ -1780,7 +1801,7 @@ ${newsMarkdown(news)}
           (r.warnings || []).forEach(item => state.financialRefresh.warnings.push(item));
         } catch (err) {
           const message = friendlyRefreshError(err, 'Financial batch');
-          incoming = batch.map(symbol => normalizeFinancialResult({ symbol, status:'failed', stage:'request', error_code:/timeout/i.test(message) ? 'TIMEOUT' : 'REQUEST_FAILED', message, retryable:true }));
+          incoming = batch.map(symbol => normalizeFinancialResult({ symbol, status:'failed', stage:'request', error_code:/timeout/i.test(message) ? 'TIMEOUT' : 'REQUEST_FAILED', message, retryable:true, manual_retry_allowed:true }));
         }
         state.financialRefresh.results = mergeFinancialResults(state.financialRefresh.results, incoming);
         state.financialDiagnostics = {
