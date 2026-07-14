@@ -1,24 +1,23 @@
-﻿/**
+/**
  * AlphaWeek — api/fetch-weekly.js
- * Version: v09-financial-diagnostics (V26.2 per-symbol diagnostics and targeted retry)
+ * Version: v09.1-manual-retry-fallback (V26.2.1 manual retry and Yahoo host fallback)
  */
 'use strict';
 
 
-const API_VERSION = 'v09-financial-diagnostics';
+const API_VERSION = 'v09.1-manual-retry-fallback';
 const YAHOO_BASE = 'https://query1.finance.yahoo.com/v8/finance/chart/';
-const YAHOO_QUOTE_SUMMARY_BASE = 'https://query1.finance.yahoo.com/v10/finance/quoteSummary/';
-const YAHOO_QUOTE_BASE = 'https://query1.finance.yahoo.com/v7/finance/quote';
+const YAHOO_FINANCIAL_HOSTS = ['https://query1.finance.yahoo.com', 'https://query2.finance.yahoo.com'];
 const SET_INDEX = { symbol: 'SET', yahoo: '^SET.BK' };
 const PRICE_FETCH_TIMEOUT_MS = 12000;
 const APPS_SCRIPT_TIMEOUT_MS = 12000;
-const FINANCIAL_CORE_TIMEOUT_MS = 4500;
-const FINANCIAL_ENRICH_TIMEOUT_MS = 3500;
-const FINANCIAL_REQUEST_BUDGET_MS = 8500;
+const FINANCIAL_CORE_TIMEOUT_MS = 2400;
+const FINANCIAL_ENRICH_TIMEOUT_MS = 1800;
+const FINANCIAL_REQUEST_BUDGET_MS = 9000;
 const PRICE_MAX_SYMBOLS_PER_REQUEST = 10;
 const FINANCIAL_MAX_SYMBOLS_PER_REQUEST = 5;
 const PRICE_FETCH_CONCURRENCY = 3;
-const FINANCIAL_FETCH_CONCURRENCY = 2;
+const FINANCIAL_FETCH_CONCURRENCY = 3;
 const CORE_FUNDAMENTAL_FIELDS = ['pe_ttm', 'pbv', 'dividend_yield_pct', 'market_cap', 'eps_ttm'];
 const ENRICHMENT_FUNDAMENTAL_FIELDS = ['roe_pct', 'debt_to_equity', 'revenue_growth_yoy_pct', 'net_profit_growth_yoy_pct', 'financial_period'];
 const ALL_FUNDAMENTAL_FIELDS = CORE_FUNDAMENTAL_FIELDS.concat(ENRICHMENT_FUNDAMENTAL_FIELDS);
@@ -407,6 +406,7 @@ async function runFinancialBatch(symbolInputs, meta) {
       result.error_code = 'SAVE_FAILED';
       result.message = saved.error || 'Apps Script fundamentals save failed';
       result.retryable = true;
+      result.manual_retry_allowed = true;
       result.saved = false;
     });
   } else if (saved.ok) {
@@ -436,7 +436,7 @@ async function runFinancialBatch(symbolInputs, meta) {
     symbols_refreshed: refreshed.map((r) => r.symbol),
     symbols_partial: partial.map((r) => r.symbol),
     symbols_skipped_fresh: fresh.map((r) => r.symbol),
-    symbols_failed: failed.map((r) => ({ symbol: r.symbol, error: r.message, stage: r.stage, code: r.error_code, retryable: r.retryable })),
+    symbols_failed: failed.map((r) => ({ symbol: r.symbol, error: r.message, stage: r.stage, code: r.error_code, retryable: r.retryable, manual_retry_allowed: r.manual_retry_allowed !== false })),
     symbol_results: symbolResults,
     coverage,
     warnings,
@@ -466,6 +466,7 @@ function buildFreshSymbolResult(symbol, row) {
     error_code: '',
     message: fields.missing_fields.length ? 'Fresh cached data; some fields are unavailable' : 'Fresh cached data',
     retryable: fields.missing_fields.length > 0,
+    manual_retry_allowed: false,
     saved: false
   };
 }
@@ -495,6 +496,7 @@ function buildFetchedSymbolResult(input) {
       error_code: input.enrichmentCode || (input.coreBatchError ? 'CORE_FAILED' : 'NO_DATA'),
       message: providerMessage + retained,
       retryable: input.enrichmentRetryable !== false,
+      manual_retry_allowed: true,
       saved: false
     };
   }
@@ -520,6 +522,7 @@ function buildFetchedSymbolResult(input) {
     error_code: input.enrichmentCode || (input.coreBatchError ? 'CORE_PARTIAL' : ''),
     message: [warningMessage, missingMessage].filter(Boolean).join(' · ') || 'Financial data updated',
     retryable: isPartial,
+    manual_retry_allowed: isPartial,
     saved: false
   };
 }
@@ -598,6 +601,9 @@ function errorCode(err) {
   if (!err) return 'UNKNOWN';
   if (err.code === 'ETIMEDOUT') return 'TIMEOUT';
   const status = Number(err.status);
+  if (status === 401) return 'UPSTREAM_401';
+  if (status === 403) return 'UPSTREAM_403';
+  if (status === 404) return 'UPSTREAM_404';
   if (status === 429) return 'RATE_LIMIT';
   if (status >= 500) return 'UPSTREAM_5XX';
   if (status >= 400) return 'UPSTREAM_4XX';
@@ -682,7 +688,7 @@ async function fetchAllQuotes(symbols, range) {
 
 async function fetchYahooBars(yahooSymbol, range) {
   const url = YAHOO_BASE + encodeURIComponent(yahooSymbol) + '?range=' + encodeURIComponent(range) + '&interval=1d';
-  const json = await fetchJSON(url, { headers: { 'User-Agent': 'Mozilla/5.0 (AlphaWeek V26.2)' } }, { stage: 'Yahoo chart ' + yahooSymbol, timeoutMs: PRICE_FETCH_TIMEOUT_MS });
+  const json = await fetchJSON(url, { headers: { 'User-Agent': 'Mozilla/5.0 (AlphaWeek V26.2.1)' } }, { stage: 'Yahoo chart ' + yahooSymbol, timeoutMs: PRICE_FETCH_TIMEOUT_MS });
   const r = json && json.chart && json.chart.result && json.chart.result[0];
   if (!r || !r.timestamp) throw new Error('yahoo: empty result for ' + yahooSymbol);
   const q = r.indicators && r.indicators.quote && r.indicators.quote[0];
@@ -753,36 +759,93 @@ async function getExistingFundamentals(deadline) {
 
 async function fetchYahooQuoteBatch(symbols, deadline) {
   if (!symbols.length) return [];
-  const url = YAHOO_QUOTE_BASE + '?symbols=' + encodeURIComponent(symbols.map((s) => s.yahoo).join(','));
-  const json = await fetchJSONWithRetry(url, { headers: yahooHeaders() }, {
-    stage: 'Yahoo financial core batch',
-    timeoutMs: FINANCIAL_CORE_TIMEOUT_MS,
-    deadline,
-    retry: true
-  });
-  const results = json && json.quoteResponse && Array.isArray(json.quoteResponse.result) ? json.quoteResponse.result : [];
+  const symbolQuery = encodeURIComponent(symbols.map((s) => s.yahoo).join(','));
+  const fetched = await fetchYahooFinancialFromHosts(
+    (host) => host + '/v7/finance/quote?symbols=' + symbolQuery,
+    { headers: yahooHeaders() },
+    {
+      stage: 'Yahoo financial core batch',
+      timeoutMs: FINANCIAL_CORE_TIMEOUT_MS,
+      deadline
+    }
+  );
+  const results = fetched.json && fetched.json.quoteResponse && Array.isArray(fetched.json.quoteResponse.result)
+    ? fetched.json.quoteResponse.result
+    : [];
   return results.map((q) => {
     const symbol = normalizeSymbolKey(q.symbol);
-    return normalizeQuoteFundamentals(symbol, q);
+    const row = normalizeQuoteFundamentals(symbol, q);
+    row.source = 'yahoo_quote@' + yahooHostLabel(fetched.host);
+    return row;
   }).filter(hasCoreFundamental);
 }
 
 
 async function fetchYahooSummaryFundamentals(symbol, deadline) {
   const modules = 'price,summaryDetail,defaultKeyStatistics,financialData';
-  const summaryUrl = YAHOO_QUOTE_SUMMARY_BASE + encodeURIComponent(symbol.yahoo) +
-    '?modules=' + encodeURIComponent(modules);
-  const json = await fetchJSONWithRetry(summaryUrl, { headers: yahooHeaders() }, {
-    stage: 'Yahoo quoteSummary ' + symbol.symbol,
-    timeoutMs: FINANCIAL_ENRICH_TIMEOUT_MS,
-    deadline,
-    retry: true
-  });
-  const result = json && json.quoteSummary && json.quoteSummary.result && json.quoteSummary.result[0];
+  const fetched = await fetchYahooFinancialFromHosts(
+    (host) => host + '/v10/finance/quoteSummary/' + encodeURIComponent(symbol.yahoo) +
+      '?modules=' + encodeURIComponent(modules),
+    { headers: yahooHeaders() },
+    {
+      stage: 'Yahoo quoteSummary ' + symbol.symbol,
+      timeoutMs: FINANCIAL_ENRICH_TIMEOUT_MS,
+      deadline
+    }
+  );
+  const result = fetched.json && fetched.json.quoteSummary && fetched.json.quoteSummary.result && fetched.json.quoteSummary.result[0];
   if (!result) throw new Error('quoteSummary empty result');
   const row = normalizeQuoteSummaryFundamentals(symbol.symbol, result);
   if (!hasCoreFundamental(row)) throw new Error('quoteSummary returned no usable fundamentals');
+  row.source = 'yahoo_quoteSummary@' + yahooHostLabel(fetched.host);
   return row;
+}
+
+
+async function fetchYahooFinancialFromHosts(urlFactory, opts, meta) {
+  const failures = [];
+  for (const host of YAHOO_FINANCIAL_HOSTS) {
+    if (remainingBudget(meta && meta.deadline) <= 350) break;
+    const url = urlFactory(host);
+    try {
+      const json = await fetchJSONWithRetry(url, opts, Object.assign({}, meta || {}, { retry: false }));
+      return { json, host };
+    } catch (err) {
+      const detail = {
+        event: 'yahoo_financial_host_failure',
+        api_version: API_VERSION,
+        stage: String((meta && meta.stage) || 'Yahoo financial request'),
+        host: yahooHostLabel(host),
+        status: Number(err && err.status) || '',
+        code: errorCode(err),
+        message: normalizeErrorMessage(err, (meta && meta.stage) || 'Yahoo financial request')
+      };
+      failures.push({ host, err, detail });
+      try { console.warn(JSON.stringify(detail)); } catch (logErr) {}
+    }
+  }
+
+  if (!failures.length) {
+    const budgetError = new Error(String((meta && meta.stage) || 'Yahoo financial request') + ' skipped: route budget exhausted');
+    budgetError.code = 'ETIMEDOUT';
+    throw budgetError;
+  }
+
+  const last = failures[failures.length - 1];
+  const combined = new Error(
+    String((meta && meta.stage) || 'Yahoo financial request') +
+    ' failed on ' + failures.map((item) => item.detail.host + ' [' + item.detail.code + ']').join(' → ')
+  );
+  if (last.err && last.err.status) combined.status = last.err.status;
+  if (last.err && last.err.code) combined.code = last.err.code;
+  combined.host_failures = failures.map((item) => item.detail);
+  throw combined;
+}
+
+
+function yahooHostLabel(host) {
+  try { return new URL(host).hostname; }
+  catch (err) { return String(host || 'yahoo'); }
 }
 
 
@@ -801,7 +864,7 @@ function mergeFundamentalRows(core, enrichment, symbol) {
   });
   base.symbol = symbol;
   base.fetched_at = fetchedAt;
-  if (core && enrichment) base.source = 'yahoo_quote+yahoo_quoteSummary';
+  if (core && enrichment) base.source = [core.source || 'yahoo_quote', enrichment.source || 'yahoo_quoteSummary'].join('+');
   else if (enrichment) base.source = enrichment.source || 'yahoo_quoteSummary';
   else if (core) base.source = core.source || 'yahoo_quote';
   return cleanFundamentalRow(base);
@@ -925,7 +988,7 @@ async function mapWithConcurrency(items, limit, worker) {
 
 function yahooHeaders() {
   return {
-    'User-Agent': 'Mozilla/5.0 (AlphaWeek V26.2)',
+    'User-Agent': 'Mozilla/5.0 (AlphaWeek V26.2.1)',
     'Accept': 'application/json,text/plain,*/*'
   };
 }
