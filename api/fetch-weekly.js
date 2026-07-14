@@ -1,10 +1,11 @@
-/**
+﻿/**
  * AlphaWeek — api/fetch-weekly.js
- * Version: v08-refresh-split (V26.1 split price/financial refresh)
+ * Version: v09-financial-diagnostics (V26.2 per-symbol diagnostics and targeted retry)
  */
 'use strict';
 
-const API_VERSION = 'v08-refresh-split';
+
+const API_VERSION = 'v09-financial-diagnostics';
 const YAHOO_BASE = 'https://query1.finance.yahoo.com/v8/finance/chart/';
 const YAHOO_QUOTE_SUMMARY_BASE = 'https://query1.finance.yahoo.com/v10/finance/quoteSummary/';
 const YAHOO_QUOTE_BASE = 'https://query1.finance.yahoo.com/v7/finance/quote';
@@ -18,29 +19,38 @@ const PRICE_MAX_SYMBOLS_PER_REQUEST = 10;
 const FINANCIAL_MAX_SYMBOLS_PER_REQUEST = 5;
 const PRICE_FETCH_CONCURRENCY = 3;
 const FINANCIAL_FETCH_CONCURRENCY = 2;
+const CORE_FUNDAMENTAL_FIELDS = ['pe_ttm', 'pbv', 'dividend_yield_pct', 'market_cap', 'eps_ttm'];
+const ENRICHMENT_FUNDAMENTAL_FIELDS = ['roe_pct', 'debt_to_equity', 'revenue_growth_yoy_pct', 'net_profit_growth_yoy_pct', 'financial_period'];
+const ALL_FUNDAMENTAL_FIELDS = CORE_FUNDAMENTAL_FIELDS.concat(ENRICHMENT_FUNDAMENTAL_FIELDS);
+
 
 module.exports = async function handler(req, res) {
   setCors(res);
   if (req.method === 'OPTIONS') return res.status(204).end();
+
 
   const isCron = !!req.headers['x-vercel-cron'];
   const token = (req.query && req.query.token) || '';
   const isManualToken = !!process.env.MANUAL_TRIGGER_TOKEN && token === process.env.MANUAL_TRIGGER_TOKEN;
   const isPublicRefresh = req.method === 'POST' || req.method === 'GET';
 
+
   if (!isCron && !isManualToken && !isPublicRefresh) {
     return res.status(401).json({ ok: false, api_version: API_VERSION, error: 'unauthorized' });
   }
+
 
   const missing = ['APPS_SCRIPT_URL', 'ALPHAWEEK_PIN'].filter((k) => !process.env[k]);
   if (missing.length) {
     return res.status(500).json({ ok: false, api_version: API_VERSION, error: 'missing env: ' + missing.join(', ') });
   }
 
+
   const seedMode = String((req.query && req.query.seed) || '') === '1';
   if (seedMode && !isManualToken) {
     return res.status(401).json({ ok: false, api_version: API_VERSION, error: 'seed requires manual token' });
   }
+
 
   try {
     if (seedMode) {
@@ -50,6 +60,7 @@ module.exports = async function handler(req, res) {
     const refreshType = normalizeRefreshType((body && body.refresh_type) || (req.query && req.query.refresh_type));
     const requestedSymbols = extractRequestedSymbols(req, body, refreshType);
     const universe = String((body && body.universe) || (req.query && req.query.universe) || 'watchlist');
+
 
     let result;
     let mode;
@@ -61,7 +72,8 @@ module.exports = async function handler(req, res) {
         universe,
         source: body && body.source,
         force: parseBoolean(body && body.force),
-        maxAgeDays: clampNumber(body && body.max_age_days, 0, 30, 7)
+        maxAgeDays: clampNumber(body && body.max_age_days, 0, 30, 7),
+        financialMode: normalizeFinancialMode(body && body.financial_mode)
       });
       mode = 'financial-batch';
     } else {
@@ -71,9 +83,11 @@ module.exports = async function handler(req, res) {
       mode = requestedSymbols.length ? 'price-batch' : 'weekly-prices';
     }
 
+
     const routeOk = refreshType === 'financial' ? !!result.operation_ok : !!result.save_ok;
-    return res.status(routeOk ? 200 : 502).json({
-      ok: routeOk,
+    const transportOk = refreshType === 'financial' ? true : routeOk;
+    return res.status(transportOk ? 200 : 502).json({
+      ok: transportOk,
       refresh_type: refreshType,
       mode,
       auth_mode: isCron ? 'cron' : (isManualToken ? 'token' : 'public'),
@@ -87,9 +101,19 @@ module.exports = async function handler(req, res) {
   }
 };
 
+
 function normalizeRefreshType(value) {
   return String(value || 'prices').toLowerCase() === 'financial' ? 'financial' : 'prices';
 }
+
+
+function normalizeFinancialMode(value) {
+  const mode = String(value || 'all').toLowerCase();
+  return ['all', 'failed', 'missing'].includes(mode) ? mode : 'all';
+}
+
+
+
 
 function setCors(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -97,12 +121,14 @@ function setCors(res) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 }
 
+
 function parseBody(req) {
   if (!req || !req.body) return {};
   if (typeof req.body === 'object') return req.body;
   try { return JSON.parse(String(req.body || '{}')); }
   catch (err) { return {}; }
 }
+
 
 function extractRequestedSymbols(req, body, refreshType) {
   let raw = [];
@@ -121,6 +147,7 @@ function extractRequestedSymbols(req, body, refreshType) {
   return out;
 }
 
+
 async function runWeeklyPrices() {
   const watchlist = await getWatchlist();
   const symbols = activeSymbols(watchlist);
@@ -128,6 +155,7 @@ async function runWeeklyPrices() {
   const quotes = await fetchAllQuotes(symbols, '4mo');
   const rows = [];
   const errors = [];
+
 
   for (const q of quotes) {
     if (q.error) { errors.push({ symbol: q.symbol, error: q.error }); continue; }
@@ -137,6 +165,7 @@ async function runWeeklyPrices() {
     m.source = q.source;
     rows.push(m);
   }
+
 
   const existingNews = await getExistingNews(weekEnding);
   const saved = await postToAppsScript({
@@ -148,6 +177,7 @@ async function runWeeklyPrices() {
     meta: { source: 'weekly-price-refresh', api_version: API_VERSION }
   }, 'Apps Script weekly price save');
   const saveOk = !!(saved && saved.ok);
+
 
   return {
     api_version: API_VERSION,
@@ -167,15 +197,18 @@ async function runWeeklyPrices() {
   };
 }
 
+
 async function runPriceBatch(symbolInputs, meta) {
   const symbols = normalizeSymbolList(symbolInputs);
   if (!symbols.length) throw new Error('symbols required for price batch');
   if (symbols.length > PRICE_MAX_SYMBOLS_PER_REQUEST) throw new Error('too many symbols: max ' + PRICE_MAX_SYMBOLS_PER_REQUEST);
 
+
   const weekEnding = lastFridayISO(new Date());
   const quotes = await fetchAllQuotes(symbols, '4mo');
   const rows = [];
   const errors = [];
+
 
   for (const q of quotes) {
     if (q.error) { errors.push({ symbol: q.symbol, error: q.error }); continue; }
@@ -185,6 +218,7 @@ async function runPriceBatch(symbolInputs, meta) {
     m.source = q.source;
     rows.push(m);
   }
+
 
   const saved = await postToAppsScript({
     action: 'saveWeeklyMerge',
@@ -198,6 +232,7 @@ async function runPriceBatch(symbolInputs, meta) {
     }
   }, 'Apps Script price batch save');
   const saveOk = !!(saved && saved.ok);
+
 
   return {
     api_version: API_VERSION,
@@ -216,43 +251,60 @@ async function runPriceBatch(symbolInputs, meta) {
   };
 }
 
+
 async function runFinancialBatch(symbolInputs, meta) {
   const symbols = normalizeSymbolList(symbolInputs).filter((s) => s.symbol !== 'SET');
   if (!symbols.length) throw new Error('symbols required for financial batch');
   if (symbols.length > FINANCIAL_MAX_SYMBOLS_PER_REQUEST) throw new Error('too many symbols: max ' + FINANCIAL_MAX_SYMBOLS_PER_REQUEST);
 
-  const deadline = Date.now() + FINANCIAL_REQUEST_BUDGET_MS;
+
   const force = !!(meta && meta.force);
   const maxAgeDays = clampNumber(meta && meta.maxAgeDays, 0, 30, 7);
+  const financialMode = normalizeFinancialMode(meta && meta.financialMode);
+  const deadline = Date.now() + FINANCIAL_REQUEST_BUDGET_MS;
   let existingRows = [];
   const warnings = [];
+
 
   try {
     existingRows = await getExistingFundamentals(deadline);
   } catch (err) {
-    warnings.push({ stage: 'freshness-read', error: normalizeErrorMessage(err, 'Apps Script fundamentals read') });
+    warnings.push(buildWarning('', 'freshness-read', err, 'Apps Script fundamentals read'));
   }
+
 
   const existingMap = {};
   existingRows.forEach((row) => { existingMap[normalizeSymbolKey(row.symbol)] = row; });
   const pending = [];
-  const skippedFresh = [];
+  const symbolResults = [];
+
+
   symbols.forEach((symbol) => {
-    const existing = existingMap[symbol.symbol];
-    if (!force && isFreshFundamental(existing, maxAgeDays)) skippedFresh.push(symbol.symbol);
-    else pending.push(symbol);
+    const existing = existingMap[symbol.symbol] || null;
+    const mayUseFreshCache = financialMode === 'all' && !force;
+    if (mayUseFreshCache && isFreshFundamental(existing, maxAgeDays)) {
+      symbolResults.push(buildFreshSymbolResult(symbol.symbol, existing));
+    } else {
+      pending.push(symbol);
+    }
   });
 
+
   if (!pending.length) {
+    const coverage = buildFinancialCoverage(symbolResults);
     return {
       api_version: API_VERSION,
       refresh_type: 'financial',
+      financial_mode: financialMode,
       operation_ok: true,
       save_ok: true,
       symbols_requested: symbols.map((s) => s.symbol),
       symbols_refreshed: [],
-      symbols_skipped_fresh: skippedFresh,
+      symbols_partial: [],
+      symbols_skipped_fresh: symbolResults.filter((r) => r.status === 'fresh').map((r) => r.symbol),
       symbols_failed: [],
+      symbol_results: symbolResults,
+      coverage,
       warnings,
       max_age_days: maxAgeDays,
       force,
@@ -261,70 +313,300 @@ async function runFinancialBatch(symbolInputs, meta) {
     };
   }
 
+
   let coreRows = [];
+  let coreBatchError = '';
   try {
     coreRows = await fetchYahooQuoteBatch(pending, deadline);
   } catch (err) {
-    warnings.push({ stage: 'core', error: normalizeErrorMessage(err, 'Yahoo financial core') });
+    coreBatchError = normalizeErrorMessage(err, 'Yahoo financial core');
+    warnings.push(buildWarning('', 'core', err, 'Yahoo financial core'));
   }
   const coreMap = {};
   coreRows.forEach((row) => { coreMap[normalizeSymbolKey(row.symbol)] = row; });
 
+
   const enrichmentResults = await mapWithConcurrency(pending, FINANCIAL_FETCH_CONCURRENCY, async (symbol) => {
     if (remainingBudget(deadline) < 700) {
-      return { symbol: symbol.symbol, error: 'optional enrichment skipped: route budget nearly exhausted' };
+      return { symbol: symbol.symbol, error: 'optional enrichment skipped: route budget nearly exhausted', code: 'BUDGET_EXHAUSTED', retryable: true };
     }
     try {
       const row = await fetchYahooSummaryFundamentals(symbol, deadline);
       return { symbol: symbol.symbol, row };
     } catch (err) {
-      return { symbol: symbol.symbol, error: normalizeErrorMessage(err, 'Yahoo quoteSummary ' + symbol.symbol) };
+      return {
+        symbol: symbol.symbol,
+        error: normalizeErrorMessage(err, 'Yahoo quoteSummary ' + symbol.symbol),
+        code: errorCode(err),
+        retryable: isRetryableError(err)
+      };
     }
   });
   const enrichmentMap = {};
-  enrichmentResults.forEach((item) => { if (item.row) enrichmentMap[item.symbol] = item.row; });
+  const enrichmentResultMap = {};
+  enrichmentResults.forEach((item) => {
+    enrichmentResultMap[item.symbol] = item;
+    if (item.row) enrichmentMap[item.symbol] = item.row;
+  });
+
 
   const rows = [];
-  const errors = [];
+  const pendingDiagnostics = [];
   pending.forEach((symbol) => {
     const core = coreMap[symbol.symbol] || null;
     const enrichment = enrichmentMap[symbol.symbol] || null;
+    const enrichmentResult = enrichmentResultMap[symbol.symbol] || null;
     const merged = mergeFundamentalRows(core, enrichment, symbol.symbol);
-    const enrichmentResult = enrichmentResults.find((item) => item.symbol === symbol.symbol);
+    const existing = existingMap[symbol.symbol] || null;
+    const effective = mergeExistingFundamentalRow(existing, merged, symbol.symbol);
+
+
     if (enrichmentResult && enrichmentResult.error) {
-      warnings.push({ symbol: symbol.symbol, stage: 'enrichment', error: enrichmentResult.error });
+      warnings.push({
+        symbol: symbol.symbol,
+        stage: 'enrichment',
+        code: enrichmentResult.code || 'ENRICHMENT_FAILED',
+        retryable: enrichmentResult.retryable !== false,
+        error: enrichmentResult.error
+      });
     }
-    if (hasCoreFundamental(merged)) rows.push(merged);
-    else errors.push({ symbol: symbol.symbol, error: 'no usable financial fields returned' });
+
+
+    const diagnostic = buildFetchedSymbolResult({
+      symbol: symbol.symbol,
+      core,
+      enrichment,
+      merged: effective,
+      providerRow: merged,
+      existing,
+      coreBatchError,
+      enrichmentError: enrichmentResult && enrichmentResult.error,
+      enrichmentCode: enrichmentResult && enrichmentResult.code,
+      enrichmentRetryable: enrichmentResult && enrichmentResult.retryable
+    });
+    pendingDiagnostics.push(diagnostic);
+    if (hasAnyFundamentalField(merged)) rows.push(merged);
   });
+
 
   const saved = await saveFundamentalsBestEffort(rows, {
     universe: meta && meta.universe,
     source: meta && meta.source,
     api_version: API_VERSION,
+    financial_mode: financialMode,
     max_age_days: maxAgeDays,
     force
   });
-  const operationOk = skippedFresh.length > 0 || (rows.length > 0 && saved.ok);
+
+
+  if (rows.length && !saved.ok) {
+    pendingDiagnostics.forEach((result) => {
+      if (result.status === 'failed') return;
+      result.status = 'failed';
+      result.stage = 'save';
+      result.error_code = 'SAVE_FAILED';
+      result.message = saved.error || 'Apps Script fundamentals save failed';
+      result.retryable = true;
+      result.saved = false;
+    });
+  } else if (saved.ok) {
+    pendingDiagnostics.forEach((result) => {
+      if (result.status !== 'failed') result.saved = true;
+    });
+  }
+
+
+  symbolResults.push(...pendingDiagnostics);
+  const refreshed = symbolResults.filter((r) => r.saved && ['updated', 'partial'].includes(r.status));
+  const partial = symbolResults.filter((r) => r.status === 'partial');
+  const fresh = symbolResults.filter((r) => r.status === 'fresh');
+  const failed = symbolResults.filter((r) => r.status === 'failed');
+  const coverage = buildFinancialCoverage(symbolResults);
+  const operationOk = refreshed.length > 0 || fresh.length > 0;
+
 
   return {
     api_version: API_VERSION,
     refresh_type: 'financial',
+    financial_mode: financialMode,
     operation_ok: operationOk,
-    save_ok: saved.ok,
+    save_ok: rows.length ? saved.ok : fresh.length > 0,
     error: operationOk ? undefined : (saved.error || 'no financial rows saved'),
     symbols_requested: symbols.map((s) => s.symbol),
-    symbols_refreshed: rows.map((r) => r.symbol),
-    symbols_skipped_fresh: skippedFresh,
-    symbols_failed: errors,
+    symbols_refreshed: refreshed.map((r) => r.symbol),
+    symbols_partial: partial.map((r) => r.symbol),
+    symbols_skipped_fresh: fresh.map((r) => r.symbol),
+    symbols_failed: failed.map((r) => ({ symbol: r.symbol, error: r.message, stage: r.stage, code: r.error_code, retryable: r.retryable })),
+    symbol_results: symbolResults,
+    coverage,
     warnings,
     max_age_days: maxAgeDays,
     force,
     sources: countBy(rows, 'source'),
-    saved_rows: rows.length,
+    saved_rows: saved.ok ? refreshed.length : 0,
     apps_script: saved.response
   };
 }
+
+
+function buildFreshSymbolResult(symbol, row) {
+  const fields = inspectFundamentalFields(row);
+  return {
+    symbol,
+    status: 'fresh',
+    core_status: fieldGroupStatus(fields.core_available, CORE_FUNDAMENTAL_FIELDS.length, 'cached'),
+    enrichment_status: fieldGroupStatus(fields.enrichment_available, ENRICHMENT_FUNDAMENTAL_FIELDS.length, 'cached'),
+    core_available: fields.core_available,
+    enrichment_available: fields.enrichment_available,
+    available_fields: fields.available_fields,
+    missing_fields: fields.missing_fields,
+    source: String((row && row.source) || 'stored'),
+    fetched_at: String((row && (row.fetched_at || row.as_of_date)) || ''),
+    stage: 'cache',
+    error_code: '',
+    message: fields.missing_fields.length ? 'Fresh cached data; some fields are unavailable' : 'Fresh cached data',
+    retryable: fields.missing_fields.length > 0,
+    saved: false
+  };
+}
+
+
+function buildFetchedSymbolResult(input) {
+  const merged = input.merged || {};
+  const providerRow = input.providerRow || {};
+  const fields = inspectFundamentalFields(merged);
+  const providerFields = inspectFundamentalFields(providerRow);
+  const hasProviderData = providerFields.available_fields.length > 0;
+  if (!hasProviderData) {
+    const providerMessage = input.enrichmentError || input.coreBatchError || 'no usable financial fields returned';
+    const retained = fields.available_fields.length ? ' · Last-good stored values retained' : '';
+    return {
+      symbol: input.symbol,
+      status: 'failed',
+      core_status: input.coreBatchError ? 'failed' : 'missing',
+      enrichment_status: input.enrichmentError ? 'failed' : 'missing',
+      core_available: fields.core_available,
+      enrichment_available: fields.enrichment_available,
+      available_fields: fields.available_fields,
+      missing_fields: fields.missing_fields,
+      source: String((input.existing && input.existing.source) || ''),
+      fetched_at: String((input.existing && (input.existing.fetched_at || input.existing.as_of_date)) || ''),
+      stage: input.enrichmentError ? 'enrichment' : (input.coreBatchError ? 'core' : 'provider'),
+      error_code: input.enrichmentCode || (input.coreBatchError ? 'CORE_FAILED' : 'NO_DATA'),
+      message: providerMessage + retained,
+      retryable: input.enrichmentRetryable !== false,
+      saved: false
+    };
+  }
+
+
+  const isPartial = fields.missing_fields.length > 0 || !!input.enrichmentError || !!input.coreBatchError;
+  const missingMessage = fields.missing_fields.length ? 'Missing: ' + fields.missing_fields.join(', ') : '';
+  const warningMessage = input.enrichmentError || input.coreBatchError || '';
+  return {
+    symbol: input.symbol,
+    status: isPartial ? 'partial' : 'updated',
+    core_status: fieldGroupStatus(fields.core_available, CORE_FUNDAMENTAL_FIELDS.length),
+    enrichment_status: input.enrichmentError
+      ? (fields.enrichment_available.length ? 'partial' : 'failed')
+      : fieldGroupStatus(fields.enrichment_available, ENRICHMENT_FUNDAMENTAL_FIELDS.length),
+    core_available: fields.core_available,
+    enrichment_available: fields.enrichment_available,
+    available_fields: fields.available_fields,
+    missing_fields: fields.missing_fields,
+    source: String(merged.source || ''),
+    fetched_at: String(merged.fetched_at || merged.as_of_date || ''),
+    stage: isPartial ? (input.enrichmentError ? 'enrichment' : (input.coreBatchError ? 'core' : 'coverage')) : 'saved',
+    error_code: input.enrichmentCode || (input.coreBatchError ? 'CORE_PARTIAL' : ''),
+    message: [warningMessage, missingMessage].filter(Boolean).join(' · ') || 'Financial data updated',
+    retryable: isPartial,
+    saved: false
+  };
+}
+
+
+function mergeExistingFundamentalRow(existing, incoming, symbol) {
+  const out = Object.assign({}, existing || {});
+  Object.keys(incoming || {}).forEach((key) => {
+    if (hasFieldValue(incoming[key])) out[key] = incoming[key];
+  });
+  out.symbol = symbol;
+  if (!out.source && incoming && incoming.source) out.source = incoming.source;
+  return cleanFundamentalRow(out);
+}
+
+
+function hasAnyFundamentalField(row) {
+  return inspectFundamentalFields(row).available_fields.length > 0;
+}
+
+
+function inspectFundamentalFields(row) {
+  const available = ALL_FUNDAMENTAL_FIELDS.filter((field) => hasFieldValue(row && row[field]));
+  const coreAvailable = CORE_FUNDAMENTAL_FIELDS.filter((field) => available.includes(field));
+  const enrichmentAvailable = ENRICHMENT_FUNDAMENTAL_FIELDS.filter((field) => available.includes(field));
+  return {
+    available_fields: available,
+    missing_fields: ALL_FUNDAMENTAL_FIELDS.filter((field) => !available.includes(field)),
+    core_available: coreAvailable,
+    enrichment_available: enrichmentAvailable
+  };
+}
+
+
+function hasFieldValue(value) {
+  return value !== '' && value !== null && value !== undefined;
+}
+
+
+function fieldGroupStatus(available, total, prefix) {
+  const count = Array.isArray(available) ? available.length : 0;
+  const base = count === 0 ? 'missing' : (count >= total ? 'complete' : 'partial');
+  return prefix ? prefix + '-' + base : base;
+}
+
+
+function buildFinancialCoverage(results) {
+  const rows = Array.isArray(results) ? results : [];
+  const fetchedTimes = rows.map((r) => Date.parse(r.fetched_at)).filter(Number.isFinite);
+  return {
+    requested: rows.length,
+    core_covered: rows.filter((r) => (r.core_available || []).length > 0).length,
+    full_covered: rows.filter((r) => (r.missing_fields || []).length === 0).length,
+    updated: rows.filter((r) => r.status === 'updated').length,
+    partial: rows.filter((r) => r.status === 'partial').length,
+    fresh: rows.filter((r) => r.status === 'fresh').length,
+    failed: rows.filter((r) => r.status === 'failed').length,
+    oldest_fetched_at: fetchedTimes.length ? new Date(Math.min(...fetchedTimes)).toISOString() : '',
+    newest_fetched_at: fetchedTimes.length ? new Date(Math.max(...fetchedTimes)).toISOString() : ''
+  };
+}
+
+
+function buildWarning(symbol, stage, err, fallbackStage) {
+  return {
+    symbol: symbol || '',
+    stage,
+    code: errorCode(err),
+    retryable: isRetryableError(err),
+    error: normalizeErrorMessage(err, fallbackStage || stage)
+  };
+}
+
+
+function errorCode(err) {
+  if (!err) return 'UNKNOWN';
+  if (err.code === 'ETIMEDOUT') return 'TIMEOUT';
+  const status = Number(err.status);
+  if (status === 429) return 'RATE_LIMIT';
+  if (status >= 500) return 'UPSTREAM_5XX';
+  if (status >= 400) return 'UPSTREAM_4XX';
+  const message = String(err.message || err);
+  if (/budget/i.test(message)) return 'BUDGET_EXHAUSTED';
+  if (/empty result|no usable/i.test(message)) return 'NO_DATA';
+  return 'PROVIDER_ERROR';
+}
+
 
 function normalizeSymbolList(items) {
   const seen = new Set();
@@ -338,11 +620,13 @@ function normalizeSymbolList(items) {
   return out;
 }
 
+
 async function getWatchlist() {
   const json = await fetchJSON(process.env.APPS_SCRIPT_URL + '?action=watchlist', {}, { stage: 'Apps Script watchlist read', timeoutMs: APPS_SCRIPT_TIMEOUT_MS });
   if (!json || !json.ok) throw new Error('watchlist fetch failed: ' + JSON.stringify(json));
   return json.data || [];
 }
+
 
 async function getExistingNews(weekEnding) {
   try {
@@ -360,6 +644,7 @@ async function getExistingNews(weekEnding) {
   }
 }
 
+
 function activeSymbols(watchlist) {
   const seen = new Set();
   const out = [];
@@ -374,6 +659,7 @@ function activeSymbols(watchlist) {
   return out;
 }
 
+
 function normalizeThaiSymbol(input) {
   let raw = String(input || '').trim().toUpperCase().replace(/\s+/g, '');
   raw = raw.replace(/^SET:/, '');
@@ -381,6 +667,7 @@ function normalizeThaiSymbol(input) {
   const base = raw.replace(/\.BK$/, '');
   return { symbol: base, yahoo: base.includes('.') ? base : base + '.BK' };
 }
+
 
 async function fetchAllQuotes(symbols, range) {
   return mapWithConcurrency(symbols, PRICE_FETCH_CONCURRENCY, async (s) => {
@@ -392,9 +679,10 @@ async function fetchAllQuotes(symbols, range) {
   });
 }
 
+
 async function fetchYahooBars(yahooSymbol, range) {
   const url = YAHOO_BASE + encodeURIComponent(yahooSymbol) + '?range=' + encodeURIComponent(range) + '&interval=1d';
-  const json = await fetchJSON(url, { headers: { 'User-Agent': 'Mozilla/5.0 (AlphaWeek V26.1)' } }, { stage: 'Yahoo chart ' + yahooSymbol, timeoutMs: PRICE_FETCH_TIMEOUT_MS });
+  const json = await fetchJSON(url, { headers: { 'User-Agent': 'Mozilla/5.0 (AlphaWeek V26.2)' } }, { stage: 'Yahoo chart ' + yahooSymbol, timeoutMs: PRICE_FETCH_TIMEOUT_MS });
   const r = json && json.chart && json.chart.result && json.chart.result[0];
   if (!r || !r.timestamp) throw new Error('yahoo: empty result for ' + yahooSymbol);
   const q = r.indicators && r.indicators.quote && r.indicators.quote[0];
@@ -414,6 +702,7 @@ async function fetchYahooBars(yahooSymbol, range) {
   if (!bars.length) throw new Error('yahoo: zero bars for ' + yahooSymbol);
   return bars;
 }
+
 
 function computeWeeklyMetrics(bars, weekEnding) {
   const upTo = bars.filter((b) => b.date <= weekEnding);
@@ -448,6 +737,8 @@ function computeWeeklyMetrics(bars, weekEnding) {
 }
 
 
+
+
 async function getExistingFundamentals(deadline) {
   const url = process.env.APPS_SCRIPT_URL + '?action=fundamentals';
   const json = await fetchJSON(url, {}, {
@@ -458,6 +749,7 @@ async function getExistingFundamentals(deadline) {
   if (!json || !json.ok) throw new Error('fundamentals read failed: ' + JSON.stringify(json));
   return Array.isArray(json.data) ? json.data : [];
 }
+
 
 async function fetchYahooQuoteBatch(symbols, deadline) {
   if (!symbols.length) return [];
@@ -475,6 +767,7 @@ async function fetchYahooQuoteBatch(symbols, deadline) {
   }).filter(hasCoreFundamental);
 }
 
+
 async function fetchYahooSummaryFundamentals(symbol, deadline) {
   const modules = 'price,summaryDetail,defaultKeyStatistics,financialData';
   const summaryUrl = YAHOO_QUOTE_SUMMARY_BASE + encodeURIComponent(symbol.yahoo) +
@@ -491,6 +784,7 @@ async function fetchYahooSummaryFundamentals(symbol, deadline) {
   if (!hasCoreFundamental(row)) throw new Error('quoteSummary returned no usable fundamentals');
   return row;
 }
+
 
 function mergeFundamentalRows(core, enrichment, symbol) {
   const fetchedAt = new Date().toISOString();
@@ -513,6 +807,7 @@ function mergeFundamentalRows(core, enrichment, symbol) {
   return cleanFundamentalRow(base);
 }
 
+
 function isFreshFundamental(row, maxAgeDays) {
   if (!row || maxAgeDays <= 0) return false;
   const raw = row.fetched_at || row.as_of_date;
@@ -521,6 +816,7 @@ function isFreshFundamental(row, maxAgeDays) {
   const age = Date.now() - time;
   return age >= 0 && age <= maxAgeDays * 86400000;
 }
+
 
 function normalizeQuoteSummaryFundamentals(symbol, result) {
   const price = result.price || {};
@@ -547,6 +843,7 @@ function normalizeQuoteSummaryFundamentals(symbol, result) {
   });
 }
 
+
 function normalizeQuoteFundamentals(symbol, q) {
   const fetchedAt = new Date().toISOString();
   return cleanFundamentalRow({
@@ -567,11 +864,14 @@ function normalizeQuoteFundamentals(symbol, q) {
   });
 }
 
+
 function cleanFundamentalRow(row) {
   const out = Object.assign({}, row);
   ['pe_ttm', 'pbv', 'dividend_yield_pct', 'market_cap', 'eps_ttm', 'roe_pct',
     'debt_to_equity', 'revenue_growth_yoy_pct', 'net_profit_growth_yoy_pct'].forEach((key) => {
-      const n = Number(out[key]);
+      const raw = out[key];
+      if (raw === '' || raw === null || raw === undefined) { out[key] = ''; return; }
+      const n = Number(raw);
       out[key] = Number.isFinite(n) ? round4(n) : '';
   });
   if (Number(out.pe_ttm) <= 0) out.pe_ttm = '';
@@ -580,10 +880,12 @@ function cleanFundamentalRow(row) {
   return out;
 }
 
+
 function hasCoreFundamental(row) {
   return !!(row && [row.pe_ttm, row.pbv, row.dividend_yield_pct, row.market_cap, row.roe_pct]
     .some((v) => v !== '' && v !== null && v !== undefined));
 }
+
 
 async function saveFundamentalsBestEffort(rows, meta) {
   if (!rows || !rows.length) return { ok: false, error: 'no fundamental rows returned', response: null };
@@ -604,6 +906,7 @@ async function saveFundamentalsBestEffort(rows, meta) {
   }
 }
 
+
 async function mapWithConcurrency(items, limit, worker) {
   const input = Array.isArray(items) ? items : [];
   const results = new Array(input.length);
@@ -619,18 +922,21 @@ async function mapWithConcurrency(items, limit, worker) {
   return results;
 }
 
+
 function yahooHeaders() {
   return {
-    'User-Agent': 'Mozilla/5.0 (AlphaWeek V26.1)',
+    'User-Agent': 'Mozilla/5.0 (AlphaWeek V26.2)',
     'Accept': 'application/json,text/plain,*/*'
   };
 }
+
 
 function rawValue(value) {
   if (value === null || value === undefined) return '';
   if (typeof value === 'object' && Object.prototype.hasOwnProperty.call(value, 'raw')) return value.raw;
   return value;
 }
+
 
 function firstNumber(...values) {
   for (const value of values) {
@@ -640,11 +946,13 @@ function firstNumber(...values) {
   return '';
 }
 
+
 function percentFromFraction(value) {
   const n = Number(value);
   if (!Number.isFinite(n)) return '';
   return Math.abs(n) <= 1.5 ? n * 100 : n;
 }
+
 
 function yahooDate(value) {
   const n = Number(value);
@@ -652,9 +960,11 @@ function yahooDate(value) {
   return new Date(n * 1000).toISOString().slice(0, 10);
 }
 
+
 function round4(n) {
   return Math.round(Number(n) * 10000) / 10000;
 }
+
 
 async function postToAppsScript(payload, stage) {
   const resp = await fetchWithTimeout(process.env.APPS_SCRIPT_URL, {
@@ -668,11 +978,13 @@ async function postToAppsScript(payload, stage) {
   try { return JSON.parse(text); } catch (err) { throw new Error((stage || 'Apps Script write') + ' returned non-JSON: ' + text.slice(0, 200)); }
 }
 
+
 async function fetchJSON(url, opts, meta) {
   const resp = await fetchWithTimeout(url, Object.assign({ redirect: 'follow' }, opts || {}), meta || {});
   if (!resp.ok) throw httpError(resp.status, (meta && meta.stage ? meta.stage + ': ' : '') + 'HTTP ' + resp.status);
   return resp.json();
 }
+
 
 async function fetchJSONWithRetry(url, opts, meta) {
   const settings = Object.assign({ retry: false }, meta || {});
@@ -690,6 +1002,7 @@ async function fetchJSONWithRetry(url, opts, meta) {
   }
   throw lastError;
 }
+
 
 async function fetchWithTimeout(url, opts, meta) {
   const settings = meta || {};
@@ -716,16 +1029,19 @@ async function fetchWithTimeout(url, opts, meta) {
   }
 }
 
+
 function httpError(status, message) {
   const err = new Error(message || ('HTTP ' + status));
   err.status = Number(status);
   return err;
 }
 
+
 function isRetryableError(err) {
   const status = Number(err && err.status);
   return !!(err && err.code === 'ETIMEDOUT') || status === 429 || status >= 500;
 }
+
 
 function normalizeErrorMessage(err, fallbackStage) {
   if (!err) return (fallbackStage || 'operation') + ' failed';
@@ -736,10 +1052,12 @@ function normalizeErrorMessage(err, fallbackStage) {
   return message;
 }
 
+
 function remainingBudget(deadline) {
   if (!deadline) return Infinity;
   return Math.max(0, Number(deadline) - Date.now());
 }
+
 
 function clampNumber(value, min, max, fallback) {
   const n = Number(value);
@@ -747,9 +1065,11 @@ function clampNumber(value, min, max, fallback) {
   return Math.max(min, Math.min(max, n));
 }
 
+
 function parseBoolean(value) {
   return value === true || String(value || '').toLowerCase() === 'true' || String(value) === '1';
 }
+
 
 function normalizeSymbolKey(input) {
   let raw = String(input || '').trim().toUpperCase().replace(/\s+/g, '');
@@ -757,7 +1077,9 @@ function normalizeSymbolKey(input) {
   return raw === '^SET' ? 'SET' : raw;
 }
 
+
 function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
+
 
 function lastFridayISO(now) {
   const bkkISO = isoDateInTZ(now, 'Asia/Bangkok');
