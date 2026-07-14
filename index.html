@@ -1,11 +1,11 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="th">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>AlphaWeek — Weekly Thai Equity Brief</title>
   <meta name="description" content="AlphaWeek weekly Thai equity brief and AI writing desk." />
-  <meta name="alphaweek-build" content="V26.1-refresh-split-2026-07-13" />
+  <meta name="alphaweek-build" content="V26.2-financial-diagnostics-2026-07-14" />
   <link rel="icon" href="assets/favicon.ico" sizes="any">
   <link rel="icon" type="image/svg+xml" href="assets/alphaweek-a1-favicon.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -203,6 +203,7 @@
     .segmented .btn.active { background:linear-gradient(135deg, var(--rose), var(--mauve)); color:#fff; box-shadow:0 8px 18px rgba(219,95,142,.22); }
     .scoreboard-note { margin-top:8px; }
 
+
     .market-explorer-controls { display:flex; flex-wrap:wrap; gap:10px; align-items:end; justify-content:space-between; margin:12px 0; }
     .market-explorer-left, .market-explorer-right { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
     .market-explorer-search { min-width:220px; max-width:320px; }
@@ -252,8 +253,19 @@
     .persistence-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; }
     .persistence-card { border:1px solid var(--line); border-radius:16px; padding:12px; background:rgba(255,255,255,.30); }
     body.night .persistence-card { background:rgba(255,255,255,.04); }
+    .financial-diagnostics-box { margin-top:12px; border:1px solid var(--line); border-radius:18px; padding:14px; background:rgba(255,255,255,.24); }
+    body.night .financial-diagnostics-box { background:rgba(255,255,255,.035); }
+    .diagnostic-list { display:grid; gap:10px; margin-top:12px; }
+    .diagnostic-card { border:1px solid var(--line); border-radius:16px; padding:12px; background:rgba(255,255,255,.34); display:grid; gap:8px; }
+    body.night .diagnostic-card { background:rgba(255,255,255,.04); }
+    .diagnostic-top { display:flex; justify-content:space-between; gap:10px; align-items:flex-start; }
+    .diagnostic-symbol { font-weight:800; font-size:1.05rem; }
+    .diagnostic-fields { display:flex; flex-wrap:wrap; gap:6px; }
+    .diagnostic-message { color:var(--muted); font-size:.84rem; line-height:1.45; }
+    .diagnostic-actions { display:flex; flex-wrap:wrap; gap:8px; }
     .persistence-value { font-size:1.45rem; font-weight:800; }
     @media (max-width: 940px) { .masthead-inner, .layout-main, .cols-2, .cols-3, .cols-4, .editorial-desk-grid { grid-template-columns:1fr; } .step-row { grid-template-columns:1fr 1fr; } .watchlist-compact-grid { grid-template-columns:repeat(3,minmax(0,1fr)); } .scoreboard-grid, .market-card-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+
 
     .manager-list { display:grid; gap:10px; }
     .manager-card { border:1px solid var(--line); border-radius:18px; background:rgba(255,255,255,.32); padding:14px; display:grid; gap:10px; }
@@ -268,6 +280,7 @@
     .hidden { display:none !important; }
     @media (max-width: 900px) { .wl-row { grid-template-columns:1fr 1fr; } }
 
+
     @media (max-width: 680px) { .app { width:min(100% - 18px, 1200px); padding-top:12px; padding-bottom:48px; } .masthead { padding:14px; border-radius:22px; } .utility-bar { align-items:flex-start; flex-direction:column; } .nav-wrap { top:0; padding:8px 0; } .nav { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); border-radius:22px; gap:6px; } .nav button { padding:9px 6px; font-size:.78rem; min-width:0; } .nav button i { font-size:1rem; } .form-grid, .step-row { grid-template-columns:1fr; } .panel, .paper-card { padding:15px; border-radius:20px; } .brand { font-size:1.55rem; } .brand-mark { width:40px; height:40px; } .edition-card { min-width:0; } .watchlist-compact-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; } .scoreboard-grid, .market-card-grid { grid-template-columns:1fr; gap:8px; } .market-explorer-controls { align-items:stretch; } .market-explorer-left, .market-explorer-right, .market-explorer-search { width:100%; max-width:none; } .control-system-grid, .persistence-grid { grid-template-columns:1fr; } }
   </style>
 </head>
@@ -278,6 +291,7 @@
       <div class="meta"><span id="app-version">index-alphaweek-v26.1-refresh-split</span><button class="btn ghost" id="refresh-btn" type="button"><i class="ti ti-refresh"></i> Refresh</button><button class="btn ghost" id="refresh-prices-btn" type="button"><i class="ti ti-currency-baht"></i> Refresh Prices</button><button class="btn ghost" id="theme-btn" type="button"><i class="ti ti-sun"></i> Day</button></div>
     </header>
     <div class="runtime-error" id="runtime-error"></div>
+
 
     <section class="masthead" aria-label="AlphaWeek masthead">
       <div class="masthead-inner">
@@ -298,6 +312,7 @@
       </div>
     </section>
 
+
     <div class="nav-wrap">
       <nav class="nav" aria-label="AlphaWeek sections">
         <button class="active" data-tab="brief" type="button"><i class="ti ti-article"></i> Brief</button>
@@ -306,6 +321,7 @@
         <button data-tab="control" type="button"><i class="ti ti-settings"></i> Control</button>
       </nav>
     </div>
+
 
     <main>
       <section id="tab-brief" class="tab active section">
@@ -317,6 +333,7 @@
           <p class="lead-copy" id="lead-copy">AlphaWeek จะสรุปความพร้อมของข้อมูล หุ้นที่เคลื่อนไหวเด่น ข่าวประกอบ และสิ่งที่ควรระวังก่อนนำไปเขียนบทวิเคราะห์</p>
           <div class="stat-strip" id="brief-badges"></div>
         </article>
+
 
         <section class="panel section" id="market-data-section">
           <div class="section-title">
@@ -354,6 +371,7 @@
           <div id="market-pagination" class="market-pagination" aria-label="Market Data pages"></div>
         </section>
 
+
         <section class="panel section" id="editorial-desk-section">
           <div class="section-title">
             <div>
@@ -376,7 +394,9 @@
           </div>
         </section>
 
+
       </section>
+
 
       <section id="tab-write" class="tab section">
         <section class="panel writing-desk">
@@ -394,6 +414,7 @@
           </div>
           <div id="copy-status" style="margin-top:12px"></div>
         </section>
+
 
         <div class="grid cols-2 section">
           <section class="panel">
@@ -416,6 +437,7 @@
         </div>
       </section>
 
+
       <section id="tab-archive" class="tab section">
         <section class="panel">
           <div class="section-title"><div><h2>Archive</h2><span>บทความย้อนหลังและบันทึกการวิเคราะห์</span></div><button class="btn" id="reload-articles-btn-2" type="button"><i class="ti ti-refresh"></i> Reload</button></div>
@@ -423,6 +445,7 @@
           <div class="article-list" id="article-list"></div>
         </section>
       </section>
+
 
       <section id="tab-control" class="tab section">
         <div class="layout-main">
@@ -438,9 +461,22 @@
               <label>Auto Refresh Cooldown (minutes)<input id="price-refresh-cooldown" type="number" min="0" max="1440" step="1" value="15"></label>
             </div>
             <div class="meta"><button class="btn primary" id="save-settings-btn" type="button"><i class="ti ti-device-floppy"></i> Save Local Settings</button><button class="btn" id="restore-default-urls-btn" type="button"><i class="ti ti-rotate-clockwise"></i> Restore Default URLs</button><button class="btn" id="test-connection-btn" type="button"><i class="ti ti-plug-connected"></i> Test Connection</button><button class="btn primary" id="refresh-prices-control-btn" type="button"><i class="ti ti-currency-baht"></i> Refresh Prices Now</button><button class="btn primary" id="refresh-financial-control-btn" type="button"><i class="ti ti-report-money"></i> Refresh Financial</button><button class="btn" id="refresh-financial-force-btn" type="button"><i class="ti ti-refresh-alert"></i> Force Financial</button></div>
-            <div class="alert good">V26.1 separates refresh flows: Prices update price/technical data only. Financial runs in small free Yahoo batches, caches values for 7 days, and never blocks Price Refresh.</div><div id="settings-status"></div>
+            <div class="alert good">V26.2 keeps Price Refresh independent and adds per-symbol Financial diagnostics with targeted Retry Failed / Retry Missing controls.</div><div id="settings-status"></div>
             <div id="price-refresh-status"></div>
             <div id="financial-refresh-status"></div>
+            <div class="financial-diagnostics-box" id="financial-diagnostics">
+              <div class="section-title">
+                <div><h3>Financial Diagnostics</h3><span>ดูผลรายหุ้น แยก Core / Enrichment และ retry เฉพาะรายการที่มีปัญหา</span></div>
+                <div class="diagnostic-actions">
+                  <button class="btn" id="retry-financial-failed-btn" type="button"><i class="ti ti-reload"></i> Retry Failed</button>
+                  <button class="btn" id="retry-financial-missing-btn" type="button"><i class="ti ti-list-search"></i> Retry Missing</button>
+                </div>
+              </div>
+              <div class="persistence-grid" id="financial-diagnostics-summary"></div>
+              <div id="financial-diagnostics-empty"></div>
+              <div class="diagnostic-list" id="financial-diagnostics-list"></div>
+            </div>
+
 
             <div class="universe-refresh-box" id="universe-refresh-box">
               <div class="section-title">
@@ -496,12 +532,14 @@
     </main>
   </div>
 
+
   <script>
   (function () {
     'use strict';
-    const APP_VERSION = 'index-alphaweek-v26.1-refresh-split';
-    const STORAGE_KEY = 'alphaweek_config_v261';
-    const LEGACY_KEYS = ['alphaweek_config_v26', 'alphaweek_config_v24', 'alphaweek_config_v15', 'alphaweek_config_v14', 'alphaweek_config_v13', 'alphaweek_config_v12', 'alphaweek_config_v11', 'alphaweek_config_v10', 'alphaweek_config_v09', 'alphaweek_config_v08', 'alphaweek_config_v07', 'alphaweek_config_v06', 'alphaweek_config_v05', 'alphaweek_config_v04', 'alphaweek_config_v03', 'alphaweek_config_v02', 'alphaweek_config_v01'];
+    const APP_VERSION = 'index-alphaweek-v26.2-financial-diagnostics';
+    const STORAGE_KEY = 'alphaweek_config_v262';
+    const FINANCIAL_DIAGNOSTICS_KEY = 'alphaweek_financial_diagnostics_v262';
+    const LEGACY_KEYS = ['alphaweek_config_v261', 'alphaweek_config_v26', 'alphaweek_config_v24', 'alphaweek_config_v15', 'alphaweek_config_v14', 'alphaweek_config_v13', 'alphaweek_config_v12', 'alphaweek_config_v11', 'alphaweek_config_v10', 'alphaweek_config_v09', 'alphaweek_config_v08', 'alphaweek_config_v07', 'alphaweek_config_v06', 'alphaweek_config_v05', 'alphaweek_config_v04', 'alphaweek_config_v03', 'alphaweek_config_v02', 'alphaweek_config_v01'];
     const DEFAULT_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzh2PhvOrJu16P9ZLX192PEXUZqTHbp26P1y6TAXNUdO-3UCslhogZHBkoPnOcfx1SA/exec';
     const DEFAULT_HEALTH_URL = 'https://alphaweek.vercel.app/api/health';
     const DEFAULT_FETCH_WEEKLY_URL = 'https://alphaweek.vercel.app/api/fetch-weekly';
@@ -517,7 +555,7 @@
       lastFinancialRefreshAt: '',
       templates: defaultTemplates()
     };
-    const state = { config: loadConfig(), health: null, dashboard: null, dashboardLoad: { ok:false, error:'', lastSuccessAt:'' }, articles: [], allArticles: [], editingArticleId: null, activeTab: 'brief', scoreboardUniverse: 'watchlist', marketExplorer: { universe:'all', mode:'overview', view:'table', query:'', sortKey:'score', sortDir:'desc', page:1, pageSize:20 }, priceRefresh: { running:false, lastResult:null, statusMessage:'', statusKind:'' }, financialRefresh: { running:false, lastResult:null, statusMessage:'', statusKind:'', total:0, processed:0, refreshed:[], skipped:[], failed:[], warnings:[] }, universeRefresh: { running:false, cancelRequested:false, universe:'watchlist', batchSize:5, total:0, queue:[], originalQueue:[], currentBatch:[], completed:[], skipped:[], errors:[], startedAt:null, finishedAt:null } };
+    const state = { config: loadConfig(), health: null, dashboard: null, dashboardLoad: { ok:false, error:'', lastSuccessAt:'' }, articles: [], allArticles: [], editingArticleId: null, activeTab: 'brief', scoreboardUniverse: 'watchlist', marketExplorer: { universe:'all', mode:'overview', view:'table', query:'', sortKey:'score', sortDir:'desc', page:1, pageSize:20 }, priceRefresh: { running:false, lastResult:null, statusMessage:'', statusKind:'' }, financialRefresh: { running:false, lastResult:null, statusMessage:'', statusKind:'', total:0, processed:0, results:[], warnings:[] }, financialDiagnostics: loadFinancialDiagnosticsLocal(), universeRefresh: { running:false, cancelRequested:false, universe:'watchlist', batchSize:5, total:0, queue:[], originalQueue:[], currentBatch:[], completed:[], skipped:[], errors:[], startedAt:null, finishedAt:null } };
     const $ = (sel) => document.querySelector(sel);
     const $$ = (sel) => Array.from(document.querySelectorAll(sel));
     function reportRuntimeError(message) {
@@ -529,10 +567,10 @@
     window.addEventListener('error', event => reportRuntimeError(`Runtime error: ${event.message || event.error || 'unknown'}`));
     window.addEventListener('unhandledrejection', event => reportRuntimeError(`Async error: ${event.reason && event.reason.message ? event.reason.message : event.reason}`));
     function runFrontendSelfCheck() {
-      const requiredIds = ['brief-alert','latest-article-home','news-list','market-table','market-cards','market-pagination','market-explorer-summary','market-universe-controls','market-mode-controls','market-view-controls','market-search','article-list','article-manager-list','apps-script-url','health-url','save-settings-btn','restore-default-urls-btn','test-connection-btn','refresh-prices-btn','refresh-prices-control-btn','refresh-financial-control-btn','refresh-financial-force-btn','fetch-weekly-url','auto-refresh-prices','price-refresh-cooldown','price-refresh-status','financial-refresh-status','universe-refresh-universe','universe-refresh-batch-size','universe-refresh-start-btn','universe-refresh-stop-btn','universe-refresh-progress','watchlist-manager','persistence-check','persistence-alert'];
+      const requiredIds = ['brief-alert','latest-article-home','news-list','market-table','market-cards','market-pagination','market-explorer-summary','market-universe-controls','market-mode-controls','market-view-controls','market-search','article-list','article-manager-list','apps-script-url','health-url','save-settings-btn','restore-default-urls-btn','test-connection-btn','refresh-prices-btn','refresh-prices-control-btn','refresh-financial-control-btn','refresh-financial-force-btn','fetch-weekly-url','auto-refresh-prices','price-refresh-cooldown','price-refresh-status','financial-refresh-status','financial-diagnostics','financial-diagnostics-summary','financial-diagnostics-empty','financial-diagnostics-list','retry-financial-failed-btn','retry-financial-missing-btn','universe-refresh-universe','universe-refresh-batch-size','universe-refresh-start-btn','universe-refresh-stop-btn','universe-refresh-progress','watchlist-manager','persistence-check','persistence-alert'];
       const missingIds = requiredIds.filter(id => !document.getElementById(id));
-      const requiredFns = ['loadAll','loadDashboard','loadArticles','loadArticleManager','renderMarketDataExplorer','renderLatestArticle','lookupWatchlistRow','saveWatchlist','saveLocalSettings','restoreDefaultUrls','testConnection','refreshPrices','refreshFinancial','startUniverseRefresh','stopUniverseRefresh','buildUniverseRefreshQueue','renderUniverseRefreshProgress','maybeAutoRefreshPricesOnOpen','currentEffectiveTheme','bindSystemThemeListener','renderPersistenceCheck'];
-      const available = { loadAll, loadDashboard, loadArticles, loadArticleManager, renderMarketDataExplorer, renderLatestArticle, lookupWatchlistRow, saveWatchlist, saveLocalSettings, restoreDefaultUrls, testConnection, refreshPrices, refreshFinancial, startUniverseRefresh, stopUniverseRefresh, buildUniverseRefreshQueue, renderUniverseRefreshProgress, maybeAutoRefreshPricesOnOpen, currentEffectiveTheme, bindSystemThemeListener, renderPersistenceCheck };
+      const requiredFns = ['loadAll','loadDashboard','loadArticles','loadArticleManager','renderMarketDataExplorer','renderLatestArticle','lookupWatchlistRow','saveWatchlist','saveLocalSettings','restoreDefaultUrls','testConnection','refreshPrices','refreshFinancial','renderFinancialDiagnostics','retryFinancialResults','startUniverseRefresh','stopUniverseRefresh','buildUniverseRefreshQueue','renderUniverseRefreshProgress','maybeAutoRefreshPricesOnOpen','currentEffectiveTheme','bindSystemThemeListener','renderPersistenceCheck'];
+      const available = { loadAll, loadDashboard, loadArticles, loadArticleManager, renderMarketDataExplorer, renderLatestArticle, lookupWatchlistRow, saveWatchlist, saveLocalSettings, restoreDefaultUrls, testConnection, refreshPrices, refreshFinancial, renderFinancialDiagnostics, retryFinancialResults, startUniverseRefresh, stopUniverseRefresh, buildUniverseRefreshQueue, renderUniverseRefreshProgress, maybeAutoRefreshPricesOnOpen, currentEffectiveTheme, bindSystemThemeListener, renderPersistenceCheck };
       const missingFns = requiredFns.filter(name => typeof available[name] !== 'function');
       const result = { ok: missingIds.length === 0 && missingFns.length === 0, missingIds, missingFns, version: APP_VERSION };
       if (!result.ok) reportRuntimeError(`Frontend self-check failed\nMissing IDs: ${missingIds.join(', ') || '-'}\nMissing functions: ${missingFns.join(', ') || '-'}`);
@@ -540,6 +578,7 @@
     }
     window.AlphaWeekSelfCheck = runFrontendSelfCheck;
     document.addEventListener('DOMContentLoaded', init);
+
 
     function init() { if ($('#app-version')) $('#app-version').textContent = APP_VERSION; applyTheme(); bindSystemThemeListener(); bindEvents(); hydrateSettings(); const check = runFrontendSelfCheck(); if (check.ok) { const box = $('#runtime-error'); if (box) { box.classList.remove('show'); box.textContent = ''; } } loadAll().then(() => maybeAutoRefreshPricesOnOpen()); }
     function safeBind(selector, event, handler) { const el = $(selector); if (el) el.addEventListener(event, handler); }
@@ -577,7 +616,9 @@
       safeBind('#test-connection-btn', 'click', testConnection);
       safeBind('#refresh-prices-control-btn', 'click', () => refreshPrices({ source:'manual-control', force:true }));
       safeBind('#refresh-financial-control-btn', 'click', () => refreshFinancial({ source:'manual-financial', force:false }));
-      safeBind('#refresh-financial-force-btn', 'click', () => refreshFinancial({ source:'manual-financial-force', force:true }));
+      safeBind('#refresh-financial-force-btn', 'click', () => refreshFinancial({ source:'manual-financial-force', force:true, mode:'all' }));
+      safeBind('#retry-financial-failed-btn', 'click', () => retryFinancialResults('failed'));
+      safeBind('#retry-financial-missing-btn', 'click', () => retryFinancialResults('missing'));
       safeBind('#universe-refresh-start-btn', 'click', startUniverseRefresh);
       safeBind('#universe-refresh-stop-btn', 'click', stopUniverseRefresh);
       safeBind('#reset-template-btn', 'click', resetTemplates);
@@ -668,7 +709,7 @@
         </article>`;
       }).join('');
     }
-    function renderAll() { renderEdition(); renderBrief(); renderPersistenceCheck(); renderMarketDataExplorer(); renderNews(); renderArticles(); renderLatestArticle(); renderPromptPreview(); renderUniverseRefreshProgress(); }
+    function renderAll() { renderEdition(); renderBrief(); renderPersistenceCheck(); renderMarketDataExplorer(); renderNews(); renderArticles(); renderLatestArticle(); renderPromptPreview(); renderUniverseRefreshProgress(); renderFinancialDiagnostics(); }
     function renderEdition() {
       const d = state.dashboard || {}; const h = state.health || {}; const week = d.week_ending || h.latest_week || '';
       $('#edition-week').textContent = week ? formatBE(week) : '—';
@@ -733,6 +774,7 @@
         alertBox.innerHTML = alertHtml('good', `Google Sheets loaded · Week ${escapeHTML(d.week_ending || '—')} · Last success ${escapeHTML(last)} · Save mode Merge/Upsert${fLast}`);
       }
     }
+
 
     function normalizeStockKey(symbol) {
       return String(symbol || '').trim().toUpperCase().replace(/\.BK$/, '');
@@ -886,6 +928,8 @@
       const box = $('#watchlist-scoreboard');
       if (box) box.insertAdjacentHTML('afterbegin', msg);
     }
+
+
 
 
     function marketUniverseLabel(value) {
@@ -1097,10 +1141,12 @@
         return;
       }
 
+
       const columns = marketColumnDefinitions(mode);
       const tableRows = pageRows.map(r => `<tr>${columns.map(col => `<td class="${escapeAttr(col.cls || '')}" data-label="${escapeAttr(col.label)}">${col.render(r)}</td>`).join('')}</tr>`).join('');
       const headers = columns.map(col => `<th class="${escapeAttr(col.cls || '')}"${col.title ? ` title="${escapeAttr(col.title)}"` : ''}>${sortButton(col.label, col.key)}</th>`).join('');
       tableBox.innerHTML = `<table class="market-table market-table-${escapeAttr(mode)}"><thead><tr>${headers}</tr></thead><tbody>${tableRows}</tbody></table><div class="market-help">${mode === 'overview' ? 'Overview แสดงคอลัมน์หลักและซ่อนคอลัมน์ลำดับรองอัตโนมัติบนหน้าจอแคบ จึงไม่ต้องเลื่อนซ้าย–ขวา' : mode === 'technical' ? 'Vol x20D เปรียบเทียบ Volume สัปดาห์ล่าสุดกับ 20 วันซื้อขายก่อนหน้า' : 'ค่า Financial เป็นข้อมูล snapshot ล่าสุด; — หมายถึงแหล่งข้อมูลยังไม่ส่งค่าที่ใช้งานได้'}</div>`;
+
 
       cardBox.innerHTML = pageRows.map(r => {
         const metrics = marketCardMetrics(r, mode).map(([label,value]) => `<span>${escapeHTML(label)} <strong>${value}</strong></span>`).join('');
@@ -1189,6 +1235,7 @@
       else state.marketExplorer.page = Math.max(1, Math.min(totalPages, Number(raw || 1)));
       renderMarketDataExplorer();
     }
+
 
     function renderWatchlistCoverage() {
       const box = $('#watchlist-coverage');
@@ -1304,14 +1351,18 @@
       const d = state.dashboard || {}; const news = d.news || []; const week = d.week_ending || (state.health && state.health.latest_week) || 'N/A'; const templates = state.config.templates || defaultTemplates(); const intro = templates[templateId] || templates.weekly; const universeLabel = marketUniverseLabel(state.marketExplorer.universe || 'all');
       return `${intro}
 
+
 ข้อมูลสัปดาห์: ${week} (${formatBE(week) || week})
 ข้อกำกับ: ใช้ข้อมูลนี้เพื่อเขียนบทวิเคราะห์เชิงให้ความรู้ ไม่ใช่คำแนะนำการลงทุน และควรระบุความไม่แน่นอนของข้อมูล/แหล่งข้อมูลด้วย
+
 
 ## Market Data Explorer — ${universeLabel}
 ${marketMarkdownTable()}
 
+
 ## Global Context Digest
 ${newsMarkdown(news)}
+
 
 ## สิ่งที่อยากให้วิเคราะห์
 1. ภาพรวมตลาดและ sentiment ของสัปดาห์
@@ -1549,6 +1600,12 @@ ${newsMarkdown(news)}
         return true;
       });
     }
+    function financialRetrySymbols(mode) {
+      const results = Array.isArray(state.financialDiagnostics && state.financialDiagnostics.results) ? state.financialDiagnostics.results : [];
+      if (mode === 'failed') return results.filter(r => r.status === 'failed' && r.retryable !== false).map(r => normalizeStockKey(r.symbol)).filter(Boolean);
+      if (mode === 'missing') return results.filter(r => r.status !== 'failed' && Array.isArray(r.missing_fields) && r.missing_fields.length > 0).map(r => normalizeStockKey(r.symbol)).filter(Boolean);
+      return [];
+    }
     function chunkSymbols(items, size) {
       const out = [];
       for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
@@ -1559,22 +1616,145 @@ ${newsMarkdown(news)}
       if (/this operation was aborted|aborterror|\baborted\b/i.test(message)) return `${stage || 'Request'} timeout — กรุณาลอง batch เล็กอีกครั้ง`;
       return message;
     }
+    function normalizeFinancialResult(item) {
+      const r = Object.assign({}, item || {});
+      r.symbol = normalizeStockKey(r.symbol);
+      r.status = ['updated','fresh','partial','failed','skipped'].includes(r.status) ? r.status : 'failed';
+      r.core_available = Array.isArray(r.core_available) ? r.core_available : [];
+      r.enrichment_available = Array.isArray(r.enrichment_available) ? r.enrichment_available : [];
+      r.available_fields = Array.isArray(r.available_fields) ? r.available_fields : [];
+      r.missing_fields = Array.isArray(r.missing_fields) ? r.missing_fields : [];
+      r.core_status = r.core_status || (r.core_available.length ? 'partial' : 'missing');
+      r.enrichment_status = r.enrichment_status || (r.enrichment_available.length ? 'partial' : 'missing');
+      r.source = String(r.source || '');
+      r.fetched_at = String(r.fetched_at || '');
+      r.stage = String(r.stage || '');
+      r.error_code = String(r.error_code || '');
+      r.message = String(r.message || '');
+      r.retryable = r.retryable !== false;
+      return r;
+    }
+    function legacyFinancialResults(result, batch) {
+      const r = result || {};
+      const partial = new Set((r.symbols_partial || []).map(normalizeStockKey));
+      const fresh = new Set((r.symbols_skipped_fresh || []).map(normalizeStockKey));
+      const failedMap = {};
+      (r.symbols_failed || []).forEach(item => { const symbol = normalizeStockKey(item.symbol || item); failedMap[symbol] = item; });
+      return (batch || []).map(symbolRaw => {
+        const symbol = normalizeStockKey(symbolRaw);
+        if (failedMap[symbol]) return normalizeFinancialResult({ symbol, status:'failed', stage:failedMap[symbol].stage || 'provider', error_code:failedMap[symbol].code || '', message:failedMap[symbol].error || 'Financial refresh failed', retryable:failedMap[symbol].retryable !== false });
+        if (fresh.has(symbol)) return normalizeFinancialResult({ symbol, status:'fresh', stage:'cache', message:'Fresh cached data', retryable:false });
+        if (partial.has(symbol)) return normalizeFinancialResult({ symbol, status:'partial', stage:'coverage', message:'Financial data saved with missing fields', retryable:true });
+        return normalizeFinancialResult({ symbol, status:'updated', stage:'saved', message:'Financial data updated', retryable:false });
+      });
+    }
+    function mergeFinancialResults(existing, incoming) {
+      const map = new Map();
+      (existing || []).forEach(item => { const r = normalizeFinancialResult(item); if (r.symbol) map.set(r.symbol, r); });
+      (incoming || []).forEach(item => { const r = normalizeFinancialResult(item); if (r.symbol) map.set(r.symbol, r); });
+      return Array.from(map.values());
+    }
+    function calculateFinancialCoverage(results) {
+      const rows = Array.isArray(results) ? results : [];
+      const times = rows.map(r => Date.parse(r.fetched_at)).filter(Number.isFinite);
+      return {
+        requested: rows.length,
+        core_covered: rows.filter(r => (r.core_available || []).length > 0).length,
+        full_covered: rows.filter(r => (r.missing_fields || []).length === 0 && r.status !== 'failed').length,
+        updated: rows.filter(r => r.status === 'updated').length,
+        partial: rows.filter(r => r.status === 'partial').length,
+        fresh: rows.filter(r => r.status === 'fresh').length,
+        failed: rows.filter(r => r.status === 'failed').length,
+        oldest_fetched_at: times.length ? new Date(Math.min(...times)).toISOString() : ''
+      };
+    }
+    function financialFieldLabel(field) {
+      return ({ pe_ttm:'P/E', pbv:'P/BV', dividend_yield_pct:'Yield', market_cap:'Market Cap', eps_ttm:'EPS', roe_pct:'ROE', debt_to_equity:'D/E', revenue_growth_yoy_pct:'Revenue Growth', net_profit_growth_yoy_pct:'Earnings Growth', financial_period:'Period' })[field] || field;
+    }
+    function financialStatusLabel(status) {
+      return ({ updated:'Updated', fresh:'Fresh', partial:'Partial', failed:'Failed', skipped:'Skipped' })[status] || status;
+    }
+    function financialStatusKind(status) {
+      return status === 'updated' || status === 'fresh' ? 'good' : status === 'failed' ? 'bad' : 'warn';
+    }
+    function renderFinancialDiagnostics() {
+      const summary = $('#financial-diagnostics-summary');
+      const list = $('#financial-diagnostics-list');
+      const empty = $('#financial-diagnostics-empty');
+      const retryFailed = $('#retry-financial-failed-btn');
+      const retryMissing = $('#retry-financial-missing-btn');
+      if (!summary || !list || !empty) return;
+      const data = state.financialDiagnostics || { results:[] };
+      const results = Array.isArray(data.results) ? data.results.map(normalizeFinancialResult) : [];
+      const coverage = calculateFinancialCoverage(results);
+      const failedCount = results.filter(r => r.status === 'failed' && r.retryable !== false).length;
+      const missingCount = results.filter(r => r.status !== 'failed' && r.missing_fields.length > 0).length;
+      if (retryFailed) { retryFailed.disabled = state.financialRefresh.running || failedCount === 0; retryFailed.innerHTML = `<i class="ti ti-reload"></i> Retry Failed (${failedCount})`; }
+      if (retryMissing) { retryMissing.disabled = state.financialRefresh.running || missingCount === 0; retryMissing.innerHTML = `<i class="ti ti-list-search"></i> Retry Missing (${missingCount})`; }
+      summary.innerHTML = [
+        ['Core coverage', `${coverage.core_covered}/${coverage.requested || 0}`, coverage.core_covered > 0],
+        ['Full coverage', `${coverage.full_covered}/${coverage.requested || 0}`, coverage.full_covered > 0],
+        ['Partial', coverage.partial, coverage.partial === 0],
+        ['Failed', coverage.failed, coverage.failed === 0],
+        ['Fresh', coverage.fresh, coverage.fresh > 0],
+        ['Oldest data', coverage.oldest_fetched_at ? formatDateTime(coverage.oldest_fetched_at) : '—', !!coverage.oldest_fetched_at]
+      ].map(([label,value,ok]) => `<div class="persistence-card"><div class="muted">${escapeHTML(label)}</div><div class="persistence-value">${escapeHTML(value)}</div><span class="badge ${ok ? 'good' : 'warn'}">${ok ? 'OK' : 'Check'}</span></div>`).join('');
+      if (!results.length) {
+        empty.innerHTML = alertHtml('', 'ยังไม่มี Financial diagnostic result ในเครื่องนี้ กด Refresh Financial เพื่อเริ่มต้น');
+        list.innerHTML = '';
+        return;
+      }
+      empty.innerHTML = data.lastAttemptAt ? `<div class="muted" style="margin-top:10px">Last attempt: ${escapeHTML(formatDateTime(data.lastAttemptAt))} · Mode ${escapeHTML(data.lastMode || 'all')}</div>` : '';
+      const order = { failed:0, partial:1, updated:2, fresh:3, skipped:4 };
+      list.innerHTML = results.slice().sort((a,b) => (order[a.status] ?? 9) - (order[b.status] ?? 9) || a.symbol.localeCompare(b.symbol)).map(r => {
+        const missing = r.missing_fields.length ? r.missing_fields.map(financialFieldLabel).join(', ') : 'None';
+        const available = r.available_fields.length ? r.available_fields.map(financialFieldLabel).join(', ') : 'None';
+        const fetched = r.fetched_at ? formatDateTime(r.fetched_at) : '—';
+        return `<div class="diagnostic-card">
+          <div class="diagnostic-top"><div><div class="diagnostic-symbol">${escapeHTML(r.symbol)}</div><div class="muted">${escapeHTML(r.source || 'source unavailable')} · ${escapeHTML(fetched)}</div></div><span class="badge ${financialStatusKind(r.status)}">${escapeHTML(financialStatusLabel(r.status))}</span></div>
+          <div class="diagnostic-fields"><span class="badge">Core ${r.core_available.length}/5 · ${escapeHTML(r.core_status)}</span><span class="badge">Enrichment ${r.enrichment_available.length}/5 · ${escapeHTML(r.enrichment_status)}</span>${r.error_code ? `<span class="badge warn">${escapeHTML(r.error_code)}</span>` : ''}</div>
+          <div class="diagnostic-message"><strong>Available:</strong> ${escapeHTML(available)}<br><strong>Missing:</strong> ${escapeHTML(missing)}${r.stage ? `<br><strong>Stage:</strong> ${escapeHTML(r.stage)}` : ''}${r.message ? `<br>${escapeHTML(r.message)}` : ''}</div>
+        </div>`;
+      }).join('');
+    }
+    function loadFinancialDiagnosticsLocal() {
+      try {
+        const raw = JSON.parse(localStorage.getItem(FINANCIAL_DIAGNOSTICS_KEY) || '{}');
+        return { results:Array.isArray(raw.results) ? raw.results.map(normalizeFinancialResult) : [], lastAttemptAt:String(raw.lastAttemptAt || ''), lastMode:String(raw.lastMode || 'all'), warnings:Array.isArray(raw.warnings) ? raw.warnings : [] };
+      } catch (err) { return { results:[], lastAttemptAt:'', lastMode:'all', warnings:[] }; }
+    }
+    function saveFinancialDiagnosticsLocal() {
+      localStorage.setItem(FINANCIAL_DIAGNOSTICS_KEY, JSON.stringify(state.financialDiagnostics || { results:[] }));
+    }
+    async function retryFinancialResults(mode) {
+      const symbols = financialRetrySymbols(mode);
+      if (!symbols.length) {
+        renderFinancialRefreshStatus(mode === 'failed' ? 'ไม่มี Failed symbol ที่ retry ได้' : 'ไม่มี symbol ที่มี Missing fields ให้ retry', 'warn');
+        return false;
+      }
+      return refreshFinancial({ source:`retry-${mode}`, force:true, mode, symbols });
+    }
     async function refreshFinancial(options = {}) {
       if (state.financialRefresh.running) {
         renderFinancialRefreshStatus('กำลัง refresh Financial อยู่แล้ว', 'warn');
         return false;
       }
       saveLocalSettings();
-      const symbols = financialRefreshSymbols();
+      const mode = ['failed','missing'].includes(options.mode) ? options.mode : 'all';
+      const sourceSymbols = Array.isArray(options.symbols) && options.symbols.length ? options.symbols : financialRefreshSymbols();
+      const symbols = Array.from(new Set(sourceSymbols.map(normalizeStockKey).filter(symbol => symbol && symbol !== 'SET')));
       if (!symbols.length) {
-        renderFinancialRefreshStatus('ไม่พบหุ้น Active ใน Watchlist สำหรับ Financial refresh', 'warn');
+        renderFinancialRefreshStatus('ไม่พบหุ้นสำหรับ Financial refresh', 'warn');
         return false;
       }
+      const force = !!options.force || mode !== 'all';
       const batches = chunkSymbols(symbols, 3);
-      state.financialRefresh = { running:true, lastResult:null, statusMessage:'', statusKind:'', total:symbols.length, processed:0, refreshed:[], skipped:[], failed:[], warnings:[] };
-      renderFinancialRefreshStatus(`กำลัง refresh Financial 0/${symbols.length} · batch 3 · cache 7 วัน${options.force ? ' · FORCE' : ''}`, 'warn');
+      state.financialRefresh = { running:true, lastResult:null, statusMessage:'', statusKind:'', total:symbols.length, processed:0, results:[], warnings:[] };
+      renderFinancialRefreshStatus(`กำลัง refresh Financial 0/${symbols.length} · mode ${mode} · batch 3 · cache 7 วัน${force ? ' · FORCE' : ''}`, 'warn');
       setHealth('loading', 'กำลัง refresh Financial...');
+      renderFinancialDiagnostics();
       for (const batch of batches) {
+        let incoming = [];
         try {
           const resp = await fetch(priceRefreshUrl(), {
             method:'POST',
@@ -1582,8 +1762,9 @@ ${newsMarkdown(news)}
             body:JSON.stringify({
               source: options.source || 'manual-financial',
               refresh_type:'financial',
+              financial_mode:mode,
               symbols:batch,
-              force:!!options.force,
+              force,
               max_age_days:7
             }),
             cache:'no-store',
@@ -1595,27 +1776,36 @@ ${newsMarkdown(news)}
           if (!resp.ok || !json.ok) throw new Error(json.error || `HTTP ${resp.status}`);
           const r = json.result || {};
           state.financialRefresh.lastResult = json;
-          (r.symbols_refreshed || []).forEach(symbol => state.financialRefresh.refreshed.push(symbol));
-          (r.symbols_skipped_fresh || []).forEach(symbol => state.financialRefresh.skipped.push(symbol));
-          (r.symbols_failed || []).forEach(item => state.financialRefresh.failed.push(item));
+          incoming = Array.isArray(r.symbol_results) && r.symbol_results.length ? r.symbol_results.map(normalizeFinancialResult) : legacyFinancialResults(r, batch);
           (r.warnings || []).forEach(item => state.financialRefresh.warnings.push(item));
         } catch (err) {
           const message = friendlyRefreshError(err, 'Financial batch');
-          batch.forEach(symbol => state.financialRefresh.failed.push({ symbol, error:message }));
+          incoming = batch.map(symbol => normalizeFinancialResult({ symbol, status:'failed', stage:'request', error_code:/timeout/i.test(message) ? 'TIMEOUT' : 'REQUEST_FAILED', message, retryable:true }));
         }
+        state.financialRefresh.results = mergeFinancialResults(state.financialRefresh.results, incoming);
+        state.financialDiagnostics = {
+          results: mergeFinancialResults(state.financialDiagnostics && state.financialDiagnostics.results, incoming),
+          lastAttemptAt: new Date().toISOString(),
+          lastMode: mode,
+          warnings: state.financialRefresh.warnings.slice()
+        };
+        saveFinancialDiagnosticsLocal();
         state.financialRefresh.processed += batch.length;
-        renderFinancialRefreshStatus(`กำลัง refresh Financial ${Math.min(state.financialRefresh.processed, symbols.length)}/${symbols.length} · Updated ${state.financialRefresh.refreshed.length} · Fresh ${state.financialRefresh.skipped.length} · Failed ${state.financialRefresh.failed.length}`, 'warn');
+        const c = calculateFinancialCoverage(state.financialRefresh.results);
+        renderFinancialRefreshStatus(`กำลัง refresh Financial ${Math.min(state.financialRefresh.processed, symbols.length)}/${symbols.length} · Updated ${c.updated} · Partial ${c.partial} · Fresh ${c.fresh} · Failed ${c.failed}`, 'warn');
+        renderFinancialDiagnostics();
       }
       state.financialRefresh.running = false;
       state.config.lastFinancialRefreshAt = new Date().toISOString();
       saveConfigLocal();
-      const failed = state.financialRefresh.failed.length;
+      const counts = calculateFinancialCoverage(state.financialRefresh.results);
       const warnings = state.financialRefresh.warnings.length;
-      const kind = failed ? 'warn' : 'good';
-      renderFinancialRefreshStatus(`Refresh Financial เสร็จแล้ว · Updated ${state.financialRefresh.refreshed.length} · Fresh ${state.financialRefresh.skipped.length} · Failed ${failed} · Warnings ${warnings} · ${formatDateTime(state.config.lastFinancialRefreshAt)}`, kind);
+      const kind = counts.failed ? 'warn' : 'good';
+      renderFinancialRefreshStatus(`Refresh Financial เสร็จแล้ว · Updated ${counts.updated} · Partial ${counts.partial} · Fresh ${counts.fresh} · Failed ${counts.failed} · Warnings ${warnings} · ${formatDateTime(state.config.lastFinancialRefreshAt)}`, kind);
       await loadAll();
-      setHealth(failed === symbols.length ? 'bad' : 'ok', failed === symbols.length ? 'Financial refresh failed' : 'Financial refresh completed');
-      return failed < symbols.length;
+      renderFinancialDiagnostics();
+      setHealth(counts.failed === symbols.length ? 'bad' : 'ok', counts.failed === symbols.length ? 'Financial refresh failed' : 'Financial refresh completed');
+      return counts.failed < symbols.length;
     }
     function readUniverseRefreshControls() {
       const universe = normalizeUniverseKey(($('#universe-refresh-universe') && $('#universe-refresh-universe').value) || state.scoreboardUniverse || 'watchlist');
@@ -1766,6 +1956,7 @@ ${newsMarkdown(news)}
       box.innerHTML = `${alertHtml(statusKind, status)}<div class="refresh-progress-bar"><div class="refresh-progress-fill" style="width:${pct}%"></div></div><div class="meta"><span>${escapeHTML(label)}</span><span>${processed}/${total || '—'} processed</span><span>saved ${completed}</span><span>skipped ${skipped}</span><span>failed ${failed}</span><span>batch ${r.batchSize || 5}</span></div>${current}${logLines.length ? `<div class="refresh-mini-log">${escapeHTML(logLines.join('\n'))}</div>` : ''}`;
     }
 
+
     async function testConnection(event) {
       if (event && event.preventDefault) event.preventDefault();
       saveLocalSettings(); if ($('#settings-status')) $('#settings-status').innerHTML = alertHtml('', 'กำลังทดสอบ connection...'); if ($('#connection-result')) $('#connection-result').innerHTML = '';
@@ -1780,6 +1971,7 @@ ${newsMarkdown(news)}
     async function checkRead(name, url) { try { const json = await fetchJSON(url); return { name, ok: !!json.ok }; } catch (err) { return { name, ok:false, error: err.message }; } }
     async function saveTemplatesToSheets() { if (!state.config.pin) { $('#config-status').innerHTML = alertHtml('bad','กรุณาใส่ PIN ก่อนบันทึกลง Sheets'); return; } syncTemplatesFromEditor(false); try { const json = await postJSON('saveConfig', { entries: { template_weekly: state.config.templates.weekly, template_cautious: state.config.templates.cautious, template_short: state.config.templates.short, frontend_version: APP_VERSION }}); if (!json.ok) throw new Error(json.error || (json.data && json.data.error) || 'saveConfig failed'); $('#config-status').innerHTML = alertHtml('good','บันทึก templates ลง Sheets แล้ว'); } catch (err) { $('#config-status').innerHTML = alertHtml('bad',`บันทึก config ไม่สำเร็จ: ${escapeHTML(err.message)}`); } }
     async function saveWatchlist() { if (!state.config.pin) { $('#watchlist-status').innerHTML = alertHtml('bad','กรุณาใส่ PIN ก่อนบันทึก watchlist'); return; } const items = collectWatchlistFromManager(); if (!items.length) { $('#watchlist-status').innerHTML = alertHtml('bad','ไม่มีรายการ watchlist ที่ถูกต้อง'); return; } try { const json = await postJSON('updateWatchlist', { items }); if (!json.ok) throw new Error(json.error || (json.data && json.data.error) || 'updateWatchlist failed'); $('#watchlist-status').innerHTML = alertHtml('good',`บันทึก watchlist แล้ว ${items.length} รายการ`); await loadDashboard(); renderWatchlistCoverage(); switchTab('brief'); } catch (err) { $('#watchlist-status').innerHTML = alertHtml('bad',`บันทึก watchlist ไม่สำเร็จ: ${escapeHTML(err.message)}`); } }
+
 
     function renderWatchlistManager(items) {
       const rows = (items || []).length ? items : [{ active:'Y' }];
@@ -1850,7 +2042,7 @@ ${newsMarkdown(news)}
     }
     function collectWatchlistFromManager(onlyValid = true) { return $$('#watchlist-manager .wl-row').map(row => ({ symbol: row.querySelector('.wl-symbol').value.trim(), name_th: row.querySelector('.wl-name').value.trim(), sector: row.querySelector('.wl-sector').value.trim(), note: row.querySelector('.wl-note').value.trim(), active: row.querySelector('.wl-active').value || 'Y' })).filter(x => !onlyValid || x.symbol); }
     function syncWatchlistTextFromManager() { const items = collectWatchlistFromManager(false); $('#watchlist-editor').value = items.map(w => [w.symbol, w.name_th, w.sector, w.note, w.active].map(v => v || '').join(' | ')).join('\n'); }
-    function hydrateSettings() { $('#apps-script-url').value = state.config.appsScriptUrl; $('#health-url').value = state.config.healthUrl; if ($('#fetch-weekly-url')) $('#fetch-weekly-url').value = state.config.fetchWeeklyUrl || DEFAULT_FETCH_WEEKLY_URL; $('#local-pin').value = state.config.pin || ''; $('#theme-select').value = state.config.theme || 'day'; if ($('#auto-refresh-prices')) $('#auto-refresh-prices').value = state.config.autoRefreshPricesOnOpen ? 'Y' : 'N'; if ($('#price-refresh-cooldown')) $('#price-refresh-cooldown').value = String(state.config.priceRefreshCooldownMinutes ?? 15); hydrateTemplateEditors(); renderPriceRefreshStatus(); renderFinancialRefreshStatus(); }
+    function hydrateSettings() { $('#apps-script-url').value = state.config.appsScriptUrl; $('#health-url').value = state.config.healthUrl; if ($('#fetch-weekly-url')) $('#fetch-weekly-url').value = state.config.fetchWeeklyUrl || DEFAULT_FETCH_WEEKLY_URL; $('#local-pin').value = state.config.pin || ''; $('#theme-select').value = state.config.theme || 'day'; if ($('#auto-refresh-prices')) $('#auto-refresh-prices').value = state.config.autoRefreshPricesOnOpen ? 'Y' : 'N'; if ($('#price-refresh-cooldown')) $('#price-refresh-cooldown').value = String(state.config.priceRefreshCooldownMinutes ?? 15); hydrateTemplateEditors(); renderPriceRefreshStatus(); renderFinancialRefreshStatus(); renderFinancialDiagnostics(); }
     function hydrateTemplateEditors() { const t = state.config.templates || defaultTemplates(); $('#template-weekly').value = t.weekly || ''; $('#template-cautious').value = t.cautious || ''; $('#template-short').value = t.short || ''; }
     function hydrateWatchlistEditor() { const wl = (state.dashboard && state.dashboard.watchlist) || []; $('#watchlist-editor').value = wl.map(w => [w.symbol, w.name_th, w.sector, w.note, w.active].map(v => v || '').join(' | ')).join('\n'); renderWatchlistManager(parseWatchlist($('#watchlist-editor').value)); }
     function syncTemplatesFromEditor(shouldSave = true) { state.config.templates = { weekly: $('#template-weekly').value, cautious: $('#template-cautious').value, short: $('#template-short').value }; if (shouldSave) saveConfigLocal(); renderPromptPreview(); }
