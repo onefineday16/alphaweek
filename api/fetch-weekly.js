@@ -1,11 +1,11 @@
 /**
  * AlphaWeek — api/fetch-weekly.js
- * Version: v09.1-manual-retry-fallback (V26.2.1 manual retry and Yahoo host fallback)
+ * Version: v09.2-failure-visibility (V26.2.2 refresh failure visibility)
  */
 'use strict';
 
 
-const API_VERSION = 'v09.1-manual-retry-fallback';
+const API_VERSION = 'v09.2-failure-visibility';
 const YAHOO_BASE = 'https://query1.finance.yahoo.com/v8/finance/chart/';
 const YAHOO_FINANCIAL_HOSTS = ['https://query1.finance.yahoo.com', 'https://query2.finance.yahoo.com'];
 const SET_INDEX = { symbol: 'SET', yahoo: '^SET.BK' };
@@ -85,16 +85,16 @@ module.exports = async function handler(req, res) {
 
     const routeOk = refreshType === 'financial' ? !!result.operation_ok : !!result.save_ok;
     const transportOk = refreshType === 'financial' ? true : routeOk;
-    return res.status(transportOk ? 200 : 502).json({
-      ok: transportOk,
-      refresh_type: refreshType,
+    const responsePayload = buildRouteResponsePayload({
+      refreshType,
       mode,
-      auth_mode: isCron ? 'cron' : (isManualToken ? 'token' : 'public'),
-      api_version: API_VERSION,
-      refreshed_at: new Date().toISOString(),
-      error: routeOk ? undefined : result.error,
+      authMode: isCron ? 'cron' : (isManualToken ? 'token' : 'public'),
+      transportOk,
+      routeOk,
+      refreshedAt: new Date().toISOString(),
       result
     });
+    return res.status(transportOk ? 200 : 502).json(responsePayload);
   } catch (err) {
     return res.status(500).json({ ok: false, api_version: API_VERSION, error: normalizeErrorMessage(err, 'refresh route') });
   }
@@ -111,6 +111,51 @@ function normalizeFinancialMode(value) {
   return ['all', 'failed', 'missing'].includes(mode) ? mode : 'all';
 }
 
+
+function buildRouteResponsePayload(input) {
+  const payload = {
+    ok: input.transportOk,
+    refresh_type: input.refreshType,
+    mode: input.mode,
+    auth_mode: input.authMode,
+    api_version: API_VERSION,
+    refreshed_at: input.refreshedAt,
+    error: input.routeOk ? undefined : input.result.error,
+    result: input.result
+  };
+  if (input.refreshType === 'prices') {
+    Object.assign(payload, buildPriceFailureVisibility(input.result));
+  }
+  return payload;
+}
+
+
+function buildPriceFailureVisibility(result) {
+  const failures = Array.isArray(result && result.symbols_failed) ? result.symbols_failed : [];
+  const symbolsOk = Number(result && result.symbols_ok) || 0;
+  return {
+    data_ok: symbolsOk > 0 && failures.length === 0,
+    partial: symbolsOk > 0 && failures.length > 0,
+    symbols_failed_count: failures.length,
+    failure_summary: failures.map(formatPriceFailure).filter(Boolean).join(' · ')
+  };
+}
+
+
+function formatPriceFailure(item) {
+  const symbol = sanitizeFailureSummaryPart(item && item.symbol, 'UNKNOWN');
+  const error = sanitizeFailureSummaryPart(item && item.error, 'failed');
+  return symbol + ': ' + error;
+}
+
+
+function sanitizeFailureSummaryPart(value, fallback) {
+  return String(value || fallback || '')
+    .replace(/[\r\n]+/g, ' ')
+    .replace(/https?:\/\/\S+/gi, '[redacted-url]')
+    .trim()
+    .slice(0, 240);
+}
 
 
 
