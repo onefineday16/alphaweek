@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>AlphaWeek — Weekly Thai Equity Brief</title>
   <meta name="description" content="AlphaWeek weekly Thai equity brief and AI writing desk." />
-  <meta name="alphaweek-build" content="V26.2.1-manual-retry-fallback-2026-07-14" />
+  <meta name="alphaweek-build" content="V26.2.2-failure-visibility-2026-07-28" />
   <link rel="icon" href="assets/favicon.ico" sizes="any">
   <link rel="icon" type="image/svg+xml" href="assets/alphaweek-a1-favicon.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -169,7 +169,7 @@
     .full { grid-column:1 / -1; }
     .prompt-box, pre.preview { white-space:pre-wrap; overflow:auto; max-height:360px; padding:14px; border:1px solid var(--line); border-radius:18px; background:rgba(255,255,255,.38); color:var(--ink); line-height:1.65; font-family:var(--mono); font-size:.88rem; }
     body.night .prompt-box, body.night pre.preview { background:rgba(0,0,0,.16); }
-    .alert { border:1px solid var(--line); border-radius:16px; padding:12px 14px; color:var(--muted); background:rgba(255,255,255,.42); }
+    .alert { border:1px solid var(--line); border-radius:16px; padding:12px 14px; color:var(--muted); background:rgba(255,255,255,.42); overflow-wrap:anywhere; }
     .alert.good { color:var(--green); border-color:rgba(14,159,110,.28); background:rgba(14,159,110,.08); }
     .alert.bad { color:var(--red); border-color:rgba(224,45,60,.28); background:rgba(224,45,60,.08); }
     .alert.warn { color:var(--amber); border-color:rgba(185,133,0,.28); background:rgba(185,133,0,.08); }
@@ -461,8 +461,8 @@
               <label>Auto Refresh Cooldown (minutes)<input id="price-refresh-cooldown" type="number" min="0" max="1440" step="1" value="15"></label>
             </div>
             <div class="meta"><button class="btn primary" id="save-settings-btn" type="button"><i class="ti ti-device-floppy"></i> Save Local Settings</button><button class="btn" id="restore-default-urls-btn" type="button"><i class="ti ti-rotate-clockwise"></i> Restore Default URLs</button><button class="btn" id="test-connection-btn" type="button"><i class="ti ti-plug-connected"></i> Test Connection</button><button class="btn primary" id="refresh-prices-control-btn" type="button"><i class="ti ti-currency-baht"></i> Refresh Prices Now</button><button class="btn primary" id="refresh-financial-control-btn" type="button"><i class="ti ti-report-money"></i> Refresh Financial</button><button class="btn" id="refresh-financial-force-btn" type="button"><i class="ti ti-refresh-alert"></i> Force Financial</button></div>
-            <div class="alert good">V26.2.1 keeps Price Refresh independent, enables manual Retry Failed for every failed symbol, and adds Yahoo query1/query2 fallback.</div><div id="settings-status"></div>
-            <div id="price-refresh-status"></div>
+            <div class="alert good">V26.2.2 keeps existing refresh behavior and makes partial or total price failures visible without opening DevTools.</div><div id="settings-status"></div>
+            <div id="price-refresh-status" role="status" aria-live="polite" aria-atomic="true" tabindex="0"></div>
             <div id="financial-refresh-status"></div>
             <div class="financial-diagnostics-box" id="financial-diagnostics">
               <div class="section-title">
@@ -536,7 +536,7 @@
   <script>
   (function () {
     'use strict';
-    const APP_VERSION = 'index-alphaweek-v26.2-financial-diagnostics';
+    const APP_VERSION = 'index-alphaweek-v26.2.2-failure-visibility';
     const STORAGE_KEY = 'alphaweek_config_v262';
     const FINANCIAL_DIAGNOSTICS_KEY = 'alphaweek_financial_diagnostics_v262';
     const LEGACY_KEYS = ['alphaweek_config_v261', 'alphaweek_config_v26', 'alphaweek_config_v24', 'alphaweek_config_v15', 'alphaweek_config_v14', 'alphaweek_config_v13', 'alphaweek_config_v12', 'alphaweek_config_v11', 'alphaweek_config_v10', 'alphaweek_config_v09', 'alphaweek_config_v08', 'alphaweek_config_v07', 'alphaweek_config_v06', 'alphaweek_config_v05', 'alphaweek_config_v04', 'alphaweek_config_v03', 'alphaweek_config_v02', 'alphaweek_config_v01'];
@@ -1528,6 +1528,7 @@ ${newsMarkdown(news)}
       const fallback = running ? 'กำลัง refresh ราคาหุ้น...' : `Last price refresh: ${last}`;
       const status = message || state.priceRefresh.statusMessage || fallback;
       const statusKind = kind || state.priceRefresh.statusKind || (running ? 'warn' : '');
+      box.setAttribute('role', statusKind === 'warn' || statusKind === 'bad' ? 'alert' : 'status');
       box.innerHTML = alertHtml(statusKind, status);
     }
     async function refreshPrices(options = {}) {
@@ -1560,11 +1561,28 @@ ${newsMarkdown(news)}
         state.config.lastPriceRefreshAt = json.refreshed_at || new Date().toISOString();
         saveConfigLocal();
         const r = json.result || {};
+        const failedItems = Array.isArray(r.symbols_failed) ? r.symbols_failed : [];
         const okCount = r.symbols_ok ?? '—';
-        const failCount = Array.isArray(r.symbols_failed) ? r.symbols_failed.length : 0;
+        const numericOkCount = Number(r.symbols_ok) || 0;
+        const failCount = Number.isFinite(Number(json.symbols_failed_count)) ? Number(json.symbols_failed_count) : failedItems.length;
+        const dataOk = typeof json.data_ok === 'boolean' ? json.data_ok : (numericOkCount > 0 && failCount === 0);
+        const partial = typeof json.partial === 'boolean' ? json.partial : (numericOkCount > 0 && failCount > 0);
+        const failureSummary = String(json.failure_summary || failedItems.map(item => `${item && item.symbol ? item.symbol : 'UNKNOWN'}: ${item && item.error ? item.error : 'failed'}`).join(' · '));
         const savedInfo = r.apps_script && r.apps_script.data ? r.apps_script.data : {};
         const persistence = savedInfo.rows_after !== undefined ? ` · Rows ${savedInfo.rows_before}→${savedInfo.rows_after} · Preserved ${savedInfo.preserved_rows || 0}` : ' · Merge-safe';
-        renderPriceRefreshStatus(`Refresh Prices สำเร็จ: ${json.mode || 'weekly-prices'} · OK ${okCount} · Failed ${failCount}${persistence} · ${formatDateTime(state.config.lastPriceRefreshAt)}`, failCount ? 'warn' : 'good');
+        const weekLabel = r.week_ending ? ` · ข้อมูลสัปดาห์สิ้นสุด ${escapeHTML(r.week_ending)}` : '';
+        const timeLabel = ` · ${formatDateTime(state.config.lastPriceRefreshAt)}`;
+        if (dataOk) {
+          renderPriceRefreshStatus(`Refresh Prices สำเร็จ: ${escapeHTML(json.mode || 'weekly-prices')} · OK ${escapeHTML(okCount)} · Failed 0${weekLabel}${persistence}${timeLabel}`, 'good');
+        } else if (partial) {
+          renderPriceRefreshStatus(`Refresh Prices เสร็จบางส่วน: OK ${escapeHTML(okCount)} · Failed ${failCount} · ${escapeHTML(failureSummary || 'ไม่ทราบรายละเอียด')}${weekLabel}${persistence}${timeLabel}`, 'warn');
+        } else {
+          renderPriceRefreshStatus(`Refresh Prices ล้มเหลวทั้งหมด: OK ${escapeHTML(okCount)} · Failed ${failCount} · ${escapeHTML(failureSummary || 'ไม่สามารถอัปเดตข้อมูลราคาได้')}${weekLabel}${persistence}${timeLabel}`, 'bad');
+        }
+        if (!dataOk && source !== 'auto-open') {
+          const statusBox = $('#price-refresh-status');
+          if (statusBox && typeof statusBox.focus === 'function') statusBox.focus({ preventScroll:true });
+        }
         await loadAll();
         return true;
       } catch (err) {
