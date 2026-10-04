@@ -1,11 +1,11 @@
 /**
  * AlphaWeek — api/fetch-weekly.js
- * Version: v09.2-failure-visibility (V26.2.2 refresh failure visibility)
+ * Version: v09.3-audit-remediation (V26.2.3)
  */
 'use strict';
 
 
-const API_VERSION = 'v09.2-failure-visibility';
+const API_VERSION = 'v09.3-audit-remediation';
 const YAHOO_BASE = 'https://query1.finance.yahoo.com/v8/finance/chart/';
 const YAHOO_FINANCIAL_HOSTS = ['https://query1.finance.yahoo.com', 'https://query2.finance.yahoo.com'];
 const SET_INDEX = { symbol: 'SET', yahoo: '^SET.BK' };
@@ -14,6 +14,9 @@ const APPS_SCRIPT_TIMEOUT_MS = 12000;
 const FINANCIAL_CORE_TIMEOUT_MS = 2400;
 const FINANCIAL_ENRICH_TIMEOUT_MS = 1800;
 const FINANCIAL_REQUEST_BUDGET_MS = 9000;
+const ROUTE_REQUEST_BUDGET_MS = 45000;
+const PRICE_SAVE_RESERVE_MS = 13000;
+const WEEKLY_MAX_SYMBOLS = 101;
 const PRICE_MAX_SYMBOLS_PER_REQUEST = 10;
 const FINANCIAL_MAX_SYMBOLS_PER_REQUEST = 5;
 const PRICE_FETCH_CONCURRENCY = 3;
@@ -26,9 +29,10 @@ const ALL_FUNDAMENTAL_FIELDS = CORE_FUNDAMENTAL_FIELDS.concat(ENRICHMENT_FUNDAME
 module.exports = async function handler(req, res) {
   setCors(res);
   if (req.method === 'OPTIONS') return res.status(204).end();
+  if (!['GET', 'POST'].includes(req.method)) return res.status(405).json({ok:false, api_version:API_VERSION, error:'method not allowed'});
 
 
-  const isCron = !!req.headers['x-vercel-cron'];
+  const isCron = !!process.env.CRON_SECRET && req.headers.authorization === 'Bearer ' + process.env.CRON_SECRET;
   const token = (req.query && req.query.token) || '';
   const isManualToken = !!process.env.MANUAL_TRIGGER_TOKEN && token === process.env.MANUAL_TRIGGER_TOKEN;
   const isPublicRefresh = req.method === 'POST' || req.method === 'GET';
@@ -51,6 +55,8 @@ module.exports = async function handler(req, res) {
   }
 
 
+  const routeDeadline = Date.now() + ROUTE_REQUEST_BUDGET_MS;
+  let lease = null;
   try {
     if (seedMode) {
       return res.status(400).json({ ok: false, api_version: API_VERSION, error: 'seed disabled in v08 route' });
@@ -59,6 +65,18 @@ module.exports = async function handler(req, res) {
     const refreshType = normalizeRefreshType((body && body.refresh_type) || (req.query && req.query.refresh_type));
     const requestedSymbols = extractRequestedSymbols(req, body, refreshType);
     const universe = String((body && body.universe) || (req.query && req.query.universe) || 'watchlist');
+    if (refreshType === 'financial' && !requestedSymbols.some(symbol => symbol !== 'SET')) {
+      return res.status(400).json({ok:false, api_version:API_VERSION, error:'financial refresh requires 1-5 stock symbols'});
+    }
+    const leaseKey = refreshType + ':' + lastFridayISO(new Date()) + ':' + (requestedSymbols.length ? requestedSymbols.slice().sort().join(',') : 'watchlist');
+    const acquired = await postToAppsScript({action:'acquireRefresh', pin:process.env.ALPHAWEEK_PIN, key:leaseKey}, 'Apps Script refresh guard', routeDeadline);
+    if (!acquired || !acquired.ok || !acquired.data || !acquired.data.acquired) {
+      const detail = acquired && acquired.data || {};
+      const limited = detail.code === 'RATE_LIMITED';
+      if (limited) res.setHeader('Retry-After', String(detail.retry_after_seconds || 3));
+      return res.status(limited ? 429 : 502).json({ok:false, api_version:API_VERSION, error:limited ? 'refresh busy or rate limited' : 'refresh guard unavailable; deploy Apps Script v11 first', retry_after_seconds:detail.retry_after_seconds});
+    }
+    lease = {key:leaseKey, nonce:acquired.data.nonce};
 
 
     let result;
@@ -72,13 +90,14 @@ module.exports = async function handler(req, res) {
         source: body && body.source,
         force: parseBoolean(body && body.force),
         maxAgeDays: clampNumber(body && body.max_age_days, 0, 30, 7),
-        financialMode: normalizeFinancialMode(body && body.financial_mode)
+        financialMode: normalizeFinancialMode(body && body.financial_mode),
+        routeDeadline
       });
       mode = 'financial-batch';
     } else {
       result = requestedSymbols.length
-        ? await runPriceBatch(requestedSymbols, { universe, source: body && body.source })
-        : await runWeeklyPrices();
+        ? await runPriceBatch(requestedSymbols, { universe, source: body && body.source, routeDeadline })
+        : await runWeeklyPrices(routeDeadline);
       mode = requestedSymbols.length ? 'price-batch' : 'weekly-prices';
     }
 
@@ -94,15 +113,30 @@ module.exports = async function handler(req, res) {
       refreshedAt: new Date().toISOString(),
       result
     });
+    await releaseRefreshLease(lease, routeDeadline);
+    lease = null;
     return res.status(transportOk ? 200 : 502).json(responsePayload);
   } catch (err) {
-    return res.status(500).json({ ok: false, api_version: API_VERSION, error: normalizeErrorMessage(err, 'refresh route') });
+    await releaseRefreshLease(lease, routeDeadline);
+    lease = null;
+    return res.status(err && err.code === 'INVALID_INPUT' ? 400 : 500).json({ ok: false, api_version: API_VERSION, error: normalizeErrorMessage(err, 'refresh route') });
+  } finally {
+    await releaseRefreshLease(lease, routeDeadline);
   }
 };
 
+async function releaseRefreshLease(lease, routeDeadline) {
+  if (!lease) return;
+  // Finish before sending the response; serverless execution may stop afterwards.
+  try { await postToAppsScript({action:'releaseRefresh', pin:process.env.ALPHAWEEK_PIN, key:lease.key, nonce:lease.nonce}, 'Apps Script refresh release', Math.min(routeDeadline, Date.now() + 1500)); }
+  catch (err) { /* The 65-second lease recovers if release cannot be acknowledged. */ }
+}
+
 
 function normalizeRefreshType(value) {
-  return String(value || 'prices').toLowerCase() === 'financial' ? 'financial' : 'prices';
+  const type = String(value || 'prices').toLowerCase();
+  if (!['prices', 'financial'].includes(type)) throw invalidInput('invalid refresh_type');
+  return type;
 }
 
 
@@ -168,9 +202,11 @@ function setCors(res) {
 
 function parseBody(req) {
   if (!req || !req.body) return {};
-  if (typeof req.body === 'object') return req.body;
-  try { return JSON.parse(String(req.body || '{}')); }
-  catch (err) { return {}; }
+  let body;
+  try { body = typeof req.body === 'object' ? req.body : JSON.parse(String(req.body)); }
+  catch (err) { throw invalidInput('invalid JSON body'); }
+  if (!body || typeof body !== 'object' || Array.isArray(body)) throw invalidInput('JSON object body required');
+  return body;
 }
 
 
@@ -187,16 +223,17 @@ function extractRequestedSymbols(req, body, refreshType) {
     out.push(s.symbol);
   }
   const max = refreshType === 'financial' ? FINANCIAL_MAX_SYMBOLS_PER_REQUEST : PRICE_MAX_SYMBOLS_PER_REQUEST;
-  if (out.length > max) throw new Error('too many symbols: max ' + max + ' for ' + refreshType);
+  if (out.length > max) throw invalidInput('too many symbols: max ' + max + ' for ' + refreshType);
   return out;
 }
 
 
-async function runWeeklyPrices() {
-  const watchlist = await getWatchlist();
+async function runWeeklyPrices(routeDeadline = Date.now() + ROUTE_REQUEST_BUDGET_MS) {
+  const watchlist = await getWatchlist(routeDeadline);
   const symbols = activeSymbols(watchlist);
+  if (symbols.length > WEEKLY_MAX_SYMBOLS) throw invalidInput('watchlist exceeds maximum weekly symbols');
   const weekEnding = lastFridayISO(new Date());
-  const quotes = await fetchAllQuotes(symbols, '4mo');
+  const quotes = await fetchAllQuotes(symbols, '4mo', routeDeadline - PRICE_SAVE_RESERVE_MS);
   const rows = [];
   const errors = [];
 
@@ -211,15 +248,14 @@ async function runWeeklyPrices() {
   }
 
 
-  const existingNews = await getExistingNews(weekEnding);
+  const existingNews = await getExistingNews(weekEnding, Math.min(routeDeadline - APPS_SCRIPT_TIMEOUT_MS, Date.now() + 1000));
   const saved = await postToAppsScript({
     action: 'saveWeeklyMerge',
     pin: process.env.ALPHAWEEK_PIN,
     week_ending: weekEnding,
     rows,
-    news: existingNews,
     meta: { source: 'weekly-price-refresh', api_version: API_VERSION }
-  }, 'Apps Script weekly price save');
+  }, 'Apps Script weekly price save', routeDeadline);
   const saveOk = !!(saved && saved.ok);
 
 
@@ -249,7 +285,8 @@ async function runPriceBatch(symbolInputs, meta) {
 
 
   const weekEnding = lastFridayISO(new Date());
-  const quotes = await fetchAllQuotes(symbols, '4mo');
+  const routeDeadline = meta && meta.routeDeadline || Date.now() + ROUTE_REQUEST_BUDGET_MS;
+  const quotes = await fetchAllQuotes(symbols, '4mo', routeDeadline - PRICE_SAVE_RESERVE_MS);
   const rows = [];
   const errors = [];
 
@@ -274,7 +311,7 @@ async function runPriceBatch(symbolInputs, meta) {
       source: meta && meta.source,
       api_version: API_VERSION
     }
-  }, 'Apps Script price batch save');
+  }, 'Apps Script price batch save', routeDeadline);
   const saveOk = !!(saved && saved.ok);
 
 
@@ -305,7 +342,8 @@ async function runFinancialBatch(symbolInputs, meta) {
   const force = !!(meta && meta.force);
   const maxAgeDays = clampNumber(meta && meta.maxAgeDays, 0, 30, 7);
   const financialMode = normalizeFinancialMode(meta && meta.financialMode);
-  const deadline = Date.now() + FINANCIAL_REQUEST_BUDGET_MS;
+  const routeDeadline = meta && meta.routeDeadline || Date.now() + ROUTE_REQUEST_BUDGET_MS;
+  const deadline = Math.min(Date.now() + FINANCIAL_REQUEST_BUDGET_MS, routeDeadline - APPS_SCRIPT_TIMEOUT_MS);
   let existingRows = [];
   const warnings = [];
 
@@ -439,7 +477,8 @@ async function runFinancialBatch(symbolInputs, meta) {
     api_version: API_VERSION,
     financial_mode: financialMode,
     max_age_days: maxAgeDays,
-    force
+    force,
+    routeDeadline
   });
 
 
@@ -603,7 +642,7 @@ function inspectFundamentalFields(row) {
 
 
 function hasFieldValue(value) {
-  return value !== '' && value !== null && value !== undefined;
+  return value !== null && value !== undefined && String(value).trim() !== '' && (typeof value !== 'number' || Number.isFinite(value));
 }
 
 
@@ -672,16 +711,16 @@ function normalizeSymbolList(items) {
 }
 
 
-async function getWatchlist() {
-  const json = await fetchJSON(process.env.APPS_SCRIPT_URL + '?action=watchlist', {}, { stage: 'Apps Script watchlist read', timeoutMs: APPS_SCRIPT_TIMEOUT_MS });
+async function getWatchlist(deadline) {
+  const json = await fetchJSON(process.env.APPS_SCRIPT_URL + '?action=watchlist', {}, { stage: 'Apps Script watchlist read', timeoutMs: APPS_SCRIPT_TIMEOUT_MS, deadline });
   if (!json || !json.ok) throw new Error('watchlist fetch failed: ' + JSON.stringify(json));
   return json.data || [];
 }
 
 
-async function getExistingNews(weekEnding) {
+async function getExistingNews(weekEnding, deadline) {
   try {
-    const json = await fetchJSON(process.env.APPS_SCRIPT_URL + '?action=dashboard&week=' + encodeURIComponent(weekEnding), {}, { stage: 'Apps Script news read', timeoutMs: APPS_SCRIPT_TIMEOUT_MS });
+    const json = await fetchJSON(process.env.APPS_SCRIPT_URL + '?action=dashboard&week=' + encodeURIComponent(weekEnding), {}, { stage: 'Apps Script news read', timeoutMs: APPS_SCRIPT_TIMEOUT_MS, deadline });
     const news = json && json.ok && json.data && Array.isArray(json.data.news) ? json.data.news : [];
     return news.map((n) => ({
       headline: n.headline || '',
@@ -706,7 +745,7 @@ function activeSymbols(watchlist) {
     seen.add(s.symbol);
     out.push(s);
   }
-  out.push(SET_INDEX);
+  if (!seen.has('SET')) out.push(SET_INDEX);
   return out;
 }
 
@@ -716,14 +755,17 @@ function normalizeThaiSymbol(input) {
   raw = raw.replace(/^SET:/, '');
   if (raw === 'SET' || raw === '^SET.BK') return SET_INDEX;
   const base = raw.replace(/\.BK$/, '');
-  return { symbol: base, yahoo: base.includes('.') ? base : base + '.BK' };
+  if (!base) return {symbol:'', yahoo:''};
+  if (!/^[A-Z0-9][A-Z0-9&-]{0,19}$/.test(base)) throw invalidInput('invalid Thai symbol');
+  return { symbol: base, yahoo: base + '.BK' };
 }
 
 
-async function fetchAllQuotes(symbols, range) {
+async function fetchAllQuotes(symbols, range, deadline) {
   return mapWithConcurrency(symbols, PRICE_FETCH_CONCURRENCY, async (s) => {
     try {
-      return { symbol: s.symbol, bars: await fetchYahooBars(s.yahoo, range), source: 'yahoo_chart' };
+      if (remainingBudget(deadline) <= 250) throw new Error('price route budget exhausted');
+      return { symbol: s.symbol, bars: await fetchYahooBars(s.yahoo, range, deadline), source: 'yahoo_chart' };
     } catch (err) {
       return { symbol: s.symbol, error: String(err && err.message || err) };
     }
@@ -731,9 +773,9 @@ async function fetchAllQuotes(symbols, range) {
 }
 
 
-async function fetchYahooBars(yahooSymbol, range) {
+async function fetchYahooBars(yahooSymbol, range, deadline) {
   const url = YAHOO_BASE + encodeURIComponent(yahooSymbol) + '?range=' + encodeURIComponent(range) + '&interval=1d';
-  const json = await fetchJSON(url, { headers: { 'User-Agent': 'Mozilla/5.0 (AlphaWeek V26.2.1)' } }, { stage: 'Yahoo chart ' + yahooSymbol, timeoutMs: PRICE_FETCH_TIMEOUT_MS });
+  const json = await fetchJSON(url, { headers: { 'User-Agent': 'Mozilla/5.0 (AlphaWeek V26.2.3)' } }, { stage: 'Yahoo chart ' + yahooSymbol, timeoutMs: PRICE_FETCH_TIMEOUT_MS, deadline });
   const r = json && json.chart && json.chart.result && json.chart.result[0];
   if (!r || !r.timestamp) throw new Error('yahoo: empty result for ' + yahooSymbol);
   const q = r.indicators && r.indicators.quote && r.indicators.quote[0];
@@ -917,7 +959,7 @@ function mergeFundamentalRows(core, enrichment, symbol) {
 
 
 function isFreshFundamental(row, maxAgeDays) {
-  if (!row || maxAgeDays <= 0) return false;
+  if (!row || !hasCoreFundamental(row) || maxAgeDays <= 0) return false;
   const raw = row.fetched_at || row.as_of_date;
   const time = Date.parse(raw);
   if (!Number.isFinite(time)) return false;
@@ -978,7 +1020,7 @@ function cleanFundamentalRow(row) {
   ['pe_ttm', 'pbv', 'dividend_yield_pct', 'market_cap', 'eps_ttm', 'roe_pct',
     'debt_to_equity', 'revenue_growth_yoy_pct', 'net_profit_growth_yoy_pct'].forEach((key) => {
       const raw = out[key];
-      if (raw === '' || raw === null || raw === undefined) { out[key] = ''; return; }
+      if (raw === null || raw === undefined || String(raw).trim() === '') { out[key] = ''; return; }
       const n = Number(raw);
       out[key] = Number.isFinite(n) ? round4(n) : '';
   });
@@ -990,7 +1032,7 @@ function cleanFundamentalRow(row) {
 
 
 function hasCoreFundamental(row) {
-  return !!(row && [row.pe_ttm, row.pbv, row.dividend_yield_pct, row.market_cap, row.roe_pct]
+  return !!(row && [row.pe_ttm, row.pbv, row.dividend_yield_pct, row.market_cap, row.eps_ttm]
     .some((v) => v !== '' && v !== null && v !== undefined));
 }
 
@@ -1003,7 +1045,7 @@ async function saveFundamentalsBestEffort(rows, meta) {
       pin: process.env.ALPHAWEEK_PIN,
       rows,
       meta: meta || {}
-    }, 'Apps Script fundamentals save');
+    }, 'Apps Script fundamentals save', meta && meta.routeDeadline);
     return {
       ok: !!(response && response.ok),
       error: response && response.ok ? undefined : String((response && (response.error || JSON.stringify(response))) || 'empty response'),
@@ -1048,6 +1090,7 @@ function rawValue(value) {
 
 function firstNumber(...values) {
   for (const value of values) {
+    if (value === null || value === undefined || String(value).trim() === '') continue;
     const n = Number(value);
     if (Number.isFinite(n)) return n;
   }
@@ -1056,6 +1099,7 @@ function firstNumber(...values) {
 
 
 function percentFromFraction(value) {
+  if (value === null || value === undefined || String(value).trim() === '') return '';
   const n = Number(value);
   if (!Number.isFinite(n)) return '';
   return Math.abs(n) <= 1.5 ? n * 100 : n;
@@ -1074,23 +1118,25 @@ function round4(n) {
 }
 
 
-async function postToAppsScript(payload, stage) {
-  const resp = await fetchWithTimeout(process.env.APPS_SCRIPT_URL, {
+async function postToAppsScript(payload, stage, deadline) {
+  return fetchWithTimeout(process.env.APPS_SCRIPT_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
     redirect: 'follow'
-  }, { stage: stage || 'Apps Script write', timeoutMs: APPS_SCRIPT_TIMEOUT_MS });
-  const text = await resp.text();
-  if (!resp.ok) throw httpError(resp.status, (stage || 'Apps Script write') + ': ' + text.slice(0, 200));
-  try { return JSON.parse(text); } catch (err) { throw new Error((stage || 'Apps Script write') + ' returned non-JSON: ' + text.slice(0, 200)); }
+  }, { stage: stage || 'Apps Script write', timeoutMs: APPS_SCRIPT_TIMEOUT_MS, deadline }, async resp => {
+    const text = await resp.text();
+    if (!resp.ok) throw httpError(resp.status, (stage || 'Apps Script write') + ': HTTP ' + resp.status);
+    try { return JSON.parse(text); } catch (err) { throw new Error((stage || 'Apps Script write') + ' returned non-JSON'); }
+  });
 }
 
 
 async function fetchJSON(url, opts, meta) {
-  const resp = await fetchWithTimeout(url, Object.assign({ redirect: 'follow' }, opts || {}), meta || {});
-  if (!resp.ok) throw httpError(resp.status, (meta && meta.stage ? meta.stage + ': ' : '') + 'HTTP ' + resp.status);
-  return resp.json();
+  return fetchWithTimeout(url, Object.assign({ redirect: 'follow' }, opts || {}), meta || {}, async resp => {
+    if (!resp.ok) throw httpError(resp.status, (meta && meta.stage ? meta.stage + ': ' : '') + 'HTTP ' + resp.status);
+    return await resp.json();
+  });
 }
 
 
@@ -1112,7 +1158,7 @@ async function fetchJSONWithRetry(url, opts, meta) {
 }
 
 
-async function fetchWithTimeout(url, opts, meta) {
+async function fetchWithTimeout(url, opts, meta, consume) {
   const settings = meta || {};
   const stage = settings.stage || 'external request';
   const remaining = remainingBudget(settings.deadline);
@@ -1124,7 +1170,8 @@ async function fetchWithTimeout(url, opts, meta) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    return await fetch(url, Object.assign({}, opts || {}, { signal: controller.signal }));
+    const response = await fetch(url, Object.assign({}, opts || {}, { signal: controller.signal }));
+    return consume ? await consume(response) : response;
   } catch (err) {
     if (err && (err.name === 'AbortError' || /aborted/i.test(String(err.message || err)))) {
       const timeoutError = new Error(stage + ' timed out after ' + timeoutMs + 'ms');
@@ -1141,6 +1188,12 @@ async function fetchWithTimeout(url, opts, meta) {
 function httpError(status, message) {
   const err = new Error(message || ('HTTP ' + status));
   err.status = Number(status);
+  return err;
+}
+
+function invalidInput(message) {
+  const err = new Error(message);
+  err.code = 'INVALID_INPUT';
   return err;
 }
 

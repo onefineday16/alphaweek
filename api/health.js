@@ -1,11 +1,12 @@
 /**
  * AlphaWeek — api/health.js
- * Version: v01 (Phase 1.2)
+ * Version: v02 (V26.2.3 — read-only health and data freshness)
  *
  * รายงานสถานะข้อมูล: สัปดาห์ล่าสุดที่มีข้อมูล, จำนวน symbol, แหล่งข้อมูลที่ใช้, จำนวนข่าว
  * เปิดดูได้เลยไม่ต้องมี token (อ่านอย่างเดียว ไม่มีข้อมูลลับ)
  *
  * Env vars: APPS_SCRIPT_URL
+ * Deploy path: api/health.js
  */
 
 'use strict';
@@ -13,6 +14,10 @@
 var FETCH_TIMEOUT_MS = 15000;
 
 module.exports = async function handler(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Cache-Control', 'no-store');
+  if (req.method === 'OPTIONS') return res.status(204).end();
+  if (req.method !== 'GET') return res.status(405).json({ok:false,error:'method not allowed'});
   if (!process.env.APPS_SCRIPT_URL) {
     return res.status(500).json({ ok: false, error: 'missing env: APPS_SCRIPT_URL' });
   }
@@ -25,12 +30,15 @@ module.exports = async function handler(req, res) {
     var rows = d.rows || [];
     var sources = {};
     rows.forEach(function (r) {
-      var s = r.source || 'unknown';
+      var s = r.price_source || r.source || 'unknown';
       sources[s] = (sources[s] || 0) + 1;
     });
     return res.status(200).json({
       ok: true,
+      api_version: 'v02-audit-remediation',
       latest_week: d.week_ending || null,
+      target_week: d.target_week || null,
+      data_status: d.data_status || (rows.length ? 'unknown' : 'empty'),
       symbols: rows.length,
       sources: sources,
       news_count: (d.news || []).length,

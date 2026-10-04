@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>AlphaWeek — Weekly Thai Equity Brief</title>
   <meta name="description" content="AlphaWeek weekly Thai equity brief and AI writing desk." />
-  <meta name="alphaweek-build" content="V26.2.2-failure-visibility-2026-07-28" />
+  <meta name="alphaweek-build" content="V26.2.3-audit-remediation-2026-10-03" />
   <link rel="icon" href="assets/favicon.ico" sizes="any">
   <link rel="icon" type="image/svg+xml" href="assets/alphaweek-a1-favicon.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -98,6 +98,8 @@
     .btn.ghost { background:transparent; }
     .btn.warn { color:var(--amber); }
     .btn.danger { color:var(--red); }
+    .global-refresh-status { padding:0 18px; overflow-wrap:anywhere; }
+    input:focus-visible, textarea:focus-visible, select:focus-visible, button:focus-visible { outline:3px solid var(--rose-dark); outline-offset:3px; }
     .tab { display:none; }
     .tab.active { display:block; animation:rise .18s ease both; }
     @keyframes rise { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
@@ -288,8 +290,9 @@
   <div class="app">
     <header class="utility-bar">
       <div class="health-inline"><span class="dot" id="health-dot"></span><span id="health-text">กำลังเตรียม AlphaWeek...</span></div>
-      <div class="meta"><span id="app-version">index-alphaweek-v26.1-refresh-split</span><button class="btn ghost" id="refresh-btn" type="button"><i class="ti ti-refresh"></i> Refresh</button><button class="btn ghost" id="refresh-prices-btn" type="button"><i class="ti ti-currency-baht"></i> Refresh Prices</button><button class="btn ghost" id="theme-btn" type="button"><i class="ti ti-sun"></i> Day</button></div>
+      <div class="meta"><span id="app-version">index-alphaweek-v26.2.3-audit-remediation</span><button class="btn ghost" id="refresh-btn" type="button"><i class="ti ti-refresh"></i> Refresh</button><button class="btn ghost" id="refresh-prices-btn" type="button"><i class="ti ti-currency-baht"></i> Refresh Prices</button><button class="btn ghost" id="theme-btn" type="button"><i class="ti ti-sun"></i> Day</button></div>
     </header>
+    <div class="global-refresh-status"><div id="price-refresh-status" role="status" aria-live="polite" aria-atomic="true" tabindex="0"></div><div id="financial-refresh-status" role="status" aria-live="polite"></div><div id="storage-status" role="status" aria-live="polite"></div></div>
     <div class="runtime-error" id="runtime-error"></div>
 
 
@@ -462,8 +465,8 @@
             </div>
             <div class="meta"><button class="btn primary" id="save-settings-btn" type="button"><i class="ti ti-device-floppy"></i> Save Local Settings</button><button class="btn" id="restore-default-urls-btn" type="button"><i class="ti ti-rotate-clockwise"></i> Restore Default URLs</button><button class="btn" id="test-connection-btn" type="button"><i class="ti ti-plug-connected"></i> Test Connection</button><button class="btn primary" id="refresh-prices-control-btn" type="button"><i class="ti ti-currency-baht"></i> Refresh Prices Now</button><button class="btn primary" id="refresh-financial-control-btn" type="button"><i class="ti ti-report-money"></i> Refresh Financial</button><button class="btn" id="refresh-financial-force-btn" type="button"><i class="ti ti-refresh-alert"></i> Force Financial</button></div>
             <div class="alert good">V26.2.2 keeps existing refresh behavior and makes partial or total price failures visible without opening DevTools.</div><div id="settings-status"></div>
-            <div id="price-refresh-status" role="status" aria-live="polite" aria-atomic="true" tabindex="0"></div>
-            <div id="financial-refresh-status"></div>
+
+
             <div class="financial-diagnostics-box" id="financial-diagnostics">
               <div class="section-title">
                 <div><h3>Financial Diagnostics</h3><span>ดูผลรายหุ้น แยก Core / Enrichment และ retry เฉพาะรายการที่มีปัญหา</span></div>
@@ -536,8 +539,10 @@
   <script>
   (function () {
     'use strict';
-    const APP_VERSION = 'index-alphaweek-v26.2.2-failure-visibility';
+    const APP_VERSION = 'index-alphaweek-v26.2.3-audit-remediation';
     const STORAGE_KEY = 'alphaweek_config_v262';
+    const memoryStorage = new Map();
+    let storageWarning = '';
     const FINANCIAL_DIAGNOSTICS_KEY = 'alphaweek_financial_diagnostics_v262';
     const LEGACY_KEYS = ['alphaweek_config_v261', 'alphaweek_config_v26', 'alphaweek_config_v24', 'alphaweek_config_v15', 'alphaweek_config_v14', 'alphaweek_config_v13', 'alphaweek_config_v12', 'alphaweek_config_v11', 'alphaweek_config_v10', 'alphaweek_config_v09', 'alphaweek_config_v08', 'alphaweek_config_v07', 'alphaweek_config_v06', 'alphaweek_config_v05', 'alphaweek_config_v04', 'alphaweek_config_v03', 'alphaweek_config_v02', 'alphaweek_config_v01'];
     const DEFAULT_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzh2PhvOrJu16P9ZLX192PEXUZqTHbp26P1y6TAXNUdO-3UCslhogZHBkoPnOcfx1SA/exec';
@@ -558,6 +563,35 @@
     const state = { config: loadConfig(), health: null, dashboard: null, dashboardLoad: { ok:false, error:'', lastSuccessAt:'' }, articles: [], allArticles: [], editingArticleId: null, activeTab: 'brief', scoreboardUniverse: 'watchlist', marketExplorer: { universe:'all', mode:'overview', view:'table', query:'', sortKey:'score', sortDir:'desc', page:1, pageSize:20 }, priceRefresh: { running:false, lastResult:null, statusMessage:'', statusKind:'' }, financialRefresh: { running:false, lastResult:null, statusMessage:'', statusKind:'', total:0, processed:0, results:[], warnings:[] }, financialDiagnostics: loadFinancialDiagnosticsLocal(), universeRefresh: { running:false, cancelRequested:false, universe:'watchlist', batchSize:5, total:0, queue:[], originalQueue:[], currentBatch:[], completed:[], skipped:[], errors:[], startedAt:null, finishedAt:null } };
     const $ = (sel) => document.querySelector(sel);
     const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+    function safeStorageGet(key) {
+      if (memoryStorage.has(key)) return memoryStorage.get(key);
+      try { return localStorage.getItem(key); }
+      catch (err) { storageWarning = 'Browser storage is unavailable. Settings are kept for this session.'; return null; }
+    }
+    function safeStorageSet(key, value) {
+      memoryStorage.set(key, value);
+      try { localStorage.setItem(key, value); return true; }
+      catch (err) { storageWarning = 'Browser storage is unavailable. Settings are kept for this session.'; renderStorageWarning(); return false; }
+    }
+    function renderStorageWarning() {
+      const box = document.querySelector('#storage-status');
+      if (box) box.innerHTML = storageWarning ? alertHtml('warn', escapeHTML(storageWarning)) : '';
+    }
+    function currentTargetWeek() {
+      const iso = new Intl.DateTimeFormat('en-CA', {timeZone:'Asia/Bangkok',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+      const d = new Date(iso + 'T00:00:00Z');
+      d.setUTCDate(d.getUTCDate() - (d.getUTCDay() - 5 + 7) % 7);
+      return d.toISOString().slice(0, 10);
+    }
+    function anyRefreshRunning() { return state.priceRefresh.running || state.financialRefresh.running || state.universeRefresh.running; }
+    function setRefreshControls() {
+      const busy = anyRefreshRunning();
+      ['refresh-prices-btn','refresh-prices-control-btn','refresh-financial-control-btn','refresh-financial-force-btn','universe-refresh-start-btn'].forEach(id => { const button = document.getElementById(id); if (button) button.disabled = busy; });
+    }
+    function safeNewsUrl(value) {
+      try { const url = new URL(String(value || '')); return ['http:','https:'].includes(url.protocol) ? url.href : '#'; }
+      catch (err) { return '#'; }
+    }
     function reportRuntimeError(message) {
       const box = document.querySelector('#runtime-error');
       if (!box) return;
@@ -580,7 +614,7 @@
     document.addEventListener('DOMContentLoaded', init);
 
 
-    function init() { if ($('#app-version')) $('#app-version').textContent = APP_VERSION; applyTheme(); bindSystemThemeListener(); bindEvents(); hydrateSettings(); const check = runFrontendSelfCheck(); if (check.ok) { const box = $('#runtime-error'); if (box) { box.classList.remove('show'); box.textContent = ''; } } loadAll().then(() => maybeAutoRefreshPricesOnOpen()); }
+    function init() { if ($('#app-version')) $('#app-version').textContent = APP_VERSION; applyTheme(); bindSystemThemeListener(); bindEvents(); hydrateSettings(); const check = runFrontendSelfCheck(); if (check.ok) { const box = $('#runtime-error'); if (box) { box.classList.remove('show'); box.textContent = ''; } } renderStorageWarning(); loadAll().then(() => maybeAutoRefreshPricesOnOpen()); }
     function safeBind(selector, event, handler) { const el = $(selector); if (el) el.addEventListener(event, handler); }
     function bindEvents() {
       $$('[data-tab]').forEach(btn => btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
@@ -711,18 +745,24 @@
     }
     function renderAll() { renderEdition(); renderBrief(); renderPersistenceCheck(); renderMarketDataExplorer(); renderNews(); renderArticles(); renderLatestArticle(); renderPromptPreview(); renderUniverseRefreshProgress(); renderFinancialDiagnostics(); }
     function renderEdition() {
-      const d = state.dashboard || {}; const h = state.health || {}; const week = d.week_ending || h.latest_week || '';
+      const d = state.dashboard || {}, h = state.health || {}, week = d.week_ending || h.latest_week || '';
+      const target = currentTargetWeek(); const rows = normalizeRows(d.rows || []), news = d.news || [];
+      const refresh = state.priceRefresh.lastResult;
+      const refreshFailed = refresh && refresh.result && refresh.result.week_ending === target && refresh.data_ok === false;
+      const stale = !!week && week !== target;
+      const ready = state.dashboardLoad.ok && rows.length > 0 && !stale && !refreshFailed;
+      const label = !state.dashboardLoad.ok ? 'Data unavailable' : stale ? 'Stale data' : refreshFailed ? 'Partial / failed refresh' : ready ? 'Ready to write' : 'Waiting for data';
       $('#edition-week').textContent = week ? formatBE(week) : '—';
-      const rows = normalizeRows(d.rows || []); const news = d.news || []; const ready = rows.length > 0 && (h.ok || d.week_ending);
-      $('#readiness-pill').innerHTML = `<span class="dot ${ready ? 'ok' : ''}"></span><span>${ready ? 'Ready to write' : 'Waiting for data'}</span>`;
-      $('#edition-sub').textContent = `${week || '—'} · ${rows.length || h.symbols || 0} symbols · ${news.length || h.news_count || 0} news`;
+      $('#readiness-pill').innerHTML = '<span class="dot ' + (ready ? 'ok' : '') + '"></span><span>' + escapeHTML(label) + '</span>';
+      $('#edition-sub').textContent = (week || '—') + ' · Target ' + target + ' · ' + rows.length + ' symbols · ' + news.length + ' news';
     }
     function renderBrief() {
       const d = state.dashboard || {}; const h = state.health || {}; const rows = normalizeRows(d.rows || []); const news = d.news || [];
       const week = d.week_ending || h.latest_week || '';
       const missingSet = h.symbols === 7 || rows.every(r => r.symbol !== 'SET');
-      $('#lead-title').textContent = rows.length ? `สัปดาห์นี้พร้อมเขียนบทวิเคราะห์แล้ว` : 'ยังรอข้อมูลสำหรับสัปดาห์ล่าสุด';
-      $('#lead-copy').textContent = rows.length ? `ข้อมูลสัปดาห์สิ้นสุด ${formatBE(week) || week} พร้อมใช้เป็น brief สำหรับเขียนบทวิเคราะห์: มีข้อมูลหุ้น ${rows.length} ตัว ข่าวประกอบ ${news.length || h.news_count || 0} ข่าว และระบบบันทึกลง Sheets แล้ว` : 'เมื่อ backend มีข้อมูลล่าสุด หน้านี้จะสรุปตลาด หุ้นที่เคลื่อนไหวเด่น ข่าวประกอบ และเตรียม prompt สำหรับนำไปเขียนกับ AI';
+      $('#lead-title').textContent = !state.dashboardLoad.ok ? 'Data load failed' : d.week_ending && d.week_ending !== currentTargetWeek() ? 'Stored data is from an earlier week' : state.priceRefresh.lastResult && state.priceRefresh.lastResult.data_ok === false ? 'Latest price refresh needs attention' : rows.length ? 'ข้อมูลสัปดาห์นี้พร้อมสำหรับตรวจทาน' : 'ยังรอข้อมูลสำหรับสัปดาห์ล่าสุด';
+      const current = state.dashboardLoad.ok && week === currentTargetWeek() && !(state.priceRefresh.lastResult && state.priceRefresh.lastResult.data_ok === false);
+      $('#lead-copy').textContent = rows.length ? `ข้อมูลที่อ่านได้จาก Sheets สิ้นสุด ${formatBE(week) || week}: หุ้น ${rows.length} ตัว ข่าว ${news.length || h.news_count || 0} ข่าว · ${current ? 'ตรวจความครบถ้วนก่อนเขียนบทวิเคราะห์' : 'ตรวจสถานะและ refresh ให้ครบก่อนใช้ข้อมูลนี้เขียนบทวิเคราะห์'}` : 'เมื่อ backend มีข้อมูลล่าสุด หน้านี้จะสรุปตลาด หุ้นที่เคลื่อนไหวเด่น ข่าวประกอบ และเตรียม prompt สำหรับนำไปเขียนกับ AI';
       $('#brief-badges').innerHTML = [
         badge(`${formatBE(week) || 'ยังไม่มีสัปดาห์'}`, 'ti-calendar'),
         badge(`${rows.length || h.symbols || 0} symbols`, 'ti-chart-bar'),
@@ -731,7 +771,7 @@
       ].join('');
       const notes = [];
       notes.push(note('Vercel Health', h && h.ok ? 'OK' : 'รอตรวจ', h && h.ok ? 'good' : 'warn'));
-      notes.push(note('Apps Script Dashboard', rows.length ? 'มีข้อมูลล่าสุด' : 'ยังไม่พบ rows', rows.length ? 'good' : 'warn'));
+      notes.push(note('Apps Script Dashboard', current && rows.length ? 'มีข้อมูลสัปดาห์เป้าหมาย' : rows.length ? 'ตรวจความสดและความครบถ้วน' : 'ยังไม่พบ rows', current && rows.length ? 'good' : 'warn'));
       if (missingSet) notes.push(note('SET Index', 'Yahoo ไม่มี bar ในสัปดาห์ล่าสุด — ไม่ block งานเขียน', 'warn'));
       notes.push(note('Security', 'Market Refresh เป็น public endpoint; PIN ไม่ฝังในไฟล์และใช้เฉพาะ write actions', 'good'));
       notes.push(note('Theme', state.config.theme === 'auto' ? `Auto · ${currentEffectiveTheme() === 'night' ? 'Night' : 'Day'} ตามโหมดเครื่อง` : `${state.config.theme === 'night' ? 'Night' : 'Day'} manual`, 'good'));
@@ -777,7 +817,8 @@
 
 
     function normalizeStockKey(symbol) {
-      return String(symbol || '').trim().toUpperCase().replace(/\.BK$/, '');
+      const raw = String(symbol || '').trim().toUpperCase().replace(/^SET:/, '').replace(/\.BK$/, '');
+      return raw === '^SET' ? 'SET' : raw;
     }
     function activeWatchlistItems() {
       const wl = (state.dashboard && state.dashboard.watchlist) || [];
@@ -813,26 +854,19 @@
     }
     function scoreMarketItems(rows, members) {
       const memberMap = mapMembers(members || []);
-      return (rows || [])
-        .filter(r => memberMap[normalizeStockKey(r.symbol)])
-        .map(r => {
-          const key = normalizeStockKey(r.symbol);
-          const m = memberMap[key] || {};
-          const one = num(r.change_pct_1w);
-          const four = num(r.change_pct_4w);
-          const twelve = num(r.change_pct_12w);
-          const vol = numOrBlank(r.volume_ratio);
-          const smaText = String(r.sma20_position || '').toLowerCase();
-          const sma = /above|over|เหนือ/.test(smaText) ? 8 : (/below|under|ใต้/.test(smaText) ? -8 : 0);
-          const volBoost = vol === '' ? 0 : Math.max(-8, Math.min(14, (vol - 1) * 8));
-          const momentum = Math.max(-26, Math.min(26, one * 2.1 + four * 0.9 + twelve * 0.25));
-          const raw = 50 + momentum + volBoost + sma;
-          const score = Math.round(Math.max(0, Math.min(100, raw)));
-          const label = score >= 70 ? 'Strong read' : score >= 55 ? 'Watch' : score >= 40 ? 'Neutral' : 'Weak';
-          const reason = `${fmtPct(one)} 1W · ${fmtPct(four)} 4W · Vol x20D ${fmtMultiple(vol)}${r.sma20_position ? ' · ' + r.sma20_position : ''}`;
-          return Object.assign({}, r, { key, name_th: m.name_th || '', sector: m.sector || '', score, score_label: label, score_reason: reason });
-        })
-        .sort((a,b) => b.score - a.score);
+      return (rows || []).filter(r => memberMap[normalizeStockKey(r.symbol)]).map(r => {
+        const key = normalizeStockKey(r.symbol); const m = memberMap[key] || {};
+        const one = numOrBlank(r.change_pct_1w), four = numOrBlank(r.change_pct_4w), twelve = numOrBlank(r.change_pct_12w), vol = numOrBlank(r.volume_ratio);
+        const sufficient = one !== '' && four !== '' && vol !== '' && vol > 0;
+        const smaText = String(r.sma20_position || '').toLowerCase();
+        const sma = /above|over|เหนือ/.test(smaText) ? 8 : (/below|under|ใต้/.test(smaText) ? -8 : 0);
+        const momentum = Math.max(-26, Math.min(26, num(one) * 2.1 + num(four) * 0.9 + num(twelve) * 0.25));
+        const volBoost = vol === '' ? 0 : Math.max(-8, Math.min(14, (vol - 1) * 8));
+        const score = sufficient ? Math.round(Math.max(0, Math.min(100, 50 + momentum + volBoost + sma))) : null;
+        const label = !sufficient ? 'Insufficient data' : score >= 70 ? 'Strong read' : score >= 55 ? 'Watch' : score >= 40 ? 'Neutral' : 'Weak';
+        const reason = fmtPct(one) + ' 1W · ' + fmtPct(four) + ' 4W · Vol x20D ' + fmtMultiple(vol) + (r.sma20_position ? ' · ' + r.sma20_position : '');
+        return Object.assign({}, r, {key,name_th:m.name_th || '',sector:m.sector || '',score,score_available:sufficient,score_label:label,score_reason:reason});
+      }).sort((a,b) => a.score === null ? (b.score === null ? a.key.localeCompare(b.key) : 1) : b.score === null ? -1 : b.score - a.score);
     }
     function scoreWatchlistItems(rows, watchlist) {
       return scoreMarketItems(rows, (watchlist || []).filter(w => String(w.active || 'Y').toUpperCase() !== 'N' && w.symbol));
@@ -885,20 +919,20 @@
         return;
       }
       const cards = scored.slice(0, 10).map((r, idx) => {
-        const leader = idx === 0 ? ' leader' : '';
+        const leader = idx === 0 && r.score_available ? ' leader' : '';
         return `<article class="score-card${leader}">
           <div class="score-top">
             <div style="min-width:0">
-              <div class="score-rank">#${idx + 1} · ${escapeHTML(r.score_label)}</div>
+              <div class="score-rank">${r.score_available ? '#' + (idx + 1) : '—'} · ${escapeHTML(r.score_label)}</div>
               <div class="watch-symbol">${escapeHTML(r.key)}</div>
               <div class="watch-name" title="${escapeAttr(r.name_th || r.symbol || r.key)}">${escapeHTML(r.name_th || r.symbol || r.key)}</div>
             </div>
             <div style="text-align:right">
-              <div class="score-value">${r.score}</div>
+              <div class="score-value">${r.score === null ? '—' : r.score}</div>
               <div class="score-label">score</div>
             </div>
           </div>
-          <div class="score-meter" aria-label="Score ${r.score}"><div class="score-fill" style="--score:${r.score}%"></div></div>
+          <div class="score-meter" aria-label="${r.score_available ? 'Score ' + r.score : 'Score unavailable'}"><div class="score-fill" style="--score:${r.score === null ? 0 : r.score}%"></div></div>
           <div class="watch-metrics">
             <span>1W <strong>${fmtPct(r.change_pct_1w)}</strong></span>
             <span>4W <strong>${fmtPct(r.change_pct_4w)}</strong></span>
@@ -918,7 +952,7 @@
       const scored = scoreMarketItems(normalizedRows, selectedMembers);
       if (!scored.length) return `_${coverageText(info)} · ยังไม่มีข้อมูลสำหรับ Market Scoreboard_`;
       const header = '| Rank | Symbol | Name | Score | Label | %1W | %4W | Vol x20D | SMA20 |\n|---:|---|---|---:|---|---:|---:|---:|---|';
-      return `**Market Scoreboard — ${info.label}**\n${coverageText(info)}\n\n${header}\n${scored.slice(0, 10).map((r, i) => `| ${i + 1} | ${r.key} | ${r.name_th || ''} | ${r.score} | ${r.score_label} | ${fmtPct(r.change_pct_1w)} | ${fmtPct(r.change_pct_4w)} | ${fmtMultiple(r.volume_ratio)} | ${r.sma20_position || ''} |`).join('\n')}\n\n_Attention Score ranks price movement and volume only. It is not investment advice._`;
+      return `**Market Scoreboard — ${info.label}**\n${coverageText(info)}\n\n${header}\n${scored.slice(0, 10).map((r, i) => `| ${r.score_available ? i + 1 : '—'} | ${r.key} | ${r.name_th || ''} | ${r.score === null ? '—' : r.score} | ${r.score_label} | ${fmtPct(r.change_pct_1w)} | ${fmtPct(r.change_pct_4w)} | ${fmtMultiple(r.volume_ratio)} | ${r.sma20_position || ''} |`).join('\n')}\n\n_Attention Score ranks price movement and volume only. It is not investment advice._`;
     }
     async function copyScoreboard() {
       const d = state.dashboard || {};
@@ -973,7 +1007,8 @@
       const info = universe === 'ALL'
         ? { universe:'ALL', label:'All', total:rows.length, shown:rows.length }
         : scoreboardCoverage(rows, members, universe);
-      const scored = scoreMarketItems(rows, members).map((r, idx) => Object.assign({}, r, { score_rank:idx + 1 }));
+      let rank = 0;
+      const scored = scoreMarketItems(rows, members).map(r => Object.assign({}, r, {score_rank:r.score_available ? ++rank : ''}));
       return { rows:scored, info, universe };
     }
     function getMarketSortValue(row, key) {
@@ -1075,7 +1110,7 @@
         ];
       }
       return [
-        { key:'score', label:'Score', cls:'col-score', render:r => `<span class="score-pill">${escapeHTML(r.score)}</span>` },
+        { key:'score', label:'Score', cls:'col-score', render:r => `<span class="score-pill">${r.score === null ? '—' : escapeHTML(r.score)}</span>` },
         { key:'symbol', label:'Symbol', cls:'col-symbol', render:r => `<strong title="${escapeAttr(r.name_th || r.key || r.symbol)}">${escapeHTML(r.key || r.symbol)}</strong>` },
         { key:'close', label:'Close', cls:'col-close', render:r => fmtNumber(r.close) },
         { key:'change1w', label:'1W', cls:'col-change', render:r => pctHtml(r.change_pct_1w) },
@@ -1150,18 +1185,18 @@
 
       cardBox.innerHTML = pageRows.map(r => {
         const metrics = marketCardMetrics(r, mode).map(([label,value]) => `<span>${escapeHTML(label)} <strong>${value}</strong></span>`).join('');
-        const sourceMeta = r.source ? ` · Price ${escapeHTML(r.source)}` : '';
-        const fundamentalMeta = r.fetched_at ? ` · Fundamentals ${escapeHTML(r.fetched_at)}` : '';
+        const sourceMeta = (r.price_source || r.source) ? ` · Price ${escapeHTML(r.price_source || r.source)}` : '';
+        const fundamentalMeta = r.fetched_at ? ` · Fundamentals ${escapeHTML(r.fundamentals_source || 'stored')} · ${escapeHTML(r.fetched_at)}` : '';
         return `<article class="score-card ${r.score_rank === 1 ? 'leader' : ''}">
           <div class="score-top">
             <div style="min-width:0">
-              <div class="score-rank">#${escapeHTML(r.score_rank)} · ${escapeHTML(r.score_label)}</div>
+              <div class="score-rank">${r.score_rank ? '#' + escapeHTML(r.score_rank) : '—'} · ${escapeHTML(r.score_label)}</div>
               <div class="watch-symbol">${escapeHTML(r.key || r.symbol)}</div>
               <div class="watch-name" title="${escapeAttr(r.name_th || r.symbol || r.key)}">${escapeHTML(r.name_th || r.symbol || r.key)}</div>
             </div>
-            <div style="text-align:right"><div class="score-value">${escapeHTML(r.score)}</div><div class="score-label">score</div></div>
+            <div style="text-align:right"><div class="score-value">${r.score === null ? '—' : escapeHTML(r.score)}</div><div class="score-label">score</div></div>
           </div>
-          <div class="score-meter" aria-label="Score ${escapeAttr(r.score)}"><div class="score-fill" style="--score:${escapeAttr(r.score)}%"></div></div>
+          <div class="score-meter" aria-label="${r.score_available ? 'Score ' + escapeAttr(r.score) : 'Score unavailable'}"><div class="score-fill" style="--score:${escapeAttr(r.score === null ? 0 : r.score)}%"></div></div>
           <div class="watch-metrics">${metrics}</div>
           <div class="score-reason">${escapeHTML(r.score_reason)}</div>
           <div class="muted" style="font-size:.72rem">${escapeHTML(marketModeLabel(mode))}${sourceMeta}${fundamentalMeta}</div>
@@ -1296,13 +1331,13 @@
         <div class="context-head">
           <span class="context-rank">${i+1}</span>
           <div style="min-width:0">
-            <h4><a href="${escapeAttr(n.url || '#')}" target="_blank" rel="noopener noreferrer">${escapeHTML(n.headline || 'Untitled')}</a></h4>
+            <h4><a href="${escapeAttr(safeNewsUrl(n.url))}" target="_blank" rel="noopener noreferrer">${escapeHTML(n.headline || 'Untitled')}</a></h4>
             <p class="muted">${escapeHTML(n.summary || '')}</p>
             <div class="meta"><span>${escapeHTML(n.source || 'RSS')}</span><span>${escapeHTML(n.published_at || '')}</span></div>
           </div>
         </div>
       </article>`).join('');
-      const more = rest.length ? `<details class="context-more"><summary>View more context (${rest.length})</summary><div class="compact-news-list">${rest.map((n,i) => `<a class="compact-news-link" href="${escapeAttr(n.url || '#')}" target="_blank" rel="noopener noreferrer"><strong>${escapeHTML(n.headline || 'Untitled')}</strong><span class="muted">${escapeHTML(n.source || 'RSS')} · ${escapeHTML(n.published_at || '')}</span></a>`).join('')}</div></details>` : '';
+      const more = rest.length ? `<details class="context-more"><summary>View more context (${rest.length})</summary><div class="compact-news-list">${rest.map((n,i) => `<a class="compact-news-link" href="${escapeAttr(safeNewsUrl(n.url))}" target="_blank" rel="noopener noreferrer"><strong>${escapeHTML(n.headline || 'Untitled')}</strong><span class="muted">${escapeHTML(n.source || 'RSS')} · ${escapeHTML(n.published_at || '')}</span></a>`).join('')}</div></details>` : '';
       box.innerHTML = cards + more;
     }
     function renderMarketTable() { renderMarketDataExplorer(); }
@@ -1386,7 +1421,7 @@ ${newsMarkdown(news)}
         body = list.map(r => `| ${r.key || r.symbol} | ${fmtPE(r.pe_ttm)} | ${fmtRatio(r.pbv)} | ${fmtYield(r.dividend_yield_pct)} | ${fmtMarketCap(r.market_cap)} | ${fmtPlainPct(r.roe_pct)} |`).join('\n');
       } else {
         header = '| Score | Symbol | Close | 1W | Vol x20D | P/E | Div. Yield |\n|---:|---|---:|---:|---:|---:|---:|';
-        body = list.map(r => `| ${r.score} | ${r.key || r.symbol} | ${fmtNumber(r.close)} | ${fmtPct(r.change_pct_1w)} | ${fmtMultiple(r.volume_ratio)} | ${fmtPE(r.pe_ttm)} | ${fmtYield(r.dividend_yield_pct)} |`).join('\n');
+        body = list.map(r => `| ${r.score === null ? '—' : r.score} | ${r.key || r.symbol} | ${fmtNumber(r.close)} | ${fmtPct(r.change_pct_1w)} | ${fmtMultiple(r.volume_ratio)} | ${fmtPE(r.pe_ttm)} | ${fmtYield(r.dividend_yield_pct)} |`).join('\n');
       }
       return `**Market Data Explorer — ${marketModeLabel(mode)}**\n\n${header}\n${body}\n\n_Attention Score ranks price movement and volume only. Financial metrics are contextual and are not investment advice._`;
     }
@@ -1473,8 +1508,8 @@ ${newsMarkdown(news)}
         // Keep templates, but do not let template preview errors break settings buttons.
         try { syncTemplatesFromEditor(false); } catch (e) { console.warn('template sync skipped', e); }
         state.config = normalizeConfig(state.config);
-        saveConfigLocal(); hydrateSettings(); applyTheme();
-        if ($('#settings-status')) $('#settings-status').innerHTML = alertHtml('good','บันทึก local settings แล้ว');
+        const persisted = saveConfigLocal(); hydrateSettings(); applyTheme(); renderStorageWarning();
+        if ($('#settings-status')) $('#settings-status').innerHTML = alertHtml(persisted ? 'good' : 'warn', persisted ? 'บันทึก local settings แล้ว' : 'ใช้ settings ได้ใน session นี้ แต่ browser ไม่อนุญาตให้บันทึก storage');
         return true;
       } catch (err) {
         if ($('#settings-status')) $('#settings-status').innerHTML = alertHtml('bad', `บันทึก settings ไม่สำเร็จ: ${escapeHTML(err.message)}`);
@@ -1506,7 +1541,7 @@ ${newsMarkdown(news)}
     }
     function shouldAutoRefreshPrices() {
       if (!state.config.autoRefreshPricesOnOpen) return false;
-      const cooldown = Number(state.config.priceRefreshCooldownMinutes || 15);
+      const cooldown = Number(state.config.priceRefreshCooldownMinutes);
       return priceRefreshAgeMinutes() >= cooldown;
     }
     async function maybeAutoRefreshPricesOnOpen() {
@@ -1533,7 +1568,7 @@ ${newsMarkdown(news)}
     }
     async function refreshPrices(options = {}) {
       const source = options.source || 'manual';
-      if (state.priceRefresh.running) {
+      if (anyRefreshRunning()) {
         renderPriceRefreshStatus('กำลัง refresh ราคาหุ้นอยู่แล้ว', 'warn');
         return false;
       }
@@ -1542,21 +1577,18 @@ ${newsMarkdown(news)}
         renderPriceRefreshStatus();
         return false;
       }
-      state.priceRefresh.running = true;
+      state.priceRefresh.running = true; setRefreshControls();
       renderPriceRefreshStatus(source === 'auto-open' ? 'เปิดเว็บแล้วกำลัง refresh ราคาและ technical อัตโนมัติ...' : 'กำลัง refresh ราคาและ technical จาก Vercel API...', 'warn');
       setHealth('loading', 'กำลัง refresh ราคาหุ้น...');
       try {
-        const resp = await fetch(priceRefreshUrl(), {
+        const json = await fetchJSON(priceRefreshUrl(), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ source, refresh_type:'prices' }),
           cache: 'no-store',
           redirect: 'follow'
         });
-        const text = await resp.text();
-        let json;
-        try { json = JSON.parse(text); } catch (err) { throw new Error(`non-JSON response (${resp.status}): ${text.slice(0,120)}`); }
-        if (!resp.ok || !json.ok) throw new Error(json.error || `HTTP ${resp.status}`);
+        if (!json.ok) throw new Error(json.error || 'Price refresh failed');
         state.priceRefresh.lastResult = json;
         state.config.lastPriceRefreshAt = json.refreshed_at || new Date().toISOString();
         saveConfigLocal();
@@ -1587,11 +1619,12 @@ ${newsMarkdown(news)}
         return true;
       } catch (err) {
         const message = friendlyRefreshError(err, 'Price Refresh');
+        state.priceRefresh.lastResult = {data_ok:false, error:message, result:{week_ending:currentTargetWeek()}};
         renderPriceRefreshStatus(`Refresh Prices ไม่สำเร็จ: ${escapeHTML(message)}`, 'bad');
         setHealth('bad', `Price refresh error: ${message}`);
         return false;
       } finally {
-        state.priceRefresh.running = false;
+        state.priceRefresh.running = false; setRefreshControls();
         renderPriceRefreshStatus(state.priceRefresh.statusMessage, state.priceRefresh.statusKind);
         renderBrief();
       }
@@ -1714,14 +1747,14 @@ ${newsMarkdown(news)}
       const failedCount = results.filter(r => r.status === 'failed' && r.manual_retry_allowed !== false).length;
       const missingCount = results.filter(r => r.status !== 'failed' && r.missing_fields.length > 0).length;
       if (retryFailed) {
-        retryFailed.disabled = state.financialRefresh.running || failedCount === 0;
+        retryFailed.disabled = anyRefreshRunning() || failedCount === 0;
         retryFailed.innerHTML = `<i class="ti ti-reload"></i> Retry Failed (${failedCount})`;
         retryFailed.title = failedCount
           ? 'Manual retry เฉพาะหุ้นที่ Failed แม้ API จะไม่แนะนำ Auto-retry'
           : 'ไม่มี Failed symbol';
       }
       if (retryMissing) {
-        retryMissing.disabled = state.financialRefresh.running || missingCount === 0;
+        retryMissing.disabled = anyRefreshRunning() || missingCount === 0;
         retryMissing.innerHTML = `<i class="ti ti-list-search"></i> Retry Missing (${missingCount})`;
         retryMissing.title = missingCount
           ? 'Retry เฉพาะหุ้นที่ไม่ Failed แต่ยังขาดบาง field'
@@ -1758,12 +1791,12 @@ ${newsMarkdown(news)}
     }
     function loadFinancialDiagnosticsLocal() {
       try {
-        const raw = JSON.parse(localStorage.getItem(FINANCIAL_DIAGNOSTICS_KEY) || '{}');
+        const raw = JSON.parse(safeStorageGet(FINANCIAL_DIAGNOSTICS_KEY) || '{}');
         return { results:Array.isArray(raw.results) ? raw.results.map(normalizeFinancialResult) : [], lastAttemptAt:String(raw.lastAttemptAt || ''), lastMode:String(raw.lastMode || 'all'), warnings:Array.isArray(raw.warnings) ? raw.warnings : [] };
       } catch (err) { return { results:[], lastAttemptAt:'', lastMode:'all', warnings:[] }; }
     }
     function saveFinancialDiagnosticsLocal() {
-      localStorage.setItem(FINANCIAL_DIAGNOSTICS_KEY, JSON.stringify(state.financialDiagnostics || { results:[] }));
+      safeStorageSet(FINANCIAL_DIAGNOSTICS_KEY, JSON.stringify(state.financialDiagnostics || { results:[] }));
     }
     async function retryFinancialResults(mode) {
       const symbols = financialRetrySymbols(mode);
@@ -1774,7 +1807,7 @@ ${newsMarkdown(news)}
       return refreshFinancial({ source:`retry-${mode}`, force:true, mode, symbols });
     }
     async function refreshFinancial(options = {}) {
-      if (state.financialRefresh.running) {
+      if (anyRefreshRunning()) {
         renderFinancialRefreshStatus('กำลัง refresh Financial อยู่แล้ว', 'warn');
         return false;
       }
@@ -1789,13 +1822,15 @@ ${newsMarkdown(news)}
       const force = !!options.force || mode !== 'all';
       const batches = chunkSymbols(symbols, 3);
       state.financialRefresh = { running:true, lastResult:null, statusMessage:'', statusKind:'', total:symbols.length, processed:0, results:[], warnings:[] };
+      setRefreshControls();
+      try {
       renderFinancialRefreshStatus(`กำลัง refresh Financial 0/${symbols.length} · mode ${mode} · batch 3 · cache 7 วัน${force ? ' · FORCE' : ''}`, 'warn');
       setHealth('loading', 'กำลัง refresh Financial...');
       renderFinancialDiagnostics();
       for (const batch of batches) {
         let incoming = [];
         try {
-          const resp = await fetch(priceRefreshUrl(), {
+          const json = await fetchJSON(priceRefreshUrl(), {
             method:'POST',
             headers:{ 'Content-Type':'application/json' },
             body:JSON.stringify({
@@ -1809,10 +1844,7 @@ ${newsMarkdown(news)}
             cache:'no-store',
             redirect:'follow'
           });
-          const text = await resp.text();
-          let json;
-          try { json = JSON.parse(text); } catch (err) { throw new Error(`non-JSON response (${resp.status}): ${text.slice(0,120)}`); }
-          if (!resp.ok || !json.ok) throw new Error(json.error || `HTTP ${resp.status}`);
+          if (!json.ok) throw new Error(json.error || 'Financial refresh failed');
           const r = json.result || {};
           state.financialRefresh.lastResult = json;
           incoming = Array.isArray(r.symbol_results) && r.symbol_results.length ? r.symbol_results.map(normalizeFinancialResult) : legacyFinancialResults(r, batch);
@@ -1834,7 +1866,6 @@ ${newsMarkdown(news)}
         renderFinancialRefreshStatus(`กำลัง refresh Financial ${Math.min(state.financialRefresh.processed, symbols.length)}/${symbols.length} · Updated ${c.updated} · Partial ${c.partial} · Fresh ${c.fresh} · Failed ${c.failed}`, 'warn');
         renderFinancialDiagnostics();
       }
-      state.financialRefresh.running = false;
       state.config.lastFinancialRefreshAt = new Date().toISOString();
       saveConfigLocal();
       const counts = calculateFinancialCoverage(state.financialRefresh.results);
@@ -1845,6 +1876,7 @@ ${newsMarkdown(news)}
       renderFinancialDiagnostics();
       setHealth(counts.failed === symbols.length ? 'bad' : 'ok', counts.failed === symbols.length ? 'Financial refresh failed' : 'Financial refresh completed');
       return counts.failed < symbols.length;
+      } finally { state.financialRefresh.running = false; setRefreshControls(); renderFinancialDiagnostics(); }
     }
     function readUniverseRefreshControls() {
       const universe = normalizeUniverseKey(($('#universe-refresh-universe') && $('#universe-refresh-universe').value) || state.scoreboardUniverse || 'watchlist');
@@ -1853,23 +1885,14 @@ ${newsMarkdown(news)}
     }
     function buildUniverseRefreshQueue(universe) {
       const key = normalizeUniverseKey(universe || 'watchlist');
-      const members = selectedScoreboardMembers(key);
-      const existing = new Set(normalizeRows(((state.dashboard && state.dashboard.rows) || [])).map(r => normalizeStockKey(r.symbol)).filter(Boolean));
-      const seen = new Set();
-      const symbols = [];
-      members.forEach(m => {
-        const symbol = normalizeStockKey(m.symbol || m);
-        if (!symbol || seen.has(symbol)) return;
-        seen.add(symbol);
-        symbols.push(symbol);
-      });
-      const queue = [];
-      const skipped = [];
-      symbols.forEach(symbol => {
-        if (existing.has(symbol)) skipped.push({ symbol, reason:'current-week data exists' });
-        else queue.push(symbol);
-      });
-      return { universe:key, label:scoreboardUniverseLabel(key), symbols, queue, skipped };
+      if (!state.dashboardLoad.ok) throw new Error('Load dashboard successfully before refreshing a universe.');
+      const target = currentTargetWeek(); const dashboard = state.dashboard || {};
+      const existing = new Set(normalizeRows(dashboard.rows || []).filter(r => (r.week_ending || dashboard.week_ending) === target && marketNumberOrNull(r.close) !== null).map(r => normalizeStockKey(r.symbol)));
+      const symbols = Array.from(new Set(selectedScoreboardMembers(key).map(m => normalizeStockKey(m.symbol || m)).filter(Boolean)));
+      if (symbols.some(symbol => !/^[A-Z0-9][A-Z0-9&-]{0,19}$/.test(symbol))) throw new Error('Invalid Thai symbol in selected universe.');
+      const queue = [], skipped = [];
+      symbols.forEach(symbol => { if (existing.has(symbol)) skipped.push({symbol,reason:'target-week data exists'}); else queue.push(symbol); });
+      return {universe:key,label:scoreboardUniverseLabel(key),symbols,queue,skipped,targetWeek:target};
     }
     function stopUniverseRefresh() {
       if (!state.universeRefresh.running) {
@@ -1880,13 +1903,14 @@ ${newsMarkdown(news)}
       renderUniverseRefreshProgress('รับคำสั่งหยุดแล้ว ระบบจะหยุดหลัง batch ปัจจุบันเสร็จ', 'warn');
     }
     async function startUniverseRefresh() {
-      if (state.universeRefresh.running || state.priceRefresh.running) {
+      if (anyRefreshRunning()) {
         renderUniverseRefreshProgress('กำลัง refresh อยู่แล้ว กรุณารอให้รอบปัจจุบันจบก่อน', 'warn');
         return false;
       }
       saveLocalSettings();
-      const controls = readUniverseRefreshControls();
-      const built = buildUniverseRefreshQueue(controls.universe);
+      let controls, built;
+      try { controls = readUniverseRefreshControls(); built = buildUniverseRefreshQueue(controls.universe); }
+      catch (err) { renderUniverseRefreshProgress(err.message, 'bad'); return false; }
       state.universeRefresh = {
         running:true,
         cancelRequested:false,
@@ -1913,6 +1937,7 @@ ${newsMarkdown(news)}
         renderUniverseRefreshProgress(`${built.label} มีข้อมูล week ปัจจุบันครบแล้ว · skipped ${built.skipped.length}`, 'good');
         return true;
       }
+      setRefreshControls();
       renderUniverseRefreshProgress(`เริ่ม Universal Refresh: ${built.label} · queue ${built.queue.length} · skipped ${built.skipped.length}`, 'warn');
       setHealth('loading', `Universal Refresh ${built.label}...`);
       try {
@@ -1925,7 +1950,7 @@ ${newsMarkdown(news)}
         state.universeRefresh.currentBatch = [];
         state.universeRefresh.finishedAt = new Date().toISOString();
         const cancelled = state.universeRefresh.cancelRequested;
-        state.universeRefresh.running = false;
+        if (state.universeRefresh.errors.length) state.priceRefresh.lastResult = {data_ok:false, partial:state.universeRefresh.completed.length > 0, result:{week_ending:currentTargetWeek()}};
         const kind = state.universeRefresh.errors.length ? 'warn' : 'good';
         const msg = cancelled
           ? `หยุด Universal Refresh แล้ว · saved ${state.universeRefresh.completed.length} · failed ${state.universeRefresh.errors.length} · remaining ${state.universeRefresh.queue.length}`
@@ -1940,21 +1965,18 @@ ${newsMarkdown(news)}
         renderUniverseRefreshProgress(`Universal Refresh ไม่สำเร็จ: ${escapeHTML(err.message)}`, 'bad');
         setHealth('bad', `Universal Refresh error: ${err.message}`);
         return false;
-      }
+      } finally { state.universeRefresh.running = false; setRefreshControls(); }
     }
     async function runUniverseRefreshBatch(batch, universe) {
       try {
-        const resp = await fetch(priceRefreshUrl(), {
+        const json = await fetchJSON(priceRefreshUrl(), {
           method:'POST',
           headers:{ 'Content-Type':'application/json' },
           body:JSON.stringify({ source:'universe-refresh', refresh_type:'prices', universe, symbols:batch, batch_size:batch.length }),
           cache:'no-store',
           redirect:'follow'
         });
-        const text = await resp.text();
-        let json;
-        try { json = JSON.parse(text); } catch (err) { throw new Error(`non-JSON response (${resp.status}): ${text.slice(0,120)}`); }
-        if (!resp.ok || !json.ok) throw new Error(json.error || `HTTP ${resp.status}`);
+        if (!json.ok) throw new Error(json.error || 'Universe refresh failed');
         const result = json.result || {};
         const okSymbols = Array.isArray(result.symbols_ok_symbols) ? result.symbols_ok_symbols : [];
         const failed = Array.isArray(result.symbols_failed) ? result.symbols_failed : [];
@@ -1990,9 +2012,10 @@ ${newsMarkdown(news)}
       (r.skipped || []).slice(-6).forEach(x => logLines.push(`SKIP ${x.symbol} — ${x.reason}`));
       (r.errors || []).slice(-8).forEach(x => logLines.push(`FAIL ${x.symbol} — ${x.error}`));
       const label = scoreboardUniverseLabel(r.universe || 'watchlist');
-      const status = message || (r.running ? `กำลัง refresh ${label}...` : `Ready · เลือก universe แล้วกด Start`);
-      const statusKind = kind || (failed ? 'warn' : (r.running ? 'warn' : ''));
-      box.innerHTML = `${alertHtml(statusKind, status)}<div class="refresh-progress-bar"><div class="refresh-progress-fill" style="width:${pct}%"></div></div><div class="meta"><span>${escapeHTML(label)}</span><span>${processed}/${total || '—'} processed</span><span>saved ${completed}</span><span>skipped ${skipped}</span><span>failed ${failed}</span><span>batch ${r.batchSize || 5}</span></div>${current}${logLines.length ? `<div class="refresh-mini-log">${escapeHTML(logLines.join('\n'))}</div>` : ''}`;
+      if (message) { r.statusMessage = message; r.statusKind = kind || ''; }
+      const status = message || r.statusMessage || (r.running ? `กำลัง refresh ${label}...` : `Ready · เลือก universe แล้วกด Start`);
+      const statusKind = kind || r.statusKind || (failed ? 'warn' : (r.running ? 'warn' : ''));
+      box.innerHTML = `${alertHtml(statusKind, escapeHTML(status))}<div class="refresh-progress-bar"><div class="refresh-progress-fill" style="width:${pct}%"></div></div><div class="meta"><span>${escapeHTML(label)}</span><span>${processed}/${total || '—'} processed</span><span>saved ${completed}</span><span>skipped ${skipped}</span><span>failed ${failed}</span><span>batch ${r.batchSize || 5}</span></div>${current}${logLines.length ? `<div class="refresh-mini-log">${escapeHTML(logLines.join('\n'))}</div>` : ''}`;
     }
 
 
@@ -2116,23 +2139,38 @@ ${newsMarkdown(news)}
       if ($('#theme-btn')) $('#theme-btn').innerHTML = `<i class="ti ${icon}"></i> ${label}`;
       if ($('#theme-select')) $('#theme-select').value = state.config.theme || 'day';
     }
-    function setHealth(kind, text) { const dot = $('#health-dot'); dot.classList.remove('ok','bad'); if (kind === 'ok') dot.classList.add('ok'); if (kind === 'bad') dot.classList.add('bad'); $('#health-text').textContent = text; }
+    function setHealth(kind, text) { const refresh = state.priceRefresh.lastResult; if (kind === 'ok' && refresh && refresh.data_ok === false) { kind = 'bad'; text = 'Connection online · Latest price refresh ' + (refresh.partial ? 'partial' : 'failed'); } const dot = $('#health-dot'); dot.classList.remove('ok','bad'); if (kind === 'ok') dot.classList.add('ok'); if (kind === 'bad') dot.classList.add('bad'); $('#health-text').textContent = text; }
     function appsScriptUrl(action, params = {}) { const base = cleanUrl(state.config.appsScriptUrl, DEFAULT_APPS_SCRIPT_URL).replace(/\?+$/, ''); const url = new URL(base); url.searchParams.set('action', action); Object.keys(params).forEach(k => { if (params[k] !== undefined && params[k] !== null && params[k] !== '') url.searchParams.set(k, params[k]); }); return url.toString(); }
     async function postJSON(action, payload) { return fetchJSON(cleanUrl(state.config.appsScriptUrl, DEFAULT_APPS_SCRIPT_URL), { method:'POST', headers:{ 'Content-Type':'text/plain;charset=utf-8' }, body: JSON.stringify(Object.assign({}, payload, { action, pin: state.config.pin })), redirect:'follow' }); }
-    async function fetchJSON(url, opts = {}) { const resp = await fetch(url, Object.assign({ redirect:'follow', cache:'no-store' }, opts)); const text = await resp.text(); let json; try { json = JSON.parse(text); } catch (e) { throw new Error(`non-JSON response (${resp.status}): ${text.slice(0,120)}`); } if (!resp.ok) throw new Error(json.error || `HTTP ${resp.status}`); return json; }
+    async function fetchJSON(url, opts = {}) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 55000);
+      try {
+        const resp = await fetch(url, Object.assign({redirect:'follow',cache:'no-store'}, opts, {signal:controller.signal}));
+        const text = await resp.text();
+        let json;
+        try { json = JSON.parse(text); } catch (err) { throw new Error('non-JSON response (' + resp.status + ')'); }
+        if (!resp.ok) {
+          const retry = Number(json.retry_after_seconds) || 0;
+          const error = new Error((json.error || 'HTTP ' + resp.status) + (retry ? ' · Retry after ' + retry + ' seconds' : ''));
+          error.status = resp.status; error.retryAfterSeconds = retry; throw error;
+        }
+        return json;
+      } finally { clearTimeout(timer); }
+    }
     function loadConfig() {
       try {
-        const currentRaw = localStorage.getItem(STORAGE_KEY);
+        const currentRaw = safeStorageGet(STORAGE_KEY);
         let raw = currentRaw;
-        if (!raw) for (const k of LEGACY_KEYS) { raw = localStorage.getItem(k); if (raw) break; }
+        if (!raw) for (const k of LEGACY_KEYS) { raw = safeStorageGet(k); if (raw) break; }
         const saved = JSON.parse(raw || '{}');
         const merged = normalizeConfig(mergeConfig(DEFAULT_CONFIG, saved));
         if (!currentRaw) { if (merged.theme === 'auto') merged.theme = 'day'; merged.autoRefreshPricesOnOpen = false; }
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+        safeStorageSet(STORAGE_KEY, JSON.stringify(merged));
         return merged;
       } catch (err) {
         const fresh = normalizeConfig(JSON.parse(JSON.stringify(DEFAULT_CONFIG)));
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(fresh));
+        safeStorageSet(STORAGE_KEY, JSON.stringify(fresh));
         return fresh;
       }
     }
@@ -2151,7 +2189,7 @@ ${newsMarkdown(news)}
       c.fetchWeeklyUrl = cleanUrl(c.fetchWeeklyUrl, DEFAULT_FETCH_WEEKLY_URL);
       if (!['day','auto','night'].includes(c.theme)) c.theme = 'day';
       c.autoRefreshPricesOnOpen = c.autoRefreshPricesOnOpen !== false && c.autoRefreshPricesOnOpen !== 'N';
-      c.priceRefreshCooldownMinutes = Math.max(0, Math.min(1440, Number(c.priceRefreshCooldownMinutes || 15)));
+      c.priceRefreshCooldownMinutes = Math.max(0, Math.min(1440, Number(c.priceRefreshCooldownMinutes === '' || c.priceRefreshCooldownMinutes === undefined ? 15 : c.priceRefreshCooldownMinutes)));
       c.templates = Object.assign({}, defaultTemplates(), c.templates || {});
       if (typeof c.pin !== 'string') c.pin = '';
       if (typeof c.lastPriceRefreshAt !== 'string') c.lastPriceRefreshAt = '';
@@ -2164,7 +2202,7 @@ ${newsMarkdown(news)}
       if (!/^https:\/\//i.test(v)) return fallback;
       return v;
     }
-    function saveConfigLocal() { state.config = normalizeConfig(state.config); localStorage.setItem(STORAGE_KEY, JSON.stringify(state.config)); }
+    function saveConfigLocal() { state.config = normalizeConfig(state.config); return safeStorageSet(STORAGE_KEY, JSON.stringify(state.config)); }
     function defaultTemplates() { return { weekly:'โปรดเขียนบทวิเคราะห์หุ้นไทยรายสัปดาห์จากข้อมูลด้านล่าง เป็นภาษาไทย อ่านง่าย สไตล์หนังสือพิมพ์การเงิน มีโครงเรื่องชัดเจน และจบด้วยสิ่งที่ควรติดตามสัปดาห์หน้า', cautious:'โปรดวิเคราะห์ข้อมูลด้านล่างแบบระมัดระวัง เน้นความเสี่ยง ข้อจำกัดของข้อมูล และหลีกเลี่ยงการฟันธง ใช้ภาษาไทยที่อ่านง่าย ไม่ให้คำแนะนำซื้อขาย', short:'โปรดสรุปข้อมูลด้านล่างให้สั้น กระชับ เป็น bullet/ย่อหน้าสั้น ๆ สำหรับอ่านเร็ว โดยแยกภาพรวมตลาด หุ้นเด่น ข่าวที่เกี่ยวข้อง และสิ่งที่ควรติดตาม' }; }
     function normalizeRows(rows) { return (rows || []).map(r => Object.assign({}, r, {
       close:numOrBlank(r.close), prev_close:numOrBlank(r.prev_close),
@@ -2196,7 +2234,7 @@ ${newsMarkdown(news)}
     function fmtPct(v) { if (v === '' || v === null || v === undefined || Number.isNaN(Number(v))) return '—'; const n = Number(v); return `${n > 0 ? '+' : ''}${n.toFixed(2)}%`; }
     function pctHtml(v) { const cls = num(v) > 0 ? 'pos' : num(v) < 0 ? 'neg' : 'flat'; return `<span class="${cls}">${fmtPct(v)}</span>`; }
     function num(v) { const n = Number(v); return Number.isFinite(n) ? n : 0; }
-    function numOrBlank(v) { if (v === '' || v === null || v === undefined) return ''; const n = Number(v); return Number.isFinite(n) ? n : ''; }
+    function numOrBlank(v) { if (v === null || v === undefined || String(v).trim() === '') return ''; const n = Number(v); return Number.isFinite(n) ? n : ''; }
     function formatBE(iso) { if (!iso || iso === 'N/A') return ''; const d = new Date(`${iso}T00:00:00+07:00`); if (Number.isNaN(d.getTime())) return iso; return new Intl.DateTimeFormat('th-TH-u-ca-buddhist', { day:'numeric', month:'short', year:'numeric' }).format(d); }
     function renderMarkdown(md) { const lines = escapeHTML(md).split('\n'); let html = ''; let inList = false; for (const raw of lines) { const line = raw.trim(); if (!line) { if (inList) { html += '</ul>'; inList = false; } continue; } if (line.startsWith('### ')) { if (inList) { html += '</ul>'; inList = false; } html += `<h3>${inlineMd(line.slice(4))}</h3>`; } else if (line.startsWith('## ')) { if (inList) { html += '</ul>'; inList = false; } html += `<h2>${inlineMd(line.slice(3))}</h2>`; } else if (line.startsWith('# ')) { if (inList) { html += '</ul>'; inList = false; } html += `<h1>${inlineMd(line.slice(2))}</h1>`; } else if (line.startsWith('- ') || /^\d+\.\s/.test(line)) { if (!inList) { html += '<ul>'; inList = true; } html += `<li>${inlineMd(line.replace(/^(-|\d+\.)\s/, ''))}</li>`; } else { if (inList) { html += '</ul>'; inList = false; } html += `<p>${inlineMd(line)}</p>`; } } if (inList) html += '</ul>'; return html; }
     function inlineMd(s) { return s.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>'); }
