@@ -1,0 +1,7 @@
+.env
+.env.*
+!.env.example
+radar-trial/local-data/
+radar-trial/__pycache__/
+radar-trial/**/*.pyc
+radar-trial/verification-output.json

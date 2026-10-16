@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AlphaWeek · Personal Research Desk</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <aside class="sidebar">
+    <a class="brand" href="/" aria-label="AlphaWeek หน้าแรก"><span class="brand-mark">α</span><span>AlphaWeek<small>PERSONAL RESEARCH DESK</small></span></a>
+    <p class="workspace">ผู้ช่วยคัดกรองหุ้นไทยบนเครื่องคุณ</p>
+    <nav aria-label="เมนูหลัก">
+      <button data-view="desk" aria-current="page"><span>◉</span> ภาพรวมวันนี้ <small>01</small></button>
+      <button data-view="discover"><span>⌕</span> ค้นและวิเคราะห์ <small>02</small></button>
+      <button data-view="compare"><span>⇄</span> เปรียบเทียบ <small>03</small></button>
+      <button data-view="watch"><span>☆</span> รายการติดตาม <small>04</small></button>
+      <button data-view="news"><span>≋</span> ข่าวและธีม <small>05</small></button>
+      <button data-view="sources"><span>◎</span> สถานะข้อมูล <small>06</small></button>
+    </nav>
+    <div class="sidebar-note"><span class="live-dot"></span> LOCAL · FREE SOURCES<p>วิเคราะห์ด้วยกฎที่ตรวจสอบได้<br>ไม่มีคำสั่งซื้อขายอัตโนมัติ</p></div>
+  </aside>
+  <main>
+    <header class="topbar"><span id="today">THAI MARKET / RESEARCH DESK</span><span class="badge">TRIAL 0.2</span></header>
+    <section class="intro">
+      <div><p class="eyebrow">EVIDENCE BEFORE ACTION</p><h1 id="page-title">ภาพรวมวันนี้</h1><p id="page-subtitle">เห็นสิ่งที่ควรตรวจต่อ พร้อมหลักฐานและข้อมูลที่ยังขาด</p></div>
+      <div class="actions"><button id="market-refresh">อัปเดตราคา</button><button id="refresh" class="primary">↻ อัปเดตข่าว</button></div>
+    </section>
+    <div id="notice" role="status" aria-live="polite">กำลังเชื่อมต่อข้อมูลบนเครื่อง…</div>
+    <div class="boundary"><span>i</span><p><strong>Research assistant แบบมีกฎ</strong> สรุปจากราคาสาธารณะและ RSS ที่รับมา พร้อมบอกหลักฐานค้านและช่องว่างข้อมูล<br><small>ไม่ใช่คำแนะนำส่วนบุคคล ไม่ประเมินมูลค่า และไม่ส่งคำสั่งซื้อขาย คุณเป็นผู้ตรวจและยืนยันเองเสมอ</small></p></div>
+    <section id="metrics" class="metrics" aria-label="ภาพรวมข้อมูล"></section>
+    <section class="toolbar" id="news-filters" aria-label="กรองข่าว" hidden>
+      <label class="filter-search"><span>⌕</span><input id="news-search" type="search" placeholder="ค้นหาในข่าว" aria-label="ค้นหาในข่าว"></label>
+      <select id="theme" aria-label="เลือกธีม"><option value="all">ทุกธีม</option></select>
+      <select id="source" aria-label="เลือกแหล่งข่าว"><option value="all">ทุกแหล่งข่าว</option><option value="infoquest">InfoQuest</option><option value="thaipr">ThaiPR.NET · ประชาสัมพันธ์</option></select>
+    </section>
+    <section id="content" aria-labelledby="page-title"></section>
+    <footer><span>AlphaWeek · ข้อมูลอยู่บนเครื่องนี้</span><span><button id="export" class="text-button">ดาวน์โหลดผลทดลอง</button><button id="stop" class="text-button">ปิดโปรแกรม</button></span></footer>
+  </main>
+  <dialog id="analysis-dialog" aria-labelledby="analysis-title"><button id="close-analysis" class="close" aria-label="ปิดรายละเอียด">×</button><div id="analysis-body"></div></dialog>
+</body>
+</html>

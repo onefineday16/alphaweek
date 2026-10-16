@@ -2,7 +2,8 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "functions": {
     "api/fetch-weekly.js": { "maxDuration": 60 },
-    "api/health.js": { "maxDuration": 30 }
+    "api/health.js": { "maxDuration": 30 },
+    "api/radar.js": { "maxDuration": 60 }
   },
   "crons": [
     { "path": "/api/fetch-weekly", "schedule": "30 11 * * 5" }
